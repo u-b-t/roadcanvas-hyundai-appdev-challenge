@@ -1,0 +1,63 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/NaviHelper/routes
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+NaviHelper SDK
+Programming Guide
+Main Features
+Routes
+Routes
+NaviHelper API로 경로 옵션을 변경하고 재탐색을 요청합니다. 결과는 NaviHelperEventListener 콜백으로 확인합니다. 목적지 설정은 Destinations를 참조합니다.
+경로 옵션 변경​
+RouteOption은 다음 값을 제공합니다.
+ValueDescription
+RECOMMENDED추천 경로
+SHORT_DISTANCE최단 거리 경로
+SHORT_TIME최단 시간 경로
+FREE무료 도로 우선 경로
+HIGHWAY고속도로 우선 경로
+COMFORTABLE편안한 경로
+SCHOOL_ZONE스쿨존 고려 경로
+목적지를 처음 설정할 때 RouteInfo.routeOption으로 지정하거나, 안내 중 changeRouteOption()으로 변경할 수 있습니다.
+Kotlin
+Java
+// 목적지 설정
+naviHelper.requestRoute(
+RouteInfo(
+latitude = 37.48544722,
+longitude = 127.03636666,
+displayLongitude = null,
+displayLatitude = null,
+poiName = "42dot",
+poiId = "36khp37hh8gqcm5nqhe5",
+poiSubId = "0",
+address = "서울시 강남구 남부순환로 2621"
+)
+)
+// 경로옵션: 고속우선으로 변경
+naviHelper.changeRouteOption(RouteOption.HIGHWAY)
+// onRouteOptionChanged callback으로 변경 데이터 수신
+override fun onRouteOptionChanged(routeOption: RouteOption) {
+Log.d(logTag, "onRouteOptionChanged $routeOption")
+}
+// 목적지 취소
+naviHelper.cancelRoute()
+// 목적지 설정
+naviHelper.requestRoute(new RouteInfo(
+127.03636666,
+37.48544722,
+null,
+null,
+"42dot",
+"36khp37hh8gqcm5nqhe5",
+"서울시 강남구 남부순환로 2621",
+"0",
+RouteOption.RECOMMENDED
+));
+// 경로옵션: 고속우선으로 변경
+naviHelper.changeRouteOption(RouteOption.HIGHWAY);
+// onRouteOptionChanged callback으로 변경 데이터 수신
+@Override
+public void onRouteOptionChanged(@NonNull RouteOption routeOption) {
+Log.d(logTag, "onRouteOptionChanged = " + routeOption);

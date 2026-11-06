@@ -1,0 +1,18 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/SpeechToText/declaring-permissions
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+SpeechToText SDK
+Programming Guide
+Declaring permissions
+Declaring permissions
+SpeechToText SDK API를 사용하려면 앱의 AndroidManifest.xml에 STT_SERVICE 권한을 선언해야 합니다.
+AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<uses-permission android:name="pleos.car.permission.STT_SERVICE" />
+<application>
+<!-- ... -->
+</application>
+</manifest>

@@ -1,0 +1,32 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/NaviHelper/route-with-waypoints
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+NaviHelper SDK
+Programming Guide
+Main Features
+Route requests with waypoints
+Route requests with waypoints
+경유지를 포함한 경로 요청 방법을 안내합니다. requestRouteWithWaypoints()는 최종 목적지와 하나 이상의 경유지를 포함한 경로를 요청합니다. 목적지는 RouteInfo, 경유지는 RequestWaypointInfo로 구성하고, 두 값을 RouteWithWaypointsRequest에 전달합니다.
+경유지를 포함한 경로 요청​
+Kotlin
+Java
+naviHelper.requestRouteWithWaypoints(
+RouteWithWaypointsRequest(
+destination = RouteInfo(
+latitude = 37.48544722,
+longitude = 127.03636666,
+poiName = "42dot",
+poiId = "36khp37hh8gqcm5nqhe5",
+address = "서울시 강남구 남부순환로 2621",
+poiSubId = "0"
+),
+waypoints = listOf(
+RequestWaypointInfo(
+latitude = 37.41275833,
+longitude = 127.09481944,
+poiName = "판교 현대백화점",
+waypointIndex = WaypointIndex.FIRST,
+poiId = "36khp2hdj2cfcm5nqhe3",
+address = "경기도 성남시 수정구 창업로 0번길 6",

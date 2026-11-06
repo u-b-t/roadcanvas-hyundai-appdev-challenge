@@ -1,0 +1,58 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/Vehicle/vehicle-permission
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+Vehicle SDK
+Programming Guide
+Declaring permission
+Declaring permission
+Vehicle SDK API는 Android 매니페스트에 Pleos 차량 퍼미션을 선언해야 호출할 수 있습니다. 각 API의 @RequiresPermission 어노테이션과 상수 정의는 PleosPermission을 참조하세요.
+퍼미션 종류​
+PleosPermission 상수는 접두사로 구분됩니다. 매니페스트에는 pleos.car.permission.{상수명} 형식으로 선언합니다.
+접두사예시용도
+CAR_*CAR_DOORS → pleos.car.permission.CAR_DOORS도메인 데이터 조회(get)
+CONTROL_CAR_*CONTROL_CAR_DOORS도메인 제어(set)
+도메인별 대표 퍼미션 (CAR_*)​
+아래는 도메인과 대표적으로 연결되는 조회용 퍼미션입니다. 세부 API마다 요구 퍼미션이 다를 수 있으므로, 호출 전 해당 함수의 @RequiresPermission을 확인하세요.
+도메인PleosPermission 상수매니페스트 android:name
+DoorCAR_DOORSpleos.car.permission.CAR_DOORS
+Window, WiperCAR_WINDOWSpleos.car.permission.CAR_WINDOWS
+HVACCAR_CLIMATEpleos.car.permission.CAR_CLIMATE
+DrivingMode, Brake, OdometerCAR_DRIVEpleos.car.permission.CAR_DRIVE
+EvBattery, FuelCAR_ENERGYpleos.car.permission.CAR_ENERGY
+CarInfo, DisplayCAR_INFOpleos.car.permission.CAR_INFO
+Light, TurnSignalCAR_LIGHTSpleos.car.permission.CAR_LIGHTS
+SideMirrorCAR_MIRRORSpleos.car.permission.CAR_MIRRORS
+Safety, TireCAR_SAFETYpleos.car.permission.CAR_SAFETY
+SeatCAR_SEATSpleos.car.permission.CAR_SEATS
+TollCAR_TOLLpleos.car.permission.CAR_TOLL
+퍼미션 선언 예시​
+사용하는 도메인에 맞는 퍼미션만 선언하면 됩니다. 의존성 추가는 Importing Vehicle SDK를 참조하세요.
+AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<uses-permission android:name="pleos.car.permission.CAR_DOORS" />
+<uses-permission android:name="pleos.car.permission.CAR_INFO" />
+<!-- 사용하는 도메인에 맞는 퍼미션만 선언 -->
+</manifest>
+퍼미션 누락 시​
+퍼미션이 없으면 API onFailed에 Exception이 전달되며, VehicleException인 경우 ERROR_SECURITY_PERMISSION에 해당할 수 있습니다. 처리 방법은 Error code를 참조하세요.
+Importing Vehicle SDK
+이전
+Obtaining a domain object
+다음
+퍼미션 종류
+도메인별 대표 퍼미션 (CAR_*)
+퍼미션 선언 예시
+퍼미션 누락 시
+Discover
+Resources & EmulatorDeveloper Journey
+Docs
+Pleos ConnectPleos Fleet
+Publish
+App SubmissionApp Review Guidelines
+Workspace
+My ProjectPleos App Market Console
+서비스 이용약관|개인정보 처리방침|Cookie Policy|Cookie Settings|partnership@pleos.ai
+© Hyundai Motor Group. All rights reserved.

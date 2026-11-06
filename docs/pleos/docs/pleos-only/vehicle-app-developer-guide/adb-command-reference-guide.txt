@@ -1,0 +1,34 @@
+출처: https://document.pleos.ai/docs/pleos-only/vehicle-app-developer-guide/adb-command-reference-guide
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+앱 개발 가이드
+FAQ
+FAQ - 디버깅을 위한 주요 ADB Command 활용법
+FAQ - 디버깅을 위한 주요 ADB Command 활용법
+ADB 설치 방법​
+설치 방법 펼쳐보기
+Mac​
+Homebrew를 사용하여 adb를 설치합니다. 직접 설치할 경우 환경변수 셋업을 직접 해줘야 합니다.
+먼저 Homebrew를 설치합니다.
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+Homebrew를 사용하여 adb를 설치합니다.
+brew install android-platform-tools
+설치가 잘 되었는지 확인합니다.
+adb version
+만약 adb 명령어가 실행할 수 있는 프로그램으로 인식되지 않을 경우, 환경변수 PATH에 adb 경로가 반영되어 있는지 확인합니다.
+Windows​
+Chocolatey나 Winget을 사용하여 adb를 설치합니다.
+Chocolatey 사용
+choco install adb
+Winget 사용
+winget install Google.AndroidSDKPlatformTools
+설치가 잘 되었는지 확인합니다.
+adb version
+리눅스​
+Ubuntu / Debian 계열​
+apt 패키지 매니저를 사용하여 adb를 설치합니다.
+sudo apt update
+sudo apt install android-tools-adb android-tools-fastboot
+설치가 잘 되었는지 확인합니다.
+adb version

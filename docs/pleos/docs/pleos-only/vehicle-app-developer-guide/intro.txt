@@ -1,0 +1,32 @@
+출처: https://document.pleos.ai/docs/pleos-only/vehicle-app-developer-guide/intro
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+앱 개발 가이드
+Pleos Connect 앱 개발 가이드
+Pleos Connect 앱 개발 가이드
+이 문서는 Pleos Connect 앱 개발 시 반드시 준수해야 할 정책과 그 구현 방법을 안내합니다.
+오디오 포커스 개발 가이드
+차량 환경에서 오디오 포커스 정책과 구현 시 고려해야 할 핵심 가이드를 제공합니다.
+Suspend 모드 - 오디오 포커스 개발 가이드
+Suspend 모드 진입 및 Resume 시점에서 오디오 포커스를 안전하게 처리하는 원칙과 구현 가이드를 제공합니다.
+주행 규제 개발 가이드
+운전 중 UX 제한을 올바르게 적용할 수 있도록 CarUxRestrictions 연동 방법을 안내합니다.
+CCP 개발 가이드
+앱 분류별 CCP 지원 정책, Pre-installed 앱의 CCP 필수 요건·예외 처리, CCP 심사 기준, Pleos Connect CCP UX 가이드라인 다운로드를 제공합니다.
+Maps/Navigation 앱 개발 가이드
+Maps/Navigation 앱의 안전 중심 개발 정책과 앱 심사 기준을 안내합니다.
+Music/Audio 앱 개발 가이드
+Music/Audio 앱의 카테고리 정책, 미디어 연동 구현, 배포 및 심사 기준을 안내합니다.
+TTS / 음성 안내 선행 묵음 적용 가이드
+TTS 및 음성 안내 재생 시 초기 음절 손실을 줄이기 위한 선행 묵음 적용 방법을 안내합니다.
+IME 동작에 따른 window resize 처리 가이드
+IME 표시 시 window resize 동작 기준과 insets 예외 설정 방법을 안내합니다.
+FAQ - 앱 실행 환경 및 플랫폼 리소스
+앱 실행 환경 및 플랫폼 리소스를 확인하는 방법을 안내합니다.
+FAQ - 디버깅을 위한 주요 ADB Command 활용법
+ADB 설치, 기기 연결, 화면 캡처·녹화, 앱 설치·실행·삭제, 주행 규제 제어 등 차량 앱 디버깅에 필요한 주요 명령어를 안내합니다.
+Widgets
+이전
+오디오 포커스 개발 가이드
+다음

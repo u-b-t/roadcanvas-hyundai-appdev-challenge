@@ -1,0 +1,18 @@
+출처: https://document.pleos.ai/docs/pleos-only/app-integration-guide/guide/examples
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+Gleo Interface 구현 가이드
+Code Details with Examples
+Code Details with Examples
+1. Gleo Action​
+1.1 Android Intent 변환​
+Gleo AI가 사용자의 요청인 “오늘 오후 3시에 미팅 리마인더를 추가해줘”를 해석하면, 다음과 같은 JSON 객체를 생성합니다.
+{
+"packageName": "ai.dot42.pleos.reminderapp",
+"action": "ADD_REMINDER",
+"actionParameters": {
+"title": "미팅",
+"dateTime": "2025-02-20T06:00:00Z"
+}
+}

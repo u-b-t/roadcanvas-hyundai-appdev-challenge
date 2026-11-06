@@ -1,0 +1,31 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/SpeechToText/sending-audio-data
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+SpeechToText SDK
+Programming Guide
+Sending audio data
+Sending audio data
+차량 마이크 대신 앱이 보유한 PCM 오디오를 인식하려면 sendAudio()에 ByteArray를 전달합니다. 이 기능은 ON_DEVICE 모드에서만 사용할 수 있습니다. 전체 데이터를 한 번에 보내거나 여러 청크로 나눠 전송할 수 있습니다.
+정보
+이 문서의 3,200-byte 청크와 100ms 간격은 16 kHz, 16-bit, mono PCM을 실시간 속도로 전송하는 예시입니다. 다른 오디오 형식을 사용하는 경우 해당 형식의 100ms 분량에 맞춰 청크 크기를 계산하세요.
+Send a complete buffer​
+Kotlin
+Java
+val pcmData = applicationContext.assets
+.open("test_audio.pcm")
+.use { it.readBytes() }
+speechToText.sendAudio(pcmData)
+speechToText.completeAudioSend()
+byte[] pcmData;
+try (InputStream input = getAssets().open("test_audio.pcm");
+ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+byte[] buffer = new byte[8_192];
+int read;
+while ((read = input.read(buffer)) != -1) {
+output.write(buffer, 0, read);
+}
+pcmData = output.toByteArray();
+}
+speechToText.sendAudio(pcmData);

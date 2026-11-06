@@ -1,0 +1,31 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/NaviHelper/destinations
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+NaviHelper SDK
+Programming Guide
+Main Features
+Destinations
+Destinations
+목적지 설정·확인·취소 방법을 안내합니다. 결과는 NaviHelperEventListener 콜백으로 확인합니다.
+목적지 설정, 확인 및 취소​
+requestRoute()로 목적지를 설정하고, getDestinationInfo()로 확인한 뒤, cancelRoute()로 취소합니다. 목적지를 다시 설정할 때도 requestRoute()를 호출합니다.
+Kotlin
+Java
+// 목적지 설정
+naviHelper.requestRoute(
+RouteInfo(
+latitude = 37.48544722,
+longitude = 127.03636666,
+displayLongitude = null,
+displayLatitude = null,
+poiName = "42dot",
+poiId = "36khp37hh8gqcm5nqhe5",
+poiSubId = "0",
+address = "서울시 강남구 남부순환로 2621"
+)
+)
+// 목적지 확인
+naviHelper.getDestinationInfo()
+// onDestinationInfo callback으로 데이터 수신

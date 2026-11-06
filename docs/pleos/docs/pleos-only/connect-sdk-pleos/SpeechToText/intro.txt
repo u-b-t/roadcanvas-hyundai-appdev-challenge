@@ -1,0 +1,78 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/SpeechToText/intro
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+SpeechToText SDK
+Introduction
+Introduction
+SpeechToText SDK 소개​
+SpeechToText SDK는 음성을 텍스트로 변환하기 위한 API를 제공합니다. 3rd party 앱은 SpeechToText SDK를 통해 Pleos Connect의 Speech Service와 연동됩니다. 3rd party 앱이 음성 인식을 요청하면 Speech Service는 인식된 음성을 텍스트로 변환하고, 인식 결과를 앱에 전달합니다.
+음성 명령 기능을 제공하지 않습니다
+SpeechToText는 사용자 발화를 "음악 틀어줘"와 같은 텍스트로 변환하여 반환하며, 음악 재생과 같은 실제 동작은 실행하지 않습니다. 인식한 명령에 따라 앱의 기능을 실행하려면 Gleo Interface를 참고하세요.
+SDK 버전
+이 가이드는 SpeechToText SDK v3.3.1을 기준으로 작성되었습니다.
+음성 인식 모드​
+SpeechToText SDK는 다음과 같이 세 가지 음성 인식 모드를 제공합니다.
+HYBRID: 기본 모드입니다. 서버 기반 음성 인식을 우선 사용하고, 네트워크 연결에 실패하면 SDK가 On-device 엔진으로 자동 전환합니다. 서버 기반 인식을 사용하려면 Pleos Playground의 My Project 자격 증명을 사용한 앱 등록이 필요합니다.
+SERVER: 서버 기반 음성 인식 모드입니다. 음성 데이터를 원격 Speech Service로 전송하여 인식합니다. 네트워크 연결과 앱 등록이 필요하며, 네트워크 연결에 실패해도 On-device 엔진으로 전환하지 않습니다.
+ON_DEVICE: 차량의 On-device 엔진에서 음성을 인식합니다. 네트워크 연결이 필요하지 않으며, 이 모드만 사용하는 경우 앱 등록은 필요하지 않습니다.
+진입점​
+ai.pleos.playground.stt.SpeechToText 클래스는 SpeechToText SDK 기능에 접근하기 위한 entry point입니다. 생성자에 애플리케이션 Context와 인식 Mode를 전달하여 객체를 생성합니다. Mode를 생략하면 HYBRID가 적용됩니다.
+일반적인 사용 순서는 다음과 같습니다.
+SpeechToText 객체를 생성합니다.
+initialize()로 SDK를 초기화합니다.
+addListener()로 ResultListener를 등록합니다.
+필요한 경우 setLocale()로 인식 언어/지역을 설정합니다.
+서버 기반 인식 모드(HYBRID, SERVER)를 사용하는 경우 앱 등록을 완료합니다.
+request()로 음성 인식을 시작합니다.
+인식이 끝나면 stop()을 호출합니다.
+SDK 사용이 끝나면 removeListener() 후 release()로 리소스를 해제합니다.
+SpeechToText 객체 생성 예시​
+Kotlin
+Java
+import ai.pleos.playground.stt.SpeechToText
+import ai.pleos.playground.stt.constant.Mode
+val speechToText = SpeechToText(applicationContext, Mode.HYBRID)
+import ai.pleos.playground.stt.SpeechToText;
+import ai.pleos.playground.stt.constant.Mode;
+SpeechToText speechToText =
+new SpeechToText(getApplicationContext(), Mode.HYBRID);
+Emulator setup​
+SpeechToText SDK를 사용하려면 Android Studio에 Pleos Connect Emulator를 설치하고 AVD를 설정합니다.
+소프트웨어 개발 환경 요구사항 확인
+Pleos Connect Emulator 설치
+AVD 생성 및 실행
+Pleos Connect Virtual Console 설정
+마이크 접근 설정
+Cold boot 설정
+다음 단계​
+SpeechToText SDK 가져오기
+권한 선언
+SDK 초기화 및 해제
+결과 리스너
+앱 등록
+음성 인식 시작 및 중지
+오디오 데이터 전송
+오류 코드
+SpeechToText API Reference
+OnServerConnectionListener
+이전
+Importing SpeechToText SDK
+다음
+SpeechToText SDK 소개
+음성 인식 모드
+진입점
+SpeechToText 객체 생성 예시
+Emulator setup
+다음 단계
+Discover
+Resources & EmulatorDeveloper Journey
+Docs
+Pleos ConnectPleos Fleet
+Publish
+App SubmissionApp Review Guidelines
+Workspace
+My ProjectPleos App Market Console
+서비스 이용약관|개인정보 처리방침|Cookie Policy|Cookie Settings|partnership@pleos.ai
+© Hyundai Motor Group. All rights reserved.

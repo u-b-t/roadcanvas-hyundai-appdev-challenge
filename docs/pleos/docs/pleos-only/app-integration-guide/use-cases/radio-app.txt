@@ -1,0 +1,21 @@
+출처: https://document.pleos.ai/docs/pleos-only/app-integration-guide/use-cases/radio-app
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+Gleo Interface 구현 가이드
+Use Cases
+How to Integrate Radio App with Gleo AI
+How to Integrate Radio App with Gleo AI
+1. App Schema 예시​
+라디오 앱을 위한 App Schema의 예시는 다음과 같습니다.
+{
+"packageName": "ai.umos.mediaapp",
+"appDescription": "An app for streaming live radio stations.",
+"actionCalls": [
+{
+"type": "function",
+"function": {
+"name": "SWITCH_BAND",
+"description": "Changes between FM and AM radio bands.",
+"parameters": {
+"type": "object",

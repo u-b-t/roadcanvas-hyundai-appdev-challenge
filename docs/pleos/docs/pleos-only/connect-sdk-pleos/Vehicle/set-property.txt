@@ -1,0 +1,31 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/Vehicle/set-property
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+Vehicle SDK
+Programming Guide
+API Types
+Set
+Set
+setXxx로 차량 상태 및 설정 값을 변경합니다. 실패 시 onFailed로 전달됩니다. 도메인 객체 획득은 Obtaining a domain object를, 상세 API 명세는 API Reference를 참조하세요.
+아래 예제는 Vehicle 인스턴스(vehicle)를 이미 초기화했다고 가정합니다.
+Kotlin
+Java
+val door = vehicle.getDoor()
+door.setDoorPosition(
+area = DoorArea(DoorValue.ROW_1_LEFT),
+value = 1, // Integer type
+onFailed = { e: Exception ->
+// do something
+}
+)
+Door door = vehicle.getDoor();
+door.setDoorPosition(
+new DoorArea(DoorValue.ROW_1_LEFT),
+1,
+e -> {
+// do something
+return Unit.INSTANCE;
+}
+);

@@ -1,0 +1,52 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/SpeechToText/error-code
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+SpeechToText SDK
+Programming Guide
+Error code
+Error code
+SpeechToText SDK는 초기화, 앱 등록 및 음성 인식 중 발생한 오류를 ErrorType으로 전달합니다. 오류는 OnInitializeListener, OnServerConnectionListener 또는 ResultListener에서 처리할 수 있습니다.
+ErrorType​
+ErrorTypeDescriptionRecommended action
+AUDIO_ERROR입력 오디오 데이터 처리에 실패했습니다.입력 데이터와 오디오 형식을 확인한 후 다시 요청합니다.
+INVALID_REQUEST_ERROR요청 값이나 요청 상태가 올바르지 않습니다.호출 순서, 중복 요청 및 입력 값을 확인합니다.
+MIC_ERROR마이크 입력을 시작하거나 처리하는 중 오류가 발생했습니다.마이크 상태와 센서 개인정보 보호 설정을 확인합니다.
+NETWORK_ERROR네트워크 통신에 실패했습니다.네트워크 연결을 확인하고 다시 요청합니다.
+NOT_SUPPORTED_API현재 모드 또는 실행 환경에서 지원하지 않는 API입니다.선택한 Mode와 플랫폼의 지원 범위를 확인합니다.
+ON_DEVICE_ENGINE_ERROROn-device 음성 인식 엔진에서 오류가 발생했습니다.엔진 상태를 확인하거나 HYBRID 또는 SERVER 모드를 검토합니다.
+PERMISSION_DENIEDSpeechToText 서비스 접근 권한이 없습니다.manifest의 STT_SERVICE 권한과 실행 환경의 권한 상태를 확인합니다.
+SERVER_INTERNAL_ERRORSpeech Service 내부 오류가 발생했습니다.잠시 후 다시 요청하고, 반복되면 서비스 관리자에게 문의합니다.
+TIMEOUT제한 시간 안에 요청이 완료되지 못했습니다.네트워크와 서버 상태를 확인한 후 다시 요청합니다.
+UNAUTHENTICATED앱 인증에 실패했습니다.Pleos Playground의 My Project 자격 증명 또는 UA 앱 정보와 접속 환경을 확인합니다.
+UNAVAILABLE_LANGUAGE요청한 언어를 사용할 수 없습니다.지원되는 Locale로 변경합니다.
+UNKNOWN분류되지 않은 오류가 발생했습니다.호출 시점과 환경 정보를 수집하여 서비스 관리자에게 문의합니다.
+Handle errors​
+ErrorType은 새로운 오류 타입이 추가될 수 있으므로 when 또는 switch 문에 기본 분기를 두는 것을 권장합니다.
+override fun onError(errorType: ErrorType) {
+when (errorType) {
+ErrorType.PERMISSION_DENIED -> checkSttPermission()
+ErrorType.UNAUTHENTICATED -> checkCredentials()
+ErrorType.NETWORK_ERROR,
+ErrorType.TIMEOUT -> retryWhenNetworkIsAvailable()
+else -> logError(errorType.name)
+}
+}
+각 오류 타입의 정확한 선언은 SpeechToText API Reference에서 확인할 수 있습니다.
+Sending audio data
+이전
+SpeechToText
+다음
+ErrorType
+Handle errors
+Discover
+Resources & EmulatorDeveloper Journey
+Docs
+Pleos ConnectPleos Fleet
+Publish
+App SubmissionApp Review Guidelines
+Workspace
+My ProjectPleos App Market Console
+서비스 이용약관|개인정보 처리방침|Cookie Policy|Cookie Settings|partnership@pleos.ai
+© Hyundai Motor Group. All rights reserved.

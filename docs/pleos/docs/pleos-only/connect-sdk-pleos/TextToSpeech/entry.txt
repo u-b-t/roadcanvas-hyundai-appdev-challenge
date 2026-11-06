@@ -1,0 +1,12 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/TextToSpeech/entry
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+TextToSpeech SDK
+API Reference
+TextToSpeech
+Error code
+이전
+ai.pleos.playground.tts
+다음

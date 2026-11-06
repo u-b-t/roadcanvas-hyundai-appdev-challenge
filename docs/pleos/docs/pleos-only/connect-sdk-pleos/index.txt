@@ -1,0 +1,30 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+Overview
+Overview
+Pleos Connect SDK는 Pleos Connect 환경에서 동작하는 인포테인먼트 애플리케이션 개발을 위한 통합 개발 도구입니다. 구글 Android Automotive OS(AAOS)를 기반으로 구축되어 표준화된 인터페이스를 제공하며, 복잡한 하드웨어 연동 과정 없이도 차량 관련 앱을 효율적으로 개발할 수 있도록 지원합니다. 개발자는 SDK에서 제공하는 강력한 API와 에뮬레이터를 활용하여 다음과 같은 핵심 기능을 구현할 수 있습니다.
+차량 제어 및 모니터링: Vehicle SDK, FusedLocation SDK
+내비게이션 및 음성 서비스: NaviHelper SDK, SpeechToText SDK, TextToSpeech SDK
+Modules​
+Pleos Connect SDK는 Vehicle SDK, NaviHelper SDK, TextToSpeech SDK, SpeechToText SDK, FusedLocation SDK로 구성됩니다.
+Vehicle SDK : 차량 상태 조회와 차량 제어를 위한 API를 제공합니다.
+NaviHelper SDK : 경로 안내 제어와 내비게이션 정보 조회를 위한 API를 제공합니다.
+TextToSpeech SDK : 음성 합성(TextToSpeech) API를 제공합니다.
+SpeechToText SDK : 음성 인식(SpeechToText) API를 제공합니다.
+FusedLocation SDK : 차량의 위치 정보 API를 제공합니다.
+API policy​
+Pleos Connect SDK의 API 정책은 동일하거나 유사한 기능의 API가 Android Automotive OS에 존재할 경우 플랫폼 파편화를 최소화하기 위해 Android Automotive에 align하는 것을 원칙으로 합니다. 향후 Pleos Connect Vehicle SDK로 제공되던 기능이 Android Automotive에 수용될 경우 해당 기능은 최소 2개 major version 동안 backward compatibility를 보장하고 그 이후의 유지·변경·제거 여부는 별도 정책과 릴리스 노트를 통해 안내합니다.
+Vehicle SDK API 사용 및 앱 심사
+Vehicle SDK에서 API 지원 여부는 도메인별 checkXXXCapabilities API로 확인할 수 있습니다.
+API 사용 시에는 필요한 퍼미션을 앱에 선언해야 하며, 퍼미션은 Pleos App Market과 사전 협의 및 승인된 범위 내에서만 사용할 수 있습니다. 승인되지 않은 퍼미션을 선언하거나 해당 API를 호출하는 경우 앱 심사를 통과할 수 없습니다.
+checkXXXCapabilities 사용 방법은 도메인 Capability 확인을 참조하세요.
+앱 심사 기준에 대한 자세한 내용은 App Review Guidelines를 참조하세요.
+FAQ - 디버깅을 위한 주요 ADB Command 활용법
+이전
+Introduction
+다음
+Modules
+API policy

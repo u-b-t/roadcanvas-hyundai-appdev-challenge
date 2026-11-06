@@ -1,0 +1,41 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/NaviHelper/initialization-and-release
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+NaviHelper SDK
+Programming Guide
+Initialization
+Initialization
+앱 시작 또는 생성 시점에 NaviHelper 객체를 생성하고 initialize()를 호출해야 NaviHelper API를 사용할 수 있습니다.
+Initialize the SDK​
+initialize()는 두 가지 오버로드를 제공합니다.
+OverloadDescription
+initialize(onConnected, onFailed)서비스 연결 결과를 콜백으로 받습니다. 최초 서비스 연결이 성공하면 onConnected가, 초기 연결 재시도가 모두 실패하면 onFailed가 호출됩니다.
+initialize()인자 없이 SDK를 초기화합니다.
+초기화가 수행되어야 다른 API들이 정상 동작합니다. 연결 상태에 대한 콜백을 제공하는 API 사용을 권장합니다.
+Kotlin
+Java
+import ai.pleos.playground.navi.helper.NaviHelper
+val naviHelper = NaviHelper(applicationContext)
+naviHelper.initialize(
+onConnected = {
+// 최초 서비스 연결이 성공했습니다. 리스너를 등록하고 API를 호출합니다.
+},
+onFailed = { throwable ->
+// 초기 연결 재시도가 모두 실패했습니다.
+}
+)
+import ai.pleos.playground.navi.helper.NaviHelper;
+import kotlin.Unit;
+NaviHelper naviHelper = new NaviHelper(getApplicationContext());
+naviHelper.initialize(
+() -> {
+// 최초 서비스 연결이 성공했습니다. 리스너를 등록하고 API를 호출합니다.
+return Unit.INSTANCE;
+},
+throwable -> {
+// 초기 연결 재시도가 모두 실패했습니다.
+return Unit.INSTANCE;
+}
+);

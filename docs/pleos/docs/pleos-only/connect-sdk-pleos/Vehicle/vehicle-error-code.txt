@@ -1,0 +1,35 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/Vehicle/vehicle-error-code
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+Vehicle SDK
+Programming Guide
+Error code
+Error code
+Vehicle SDK가 제공하는 비동기 API는 onComplete와 onFailed 콜백으로 결과를 전달합니다.
+앱에서는 onFailed로 받은 Exception이 VehicleException이면 errorCode로 ErrorCode 값을 확인합니다. 모든 onFailed가 VehicleException은 아닐 수 있습니다.
+onFailed 시그니처: Get/Set APIs, checkXXXCapabilities, VehicleListener는 모두 Kotlin 표준 Exception을 사용합니다. ErrorCode가 콜백 인자로 직접 전달되지는 않습니다.
+ErrorCode 정의: ai.pleos.playground.vehicle.constant 패키지의 enum. Vehicle SDK 내부 오류 분류에 쓰이며, 공개 API에서는 VehicleException.errorCode로 노출됩니다.
+사전에 checkXXXCapabilities로 미지원 호출을 줄이고, 퍼미션 오류는 Permission을 확인하세요.
+오류 전달 흐름​
+onFailed 처리 예시​
+Kotlin
+Java
+door.getCurrentDoorPosition(
+area = DoorArea(DoorValue.ROW_1_LEFT),
+onComplete = { pos -> },
+onFailed = { e ->
+if (e is VehicleException) {
+when (e.errorCode) {
+ErrorCode.ERROR_NOT_SUPPORTED_PROPERTY,
+ErrorCode.ERROR_NOT_SUPPORTED_AREA -> { /* UI 비활성 */ }
+ErrorCode.ERROR_SECURITY_PERMISSION -> { /* 매니페스트 퍼미션 확인 */ }
+ErrorCode.ERROR_SERVICE_CONNECTION_FAILURE,
+ErrorCode.ERROR_INTERNAL_SERVICE -> { /* initialize·재시도 */ }
+else -> Log.e("Vehicle API 오류: ${e.errorCode} — ${e.message}")
+}
+} else {
+Log.e("Vehicle API 오류: ${e.message}")
+}
+}

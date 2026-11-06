@@ -1,0 +1,49 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/TextToSpeech/event-listeners
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+TextToSpeech SDK
+Programming Guide
+Event listeners
+Event listeners
+EventListener를 등록하면 음성 합성 요청의 준비, 시작, 완료, 중지, 음량 변화 및 오류 이벤트를 받을 수 있습니다.
+CallbackDescription
+onReady()speak() 요청을 처리할 준비가 되었을 때 호출됩니다.
+onStart()음성 재생이 시작될 때 호출됩니다.
+onUpdatedRms(rms)재생 중 RMS(Root Mean Square) 값이 갱신될 때 호출됩니다.
+onDone()요청한 음성 재생이 정상적으로 끝나면 호출됩니다.
+onStop()진행 중인 재생이 중지되면 호출됩니다.
+onError(errorType)처리 중 오류가 발생하면 호출됩니다.
+Kotlin
+Java
+private val eventListener = object : EventListener {
+override fun onReady() = Unit
+override fun onStart() = Unit
+override fun onUpdatedRms(rms: Double) = Unit
+override fun onDone() = Unit
+override fun onStop() = Unit
+override fun onError(errorType: ErrorType) {
+// 오류를 처리합니다.
+}
+}
+textToSpeech.addEventListener(eventListener)
+private final EventListener eventListener = new EventListener() {
+@Override public void onReady() {}
+@Override public void onStart() {}
+@Override public void onUpdatedRms(double rms) {}
+@Override public void onDone() {}
+@Override public void onStop() {}
+@Override
+public void onError(ErrorType errorType) {
+// 오류를 처리합니다.
+}
+};
+textToSpeech.addEventListener(eventListener);
+리스너가 더 이상 필요하지 않거나 SDK를 해제하기 전에는 등록할 때 사용한 동일한 인스턴스를 제거합니다.
+textToSpeech.removeEventListener(eventListener)
+오류별 처리 방법은 Error code를 참고하세요.
+Initialization
+이전
+Set locale
+다음

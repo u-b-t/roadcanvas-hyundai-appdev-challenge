@@ -1,0 +1,24 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/SpeechToText/initialization-and-release
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+SpeechToText SDK
+Programming Guide
+Initialization
+Initialization
+SpeechToText 객체를 생성한 후 initialize()를 호출해야 API를 사용할 수 있습니다. SDK 사용을 마치면 release()를 호출하여 연결과 내부 리소스를 해제합니다.
+Initialize the SDK​
+초기화 결과가 필요한 경우 OnInitializeListener를 전달합니다.
+Kotlin
+Java
+import ai.pleos.playground.stt.constant.ErrorType
+import ai.pleos.playground.stt.listener.OnInitializeListener
+speechToText.initialize(object : OnInitializeListener {
+override fun onSuccess() {
+// SpeechToText API를 사용할 수 있습니다.
+}
+override fun onFailure(errorType: ErrorType) {
+// 초기화 실패 원인을 처리합니다.
+}
+})

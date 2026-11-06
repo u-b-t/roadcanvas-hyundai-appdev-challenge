@@ -1,0 +1,32 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/NaviHelper/waypoint-settings
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+NaviHelper SDK
+Programming Guide
+Main Features
+Waypoints
+Waypoints
+경유지 추가·조회·제거 방법을 안내합니다. 결과는 NaviHelperEventListener 콜백으로 확인합니다.
+경유지 추가 및 제거​
+경유지는 최대 두 개까지 지정할 수 있으며, WaypointIndex.FIRST와 WaypointIndex.SECOND로 구분합니다. addWaypoint()로 경유지를 추가하고, removeWaypoint()로 삭제합니다.
+Kotlin
+Java
+// 목적지 설정
+naviHelper.requestRoute(
+RouteInfo(
+latitude = 37.48544722,
+longitude = 127.03636666,
+displayLongitude = null,
+displayLatitude = null,
+poiName = "42dot",
+poiId = "36khp37hh8gqcm5nqhe5",
+poiSubId = "0",
+address = "서울시 강남구 남부순환로 2621"
+)
+)
+// 경유지 추가
+naviHelper.addWaypoint(
+RequestWaypointInfo(
+latitude = 37.41275833,

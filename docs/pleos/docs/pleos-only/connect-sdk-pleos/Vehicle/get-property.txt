@@ -1,0 +1,31 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/Vehicle/get-property
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+Vehicle SDK
+Programming Guide
+API Types
+Get
+Get
+getCurrentXxx로 차량 상태 및 설정 값을 조회합니다. 결과는 onComplete(값) / onFailed로 비동기 전달됩니다. 도메인 객체 획득은 Obtaining a domain object를, 상세 API 명세는 API Reference를 참조하세요.
+아래 예제는 Vehicle 인스턴스(vehicle)를 이미 초기화했다고 가정합니다.
+Kotlin
+Java
+val door = vehicle.getDoor()
+door.getCurrentDoorPosition(
+area = DoorArea(DoorValue.ROW_1_LEFT),
+onComplete = { pos: Int? ->
+// do something
+},
+onFailed = { e: Exception ->
+// do something
+}
+)
+val display = vehicle.getDisplay()
+display.getCurrentTemperatureDisplayUnit(
+onComplete = { unit: TemperatureUnit? ->
+// do something
+},
+onFailed = { e: Exception ->
+// do something

@@ -1,0 +1,16 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/FusedLocation/error-handling
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+FusedLocation SDK
+Programming Guide
+오류 처리
+오류 처리
+FusedLocation SDK 오류는 FusedLocationListener.onError(Exception) 콜백으로 전달됩니다. 앱은 예외를 기록하고, 위치를 사용할 수 없는 상태를 사용자에게 안내하거나 앱의 기능을 적절히 제한해야 합니다.
+onChanged(LocationData?)의 인자가 null일 수 있으므로 위치 데이터를 사용하기 전에 null 여부를 확인하세요. null을 유효한 위치로 처리하지 마세요.
+위치 접근이 차단된 경우에는 권한 선언의 위치 접근 차단 상태 섹션을 참고하여 차단 상태 안내를 제공할 수 있습니다. 예외의 구체적인 종류나 재시도 가능 여부는 SDK가 전달한 예외와 실행 환경을 기준으로 판단하세요.
+위치 데이터 접근
+이전
+FusedLocation
+다음

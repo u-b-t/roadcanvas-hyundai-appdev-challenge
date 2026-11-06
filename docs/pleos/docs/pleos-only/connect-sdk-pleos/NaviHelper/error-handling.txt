@@ -1,0 +1,20 @@
+출처: https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/NaviHelper/error-handling
+
+Pleos Connect 개발자 가이드
+앱 개발·연동 가이드
+SDK 사용 가이드
+NaviHelper SDK
+Programming Guide
+Error handling
+Error handling
+NaviHelper에서는 초기 서비스 연결 실패와 Navigation 앱의 요청 처리 오류가 서로 다른 경로로 전달됩니다.
+초기화 에러​
+초기 연결 결과가 필요하면 initialize()에 콜백을 전달합니다.
+naviHelper.initialize(
+onConnected = {
+// 리스너를 등록하고 API를 호출합니다.
+},
+onFailed = { throwable ->
+// 연결 실패 원인을 기록하거나 사용자에게 안내합니다.
+}
+)
