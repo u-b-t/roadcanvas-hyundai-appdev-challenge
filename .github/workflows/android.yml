@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   build:
@@ -28,4 +29,24 @@ jobs:
           printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title"
           .githooks/commit-msg "$RUNNER_TEMP/pr-title"
       - name: Check formatting, Android lint, build and test
-        run: ./gradlew ktlintCheck lintDebug assembleDebug assembleDebugAndroidTest testDebugUnitTest --no-daemon
+        run: ./gradlew ktlintCheck lintDebug assembleDebug assembleDebugAndroidTest :app:unitTestCoverageReport --no-daemon
+      - name: Check unit coverage report
+        id: coverage
+        run: |
+          if [ -f app/build/reports/jacoco/unitTestCoverageReport/unitTestCoverageReport.xml ]; then
+            echo 'available=true' >> "$GITHUB_OUTPUT"
+          elif [ -d app/src/test ] && find app/src/test -type f \( -name '*.kt' -o -name '*.java' \) -print -quit | grep -q .; then
+            echo '::error::단위 테스트 소스는 있지만 커버리지 보고서가 생성되지 않았습니다.'
+            exit 1
+          else
+            echo '::notice::단위 테스트 커버리지 보고서가 없습니다. 단위 테스트가 추가되면 Codecov에 업로드합니다.'
+          fi
+      - name: Upload unit coverage to Codecov
+        if: steps.coverage.outputs.available == 'true'
+        uses: codecov/codecov-action@v5
+        with:
+          use_oidc: true
+          files: app/build/reports/jacoco/unitTestCoverageReport/unitTestCoverageReport.xml
+          disable_search: true
+          flags: unit
+          fail_ci_if_error: true
