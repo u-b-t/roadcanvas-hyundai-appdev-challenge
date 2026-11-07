@@ -113,6 +113,7 @@ jobs:
             sleep 5
           done
           echo '에뮬레이터 부팅 시간 초과' >&2
+          if [ -f "$RUNNER_TEMP/pleos-emulator.log" ]; then tail -100 "$RUNNER_TEMP/pleos-emulator.log"; fi
           exit 1
       - name: Run Cucumber UI tests
         run: python3 scripts/run-device-tests.py
