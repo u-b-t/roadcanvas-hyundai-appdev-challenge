@@ -42,6 +42,13 @@ jobs:
           java-version: '17'
       - name: Run unit tests and generate coverage
         run: ./gradlew :app:clean :app:unitTestCoverageReport --no-daemon
+      - name: Prepare Codecov signature verification
+        if: ${{ !cancelled() }}
+        run: |
+          if ! command -v gpg >/dev/null 2>&1 && [ ! -x /opt/homebrew/bin/gpg ]; then
+            /opt/homebrew/bin/brew install gnupg
+          fi
+          echo /opt/homebrew/bin >> "$GITHUB_PATH"
       - name: Find unit test results
         id: test-results
         if: ${{ !cancelled() }}
