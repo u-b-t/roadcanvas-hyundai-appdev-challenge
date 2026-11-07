@@ -61,6 +61,10 @@ jobs:
               fi
             done < <("$emulator" -list-avds)
             if [ -z "$avd" ]; then
+              echo '설치된 시스템 이미지:'
+              for images in "$sdk/system-images" "$HOME/android-sdk/system-images"; do
+                if [ -d "$images" ]; then find "$images" -maxdepth 4 -name source.properties -print; fi
+              done
               echo 'Pleos AVD를 찾을 수 없습니다.' >&2
               exit 1
             fi
