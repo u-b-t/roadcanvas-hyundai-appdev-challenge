@@ -27,7 +27,15 @@ jobs:
           echo "ANDROID_HOME=$sdk" >> "$GITHUB_ENV"
           adb="$sdk/platform-tools/adb"
           emulator="$sdk/emulator/emulator"
-          test -x "$adb" && test -x "$emulator"
+          if [ ! -x "$adb" ] || [ ! -x "$emulator" ]; then
+            echo "SDK 도구 확인: $sdk"
+            for path in "$HOME/Library/Android/sdk" /opt/homebrew/share/android-commandlinetools /opt/homebrew/Caskroom/android-sdk "$HOME/Android/Sdk"; do
+              ls -ld "$path" "$path/platform-tools/adb" "$path/emulator/emulator" 2>/dev/null || true
+            done
+            command -v adb || true
+            command -v emulator || true
+            exit 1
+          fi
           "$emulator" -list-avds
           "$adb" devices -l
           mapfile_output=$("$adb" devices | awk '$1 ~ /^emulator-/ && $2 == "device" {print $1}')
