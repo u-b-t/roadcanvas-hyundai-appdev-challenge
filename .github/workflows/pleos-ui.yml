@@ -23,19 +23,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
-          echo "ANDROID_HOME=$sdk" >> "$GITHUB_ENV"
-          adb="$sdk/platform-tools/adb"
-          emulator="$sdk/emulator/emulator"
-          if [ ! -x "$adb" ] || [ ! -x "$emulator" ]; then
-            echo "SDK 도구 확인: $sdk"
-            for path in "$HOME/Library/Android/sdk" /opt/homebrew/share/android-commandlinetools /opt/homebrew/Caskroom/android-sdk "$HOME/Android/Sdk"; do
-              ls -ld "$path" "$path/platform-tools/adb" "$path/emulator/emulator" 2>/dev/null || true
-            done
-            command -v adb || true
-            command -v emulator || true
+          sdk=''
+          for candidate in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" "$HOME/Library/Android/sdk" /opt/homebrew/share/android-commandlinetools; do
+            if [ -x "$candidate/platform-tools/adb" ] && [ -x "$candidate/emulator/emulator" ]; then
+              sdk="$candidate"
+              break
+            fi
+          done
+          if [ -z "$sdk" ]; then
+            echo 'Android SDK와 에뮬레이터 도구를 찾을 수 없습니다.' >&2
             exit 1
           fi
+          echo "ANDROID_HOME=$sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$sdk" >> "$GITHUB_ENV"
+          adb="$sdk/platform-tools/adb"
+          emulator="$sdk/emulator/emulator"
           "$emulator" -list-avds
           "$adb" devices -l
           mapfile_output=$("$adb" devices | awk '$1 ~ /^emulator-/ && $2 == "device" {print $1}')
