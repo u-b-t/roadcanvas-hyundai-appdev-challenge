@@ -1,0 +1,31 @@
+name: Android
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Validate PR title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          STRICT_COMMIT_TITLE: '1'
+        run: |
+          printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title"
+          .githooks/commit-msg "$RUNNER_TEMP/pr-title"
+      - name: Check formatting, Android lint, build and test
+        run: ./gradlew ktlintCheck lintDebug assembleDebug testDebugUnitTest --no-daemon

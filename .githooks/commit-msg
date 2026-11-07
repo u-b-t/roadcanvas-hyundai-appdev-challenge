@@ -1,0 +1,33 @@
+#!/bin/sh
+set -eu
+
+if ! python3 - "$1" <<'PY'
+import sys
+from pathlib import Path
+
+message = Path(sys.argv[1]).read_text(encoding="utf-8")
+message = "\n".join(line for line in message.splitlines() if not line.startswith("#"))
+emoji_ranges = ((0x1F000, 0x1FAFF), (0x2600, 0x27BF), (0x1F1E6, 0x1F1FF))
+if any(any(start <= ord(char) <= end for start, end in emoji_ranges) or char in "\ufe0f\u20e3" for char in message):
+    print("커밋 메시지에 이모지를 사용하지 마세요.", file=sys.stderr)
+    sys.exit(1)
+if "generated with claude code" in message.casefold():
+    print("커밋 메시지에 LLM 도구 서명을 넣지 마세요.", file=sys.stderr)
+    sys.exit(1)
+PY
+then
+  exit 1
+fi
+
+subject=$(head -n 1 "$1")
+if [ "${STRICT_COMMIT_TITLE:-0}" != 1 ]; then
+  case "$subject" in
+    'Merge '*|'Revert '*|'fixup! '*|'squash! '*) exit 0 ;;
+  esac
+fi
+
+if [ "${#subject}" -gt 72 ] || ! printf '%s\n' "$subject" | LC_ALL=C grep -Eq '^(feat|fix|refactor|perf|test|docs|build|ci|chore|style|revert): [^[:space:]].*$'; then
+  printf '%s\n' '커밋 제목은 72자 이내의 type: 설명 형식이어야 합니다.' >&2
+  printf '%s\n' '허용 타입: feat, fix, refactor, perf, test, docs, build, ci, chore, style, revert' >&2
+  exit 1
+fi
