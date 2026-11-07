@@ -1,0 +1,3213 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Pleos Virtual Console 로컬 인터페이스",
+    "version": "2.1.0-observed",
+    "description": "에뮬레이터의 콘솔 코드와 카탈로그를 바탕으로 작성한 비공식 명세. 구현 변경이나 동작 불일치 시 실행 중인 콘솔을 확인한다. 응답 객체 및 일부 제약은 확인되지 않아 일반 객체/문자열로 기술한다."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8088"
+    }
+  ],
+  "paths": {
+    "/browser/session": {
+      "post": {
+        "summary": "브라우저 세션 유지 또는 종료",
+        "description": "1초 간격으로 유지한다. 종료 시 동일한 client와 closing=1을 전송한다.",
+        "parameters": [
+          {
+            "name": "client",
+            "in": "query",
+            "required": true,
+            "description": "세션별 고유 식별자",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "closing",
+            "in": "query",
+            "required": false,
+            "description": "종료 시 1",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        }
+      }
+    },
+    "/vehicle/state": {
+      "get": {
+        "summary": "현재 차량 상태 조회",
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vehicle/catalog": {
+      "get": {
+        "summary": "제어 항목과 파라미터 목록 조회",
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vehicle/body": {
+      "put": {
+        "summary": "Door Position, Door Lock, Trunk / Frunk Position, Cabin Lights Switch, Ambient Light Switch, Ambient Brightness, Ambient Color, Window Position, Windshield Wiper Switch",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "ambient_brightness",
+            "in": "query",
+            "required": false,
+            "description": "ambient-light-brightness: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ambient_color",
+            "in": "query",
+            "required": false,
+            "description": "ambient-light-color: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ambient_mode",
+            "in": "query",
+            "required": false,
+            "description": "ambient-light-switch: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cabin_light",
+            "in": "query",
+            "required": false,
+            "description": "cabin-lights-switch: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "door_fl",
+            "in": "query",
+            "required": false,
+            "description": "door-pos: 영역 front_left 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "door_fr",
+            "in": "query",
+            "required": false,
+            "description": "door-pos: 영역 front_right 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "door_rl",
+            "in": "query",
+            "required": false,
+            "description": "door-pos: 영역 rear_left 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "door_rr",
+            "in": "query",
+            "required": false,
+            "description": "door-pos: 영역 rear_right 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "doors_locked",
+            "in": "query",
+            "required": false,
+            "description": "door-lock: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "front_wiper",
+            "in": "query",
+            "required": false,
+            "description": "windshield-wipers-switch: 영역 front 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "frunk",
+            "in": "query",
+            "required": false,
+            "description": "trunk-position: 영역 frunk 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rear_wiper",
+            "in": "query",
+            "required": false,
+            "description": "windshield-wipers-switch: 영역 rear 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "trunk",
+            "in": "query",
+            "required": false,
+            "description": "trunk-position: 영역 trunk 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "window_fl",
+            "in": "query",
+            "required": false,
+            "description": "window-position: 영역 front_left 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "window_fr",
+            "in": "query",
+            "required": false,
+            "description": "window-position: 영역 front_right 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "window_rl",
+            "in": "query",
+            "required": false,
+            "description": "window-position: 영역 rear_left 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "window_rr",
+            "in": "query",
+            "required": false,
+            "description": "window-position: 영역 rear_right 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "door-pos",
+            "label": "Door Position",
+            "description": "Publish opened or closed state for each passenger door",
+            "state_key": "body",
+            "state_path": "doors.{area}",
+            "areas": [
+              {
+                "label": "Front left",
+                "value": "front_left"
+              },
+              {
+                "label": "Front right",
+                "value": "front_right"
+              },
+              {
+                "label": "Rear left",
+                "value": "rear_left"
+              },
+              {
+                "label": "Rear right",
+                "value": "rear_right"
+              }
+            ],
+            "control": {
+              "kind": "boolean",
+              "field_by_area": {
+                "front_left": "door_fl",
+                "front_right": "door_fr",
+                "rear_left": "door_rl",
+                "rear_right": "door_rr"
+              },
+              "options": [
+                {
+                  "label": "Close",
+                  "value": false
+                },
+                {
+                  "label": "Open",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "door-lock",
+            "label": "Door Lock",
+            "description": "Publish the lock state for all passenger doors",
+            "state_key": "body",
+            "state_path": "door_locks.all",
+            "control": {
+              "kind": "boolean",
+              "field": "doors_locked",
+              "options": [
+                {
+                  "label": "Unlock",
+                  "value": false
+                },
+                {
+                  "label": "Lock",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "trunk-position",
+            "label": "Trunk / Frunk Position",
+            "description": "Publish front or rear trunk opened state",
+            "state_key": "body",
+            "state_path": "closures.{area}",
+            "areas": [
+              {
+                "label": "Frunk (front)",
+                "value": "frunk"
+              },
+              {
+                "label": "Trunk (rear)",
+                "value": "trunk"
+              }
+            ],
+            "control": {
+              "kind": "boolean",
+              "field_by_area": {
+                "frunk": "frunk",
+                "trunk": "trunk"
+              },
+              "options": [
+                {
+                  "label": "Close",
+                  "value": false
+                },
+                {
+                  "label": "Open",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "cabin-lights-switch",
+            "label": "Cabin Lights Switch",
+            "description": "Publish cabin-light state for every seat",
+            "state_key": "body",
+            "state_path": "cabin_light.on",
+            "control": {
+              "kind": "boolean",
+              "field": "cabin_light",
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "ambient-light-switch",
+            "label": "Ambient Light Switch",
+            "visible": false,
+            "description": "Publish the ambient-light operating mode",
+            "state_key": "body",
+            "state_path": "ambient_light.mode",
+            "control": {
+              "kind": "enum",
+              "field": "ambient_mode",
+              "options": [
+                {
+                  "label": "Off",
+                  "value": "Off"
+                },
+                {
+                  "label": "On",
+                  "value": "On"
+                },
+                {
+                  "label": "Auto",
+                  "value": "Auto"
+                }
+              ]
+            }
+          },
+          {
+            "id": "ambient-light-brightness",
+            "label": "Ambient Brightness",
+            "description": "Publish ambient-light brightness",
+            "state_key": "body",
+            "state_path": "ambient_light.brightness_pct",
+            "control": {
+              "kind": "range",
+              "field": "ambient_brightness",
+              "min": 0,
+              "max": 100,
+              "step": 1
+            }
+          },
+          {
+            "id": "ambient-light-color",
+            "label": "Ambient Color",
+            "description": "Publish the ambient-light RGB color",
+            "state_key": "body",
+            "state_path": "ambient_light.color",
+            "control": {
+              "kind": "enum",
+              "field": "ambient_color",
+              "options": [
+                {
+                  "label": "Cyan",
+                  "value": "#00e5ff"
+                },
+                {
+                  "label": "Blue",
+                  "value": "#2979ff"
+                },
+                {
+                  "label": "Purple",
+                  "value": "#aa00ff"
+                },
+                {
+                  "label": "White",
+                  "value": "#ffffff"
+                }
+              ]
+            }
+          },
+          {
+            "id": "window-position",
+            "label": "Window Position",
+            "description": "Publish each passenger-window position",
+            "state_key": "body",
+            "state_path": "windows.{area}",
+            "areas": [
+              {
+                "label": "Front left",
+                "value": "front_left"
+              },
+              {
+                "label": "Front right",
+                "value": "front_right"
+              },
+              {
+                "label": "Rear left",
+                "value": "rear_left"
+              },
+              {
+                "label": "Rear right",
+                "value": "rear_right"
+              }
+            ],
+            "control": {
+              "kind": "range",
+              "field_by_area": {
+                "front_left": "window_fl",
+                "front_right": "window_fr",
+                "rear_left": "window_rl",
+                "rear_right": "window_rr"
+              },
+              "min": 0,
+              "max": 100,
+              "step": 1
+            }
+          },
+          {
+            "id": "windshield-wipers-switch",
+            "label": "Windshield Wiper Switch",
+            "description": "Publish the selected front or rear wiper mode",
+            "state_key": "body",
+            "state_path": "wipers.{area}.mode",
+            "areas": [
+              {
+                "label": "Front",
+                "value": "front"
+              },
+              {
+                "label": "Rear",
+                "value": "rear"
+              }
+            ],
+            "control": {
+              "kind": "enum",
+              "field_by_area": {
+                "front": "front_wiper",
+                "rear": "rear_wiper"
+              },
+              "options": [
+                {
+                  "label": "Off",
+                  "value": "Off"
+                },
+                {
+                  "label": "Auto",
+                  "value": "Auto"
+                },
+                {
+                  "label": "Low",
+                  "value": "Low"
+                },
+                {
+                  "label": "High",
+                  "value": "High"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/controls": {
+      "put": {
+        "summary": "Brake Pedal, Steering Angle",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "brake",
+            "in": "query",
+            "required": false,
+            "description": "brake-pedal-status: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "steering",
+            "in": "query",
+            "required": false,
+            "description": "steering-angle: 값; 스티어링 각도 -540~540도; 콘솔 코드에서 확인, 직접 호출 미검증",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "speed",
+            "in": "query",
+            "required": false,
+            "description": "속도 km/h; 콘솔 화면은 0~240을 사용; 콘솔 코드에서 확인, 직접 호출 미검증",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "accelerator",
+            "in": "query",
+            "required": false,
+            "description": "가속 페달 위치 0~100%; 콘솔 코드에서 확인, 직접 호출 미검증",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "brake-pedal-status",
+            "label": "Brake Pedal",
+            "description": "Publish brake position and the derived pressed status",
+            "state_key": "controls",
+            "state_path": "brake_pct",
+            "control": {
+              "kind": "range",
+              "field": "brake",
+              "min": 0,
+              "max": 100,
+              "step": 1
+            }
+          },
+          {
+            "id": "steering-angle",
+            "label": "Steering Angle",
+            "description": "Publish steering-wheel angle",
+            "state_key": "controls",
+            "state_path": "steering_deg",
+            "control": {
+              "kind": "range",
+              "field": "steering",
+              "min": -470,
+              "max": 500,
+              "step": 1
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/driving-mode": {
+      "put": {
+        "summary": "Cruise Control State, Cruise Target Speed",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "ad_mode_state",
+            "in": "query",
+            "required": false,
+            "description": "cruise-control-state: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "target_speed_mps",
+            "in": "query",
+            "required": false,
+            "description": "cruise-control-target-speed: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "cruise-control-state",
+            "label": "Cruise Control State",
+            "description": "Publish the active AD control mode",
+            "state_key": "driving_mode",
+            "state_path": "ad_mode_state",
+            "control": {
+              "kind": "enum",
+              "field": "ad_mode_state",
+              "options": [
+                {
+                  "label": "Not ready",
+                  "value": "not_ready"
+                },
+                {
+                  "label": "Ready",
+                  "value": "ready"
+                },
+                {
+                  "label": "Longitudinal",
+                  "value": "longitudinal"
+                },
+                {
+                  "label": "Lateral",
+                  "value": "lateral"
+                },
+                {
+                  "label": "Full autonomous",
+                  "value": "full_autonomous"
+                }
+              ]
+            }
+          },
+          {
+            "id": "cruise-control-target-speed",
+            "label": "Cruise Target Speed",
+            "description": "Publish the actual cruise target speed",
+            "state_key": "driving_mode",
+            "state_path": "target_speed_mps",
+            "control": {
+              "kind": "range",
+              "field": "target_speed_mps",
+              "min": 5.556,
+              "max": 27.778,
+              "step": 0.277775
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/etcs": {
+      "put": {
+        "summary": "ETCS Power, ETCS Scenario",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "activated",
+            "in": "query",
+            "required": false,
+            "description": "etcs-activated: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scenario",
+            "in": "query",
+            "required": false,
+            "description": "etcs-scenario: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "etcs-activated",
+            "label": "ETCS Power",
+            "description": "Publish ETCS activation state",
+            "state_key": "etcs",
+            "state_path": "activated",
+            "control": {
+              "kind": "boolean",
+              "field": "activated",
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "etcs-scenario",
+            "label": "ETCS Scenario",
+            "description": "Publish a supported tolling scenario",
+            "state_key": "etcs",
+            "state_path": "last_scenario",
+            "control": {
+              "kind": "enum",
+              "field": "scenario",
+              "options": [
+                {
+                  "label": "Card In",
+                  "value": "card-insert"
+                },
+                {
+                  "label": "Card Out",
+                  "value": "card-remove"
+                },
+                {
+                  "label": "Entrance",
+                  "value": "tollgate-entrance"
+                },
+                {
+                  "label": "Exit",
+                  "value": "tollgate-exit"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/ev-battery": {
+      "put": {
+        "summary": "Battery Energy, Battery SOC, Battery Capacity, Charge Current Limit, Charge Percent Limit, Charge Switch, Charge Port",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "field",
+            "in": "query",
+            "required": false,
+            "description": "ev-battery-level: 고정값 \"battery_level\"; ev-battery-soc: 고정값 \"soc\"; ev-battery-capacity: 고정값 \"capacity\"; ev-charge-current-limit: 고정값 \"current_limit\"; ev-charge-percent-limit: 고정값 \"percent_limit\"; ev-charge-switch: 고정값 \"charge_switch\"; ev-charge-port: 고정값 \"charge_port_open\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "required": false,
+            "description": "ev-battery-level: 값; ev-battery-soc: 값; ev-battery-capacity: 값; ev-charge-current-limit: 값; ev-charge-percent-limit: 값; ev-charge-switch: 값; ev-charge-port: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "ev-battery-level",
+            "label": "Battery Energy",
+            "description": "Publish current traction-battery energy",
+            "state_key": "ev_battery",
+            "state_path": "current_energy_kwh",
+            "control": {
+              "kind": "range",
+              "field": "value",
+              "params": {
+                "field": "battery_level"
+              },
+              "min": 0,
+              "max": 200,
+              "step": 0.1
+            }
+          },
+          {
+            "id": "ev-battery-soc",
+            "label": "Battery SOC",
+            "description": "Publish traction-battery state of charge",
+            "state_key": "ev_battery",
+            "state_path": "state_of_charge",
+            "control": {
+              "kind": "range",
+              "field": "value",
+              "params": {
+                "field": "soc"
+              },
+              "min": 0,
+              "max": 100,
+              "step": 1
+            }
+          },
+          {
+            "id": "ev-battery-capacity",
+            "label": "Battery Capacity",
+            "description": "Publish maximum traction-battery capacity",
+            "state_key": "ev_battery",
+            "state_path": "maximum_capacity_kwh",
+            "control": {
+              "kind": "range",
+              "field": "value",
+              "params": {
+                "field": "capacity"
+              },
+              "min": 0,
+              "max": 200,
+              "step": 0.1
+            }
+          },
+          {
+            "id": "ev-charge-current-limit",
+            "label": "Charge Current Limit",
+            "description": "Publish the global charging-current limit",
+            "state_key": "ev_battery",
+            "state_path": "maximum_current_a",
+            "control": {
+              "kind": "range",
+              "field": "value",
+              "params": {
+                "field": "current_limit"
+              },
+              "min": 10,
+              "max": 48,
+              "step": 0.5
+            }
+          },
+          {
+            "id": "ev-charge-percent-limit",
+            "label": "Charge Percent Limit",
+            "description": "Publish the global charge limit",
+            "state_key": "ev_battery",
+            "state_path": "charge_limit_pct",
+            "control": {
+              "kind": "range",
+              "field": "value",
+              "params": {
+                "field": "percent_limit"
+              },
+              "min": 50,
+              "max": 100,
+              "step": 5
+            }
+          },
+          {
+            "id": "ev-charge-switch",
+            "label": "Charge Switch",
+            "description": "Publish charging activation state",
+            "state_key": "ev_battery",
+            "state_path": "charging_activated",
+            "control": {
+              "kind": "boolean",
+              "field": "value",
+              "params": {
+                "field": "charge_switch"
+              },
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "ev-charge-port",
+            "label": "Charge Port",
+            "description": "Publish charging-port open state",
+            "state_key": "ev_battery",
+            "state_path": "charging_door_opened",
+            "control": {
+              "kind": "boolean",
+              "field": "value",
+              "params": {
+                "field": "charge_port_open"
+              },
+              "options": [
+                {
+                  "label": "Closed",
+                  "value": false
+                },
+                {
+                  "label": "Open",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/gear": {
+      "put": {
+        "summary": "Gear Selection",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "gear",
+            "in": "query",
+            "required": true,
+            "description": "gear-selection: 값",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Park",
+                "Reverse",
+                "Neutral",
+                "Drive"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "gear-selection",
+            "label": "Gear Selection",
+            "description": "Publish the current actual gear",
+            "state_key": "gear",
+            "state_path": "actual.value",
+            "control": {
+              "kind": "enum",
+              "field": "gear",
+              "options": [
+                {
+                  "label": "P",
+                  "value": "Park"
+                },
+                {
+                  "label": "R",
+                  "value": "Reverse"
+                },
+                {
+                  "label": "N",
+                  "value": "Neutral"
+                },
+                {
+                  "label": "D",
+                  "value": "Drive"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/glove-box": {
+      "put": {
+        "summary": "Glove Box",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "opened",
+            "in": "query",
+            "required": false,
+            "description": "glove-box-door-pos: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "glove-box-door-pos",
+            "label": "Glove Box",
+            "description": "Open or close the front passenger glove box",
+            "state_key": "glove_box",
+            "state_field": "opened",
+            "control": {
+              "kind": "boolean",
+              "field": "opened",
+              "options": [
+                {
+                  "label": "Close",
+                  "value": false
+                },
+                {
+                  "label": "Open",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/hvac": {
+      "put": {
+        "summary": "HVAC Power, Air Conditioning, HVAC Auto, HVAC Dual, Air Recirculation, Fan Speed, Fan Direction, Defroster, Target Temperature, Seat Temperature",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "ac",
+            "in": "query",
+            "required": false,
+            "description": "hvac-ac: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "auto",
+            "in": "query",
+            "required": false,
+            "description": "hvac-auto: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "driver_direction",
+            "in": "query",
+            "required": false,
+            "description": "hvac-fan-direction: 영역 driver 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "driver_seat",
+            "in": "query",
+            "required": false,
+            "description": "hvac-seat-temperature: 영역 driver 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "driver_temp",
+            "in": "query",
+            "required": false,
+            "description": "hvac-temperature-set: 영역 driver 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dual",
+            "in": "query",
+            "required": false,
+            "description": "hvac-dual: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fan_speed",
+            "in": "query",
+            "required": false,
+            "description": "hvac-fan-speed: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "front_defroster",
+            "in": "query",
+            "required": false,
+            "description": "hvac-defroster: 영역 front_defroster_on 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "passenger_direction",
+            "in": "query",
+            "required": false,
+            "description": "hvac-fan-direction: 영역 passenger 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "passenger_seat",
+            "in": "query",
+            "required": false,
+            "description": "hvac-seat-temperature: 영역 passenger 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "passenger_temp",
+            "in": "query",
+            "required": false,
+            "description": "hvac-temperature-set: 영역 passenger 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "power",
+            "in": "query",
+            "required": false,
+            "description": "hvac-power: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rear_defroster",
+            "in": "query",
+            "required": false,
+            "description": "hvac-defroster: 영역 rear_defroster_on 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recirc",
+            "in": "query",
+            "required": false,
+            "description": "hvac-recirc: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "hvac-power",
+            "label": "HVAC Power",
+            "description": "Publish HVAC power state",
+            "state_key": "hvac",
+            "state_path": "power_on",
+            "control": {
+              "kind": "boolean",
+              "field": "power",
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "hvac-ac",
+            "label": "Air Conditioning",
+            "description": "Publish air-conditioning activation",
+            "state_key": "hvac",
+            "state_path": "ac_on",
+            "control": {
+              "kind": "boolean",
+              "field": "ac",
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "hvac-auto",
+            "label": "HVAC Auto",
+            "description": "Publish automatic HVAC activation",
+            "state_key": "hvac",
+            "state_path": "auto_on",
+            "control": {
+              "kind": "boolean",
+              "field": "auto",
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "hvac-dual",
+            "label": "HVAC Dual",
+            "description": "Publish dual-zone synchronization",
+            "state_key": "hvac",
+            "state_path": "dual_on",
+            "control": {
+              "kind": "boolean",
+              "field": "dual",
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "hvac-recirc",
+            "label": "Air Recirculation",
+            "description": "Publish cabin air-source state",
+            "state_key": "hvac",
+            "state_path": "recirc_on",
+            "control": {
+              "kind": "boolean",
+              "field": "recirc",
+              "options": [
+                {
+                  "label": "Fresh",
+                  "value": false
+                },
+                {
+                  "label": "Recirculate",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "hvac-fan-speed",
+            "label": "Fan Speed",
+            "description": "Publish HVAC blower level",
+            "state_key": "hvac",
+            "state_path": "fan_speed",
+            "control": {
+              "kind": "range",
+              "field": "fan_speed",
+              "min": 0,
+              "max": 8,
+              "step": 1
+            }
+          },
+          {
+            "id": "hvac-fan-direction",
+            "label": "Fan Direction",
+            "description": "Publish zone air-distribution mode",
+            "state_key": "hvac",
+            "state_path": "{area}.fan_direction",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              }
+            ],
+            "control": {
+              "kind": "enum",
+              "field_by_area": {
+                "driver": "driver_direction",
+                "passenger": "passenger_direction"
+              },
+              "options": [
+                {
+                  "label": "Face",
+                  "value": 1
+                },
+                {
+                  "label": "Floor",
+                  "value": 2
+                },
+                {
+                  "label": "Defrost",
+                  "value": 4
+                }
+              ]
+            }
+          },
+          {
+            "id": "hvac-defroster",
+            "label": "Defroster",
+            "description": "Publish front or rear defog activation",
+            "state_key": "hvac",
+            "state_path": "{area}",
+            "areas": [
+              {
+                "label": "Front",
+                "value": "front_defroster_on"
+              },
+              {
+                "label": "Rear",
+                "value": "rear_defroster_on"
+              }
+            ],
+            "control": {
+              "kind": "boolean",
+              "field_by_area": {
+                "front_defroster_on": "front_defroster",
+                "rear_defroster_on": "rear_defroster"
+              },
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "hvac-temperature-set",
+            "label": "Target Temperature",
+            "description": "Publish zone target temperature",
+            "state_key": "hvac",
+            "state_path": "{area}.temp_c",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              }
+            ],
+            "control": {
+              "kind": "range",
+              "field_by_area": {
+                "driver": "driver_temp",
+                "passenger": "passenger_temp"
+              },
+              "min": 16,
+              "max": 30,
+              "step": 0.5
+            }
+          },
+          {
+            "id": "hvac-seat-temperature",
+            "label": "Seat Temperature",
+            "description": "Publish seat ventilation or heating level",
+            "state_key": "hvac",
+            "state_path": "{area}.seat_temp",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              }
+            ],
+            "control": {
+              "kind": "enum",
+              "field_by_area": {
+                "driver": "driver_seat",
+                "passenger": "passenger_seat"
+              },
+              "options": [
+                {
+                  "label": "V3",
+                  "value": -3
+                },
+                {
+                  "label": "V2",
+                  "value": -2
+                },
+                {
+                  "label": "V1",
+                  "value": -1
+                },
+                {
+                  "label": "Off",
+                  "value": 0
+                },
+                {
+                  "label": "H1",
+                  "value": 1
+                },
+                {
+                  "label": "H2",
+                  "value": 2
+                },
+                {
+                  "label": "H3",
+                  "value": 3
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/hvac-air-cleaner": {
+      "put": {
+        "summary": "Air Cleaner",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "activated",
+            "in": "query",
+            "required": false,
+            "description": "hvac-air-cleaner: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "hvac-air-cleaner",
+            "label": "Air Cleaner",
+            "description": "Publish HVAC air-purification activation",
+            "state_key": "hvac_air_cleaner",
+            "state_path": "activated",
+            "control": {
+              "kind": "boolean",
+              "field": "activated",
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/lights": {
+      "put": {
+        "summary": "Exterior Lights Mode, High Beam, Hazard Lights, Stop Lights, Door Lights, Escort Lights",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "area",
+            "in": "query",
+            "required": false,
+            "description": "door-lights: 영역 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "feature",
+            "in": "query",
+            "required": false,
+            "description": "exterior-lights-mode: 고정값 \"headlamp_mode\"; high-beam-lights: 고정값 \"high_beam\"; hazard-lights: 고정값 \"hazard\"; stop-lights: 고정값 \"stop_light\"; door-lights: 고정값 \"door_light\"; escort-lights: 고정값 \"escort_enabled\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "required": false,
+            "description": "exterior-lights-mode: 값; high-beam-lights: 값; hazard-lights: 값; stop-lights: 값; door-lights: 값; escort-lights: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "exterior-lights-mode",
+            "label": "Exterior Lights Mode",
+            "description": "Publish headlamp mode with coherent tail and low beam states",
+            "state_key": "lights",
+            "state_path": "headlamp_mode",
+            "control": {
+              "kind": "enum",
+              "field": "value",
+              "params": {
+                "feature": "headlamp_mode"
+              },
+              "options": [
+                {
+                  "label": "Off",
+                  "value": "Off"
+                },
+                {
+                  "label": "Auto",
+                  "value": "Auto"
+                },
+                {
+                  "label": "Tail lamp",
+                  "value": "Position"
+                },
+                {
+                  "label": "Low beam",
+                  "value": "LowBeam"
+                }
+              ]
+            }
+          },
+          {
+            "id": "high-beam-lights",
+            "label": "High Beam",
+            "description": "Publish high-beam actual state",
+            "state_key": "lights",
+            "state_path": "high_beam_on",
+            "control": {
+              "kind": "boolean",
+              "field": "value",
+              "params": {
+                "feature": "high_beam"
+              },
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "hazard-lights",
+            "label": "Hazard Lights",
+            "description": "Publish synchronized hazard switch and state",
+            "state_key": "lights",
+            "state_path": "hazard_on",
+            "control": {
+              "kind": "boolean",
+              "field": "value",
+              "params": {
+                "feature": "hazard"
+              },
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "stop-lights",
+            "label": "Stop Lights",
+            "description": "Publish stop-light actual state",
+            "state_key": "lights",
+            "state_path": "stop_light_on",
+            "control": {
+              "kind": "boolean",
+              "field": "value",
+              "params": {
+                "feature": "stop_light"
+              },
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "door-lights",
+            "label": "Door Lights",
+            "description": "Publish Frunk or Trunk light state",
+            "state_key": "lights",
+            "state_path": "door_lights.{area}",
+            "areas": [
+              {
+                "label": "Frunk",
+                "value": "frunk"
+              },
+              {
+                "label": "Trunk",
+                "value": "trunk"
+              }
+            ],
+            "control": {
+              "kind": "boolean",
+              "field": "value",
+              "area_field": "area",
+              "params": {
+                "feature": "door_light"
+              },
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "id": "escort-lights",
+            "label": "Escort Lights",
+            "visible": false,
+            "description": "Publish escort-light enabled state",
+            "state_key": "lights",
+            "state_path": "escort_enabled",
+            "control": {
+              "kind": "boolean",
+              "field": "value",
+              "params": {
+                "feature": "escort_enabled"
+              },
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/notifications/simulator": {
+      "put": {
+        "summary": "Notification 1",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "display",
+            "in": "query",
+            "required": false,
+            "description": "notification-1: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "description": "notification-1: 고정값 1",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "notification-1",
+            "label": "Notification 1",
+            "description": "Show or hide notification identifier 1",
+            "state_key": "notifications",
+            "state_path": "actual.1.display",
+            "control": {
+              "kind": "boolean",
+              "field": "display",
+              "params": {
+                "id": 1
+              },
+              "options": [
+                {
+                  "label": "Hide",
+                  "value": false
+                },
+                {
+                  "label": "Show",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/odometer": {
+      "put": {
+        "summary": "Odometer, Trip Driving Time, Remaining Range",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "remaining_range_m",
+            "in": "query",
+            "required": false,
+            "description": "range-remaining: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "traveled_distance_km",
+            "in": "query",
+            "required": false,
+            "description": "perf-odometer: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usage_time_min",
+            "in": "query",
+            "required": false,
+            "description": "trip-driving-time: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          },
+          "400": {
+            "description": "주행 거리 또는 주행 시간 감소 요청 거부: traveled_distance_must_not_decrease 또는 usage_time_must_not_decrease."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "perf-odometer",
+            "label": "Odometer",
+            "description": "Publish cumulative traveled distance",
+            "state_key": "odometer",
+            "state_path": "traveled_distance_km",
+            "control": {
+              "kind": "range",
+              "field": "traveled_distance_km",
+              "min": 0,
+              "max": 1000000,
+              "step": 1
+            }
+          },
+          {
+            "id": "trip-driving-time",
+            "label": "Trip Driving Time",
+            "visible": false,
+            "description": "Publish cumulative vehicle usage time",
+            "state_key": "odometer",
+            "state_path": "usage_time_min",
+            "control": {
+              "kind": "range",
+              "field": "usage_time_min",
+              "min": 0,
+              "max": 525600,
+              "step": 1
+            }
+          },
+          {
+            "id": "range-remaining",
+            "label": "Remaining Range",
+            "description": "Publish the estimated remaining range",
+            "state_key": "odometer",
+            "state_path": "remaining_range_m",
+            "control": {
+              "kind": "range",
+              "field": "remaining_range_m",
+              "min": 0,
+              "max": 1000000,
+              "step": 1000
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/power-system/simulator": {
+      "put": {
+        "summary": "Power System Actual",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "area_id",
+            "in": "query",
+            "required": false,
+            "description": "power-system-actual: 고정값 0",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "description": "power-system-actual: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "power-system-actual",
+            "label": "Power System Actual",
+            "visible": false,
+            "description": "Publish the vehicle power-system actual state",
+            "state_key": "power_system",
+            "state_path": "actual.0.state",
+            "control": {
+              "kind": "enum",
+              "field": "state",
+              "params": {
+                "area_id": 0
+              },
+              "options": [
+                {
+                  "label": "Off",
+                  "value": "Off"
+                },
+                {
+                  "label": "Ready",
+                  "value": "Ready"
+                },
+                {
+                  "label": "On",
+                  "value": "On"
+                },
+                {
+                  "label": "Driving",
+                  "value": "Driving"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/reading-lights": {
+      "put": {
+        "summary": "Reading Lights",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "area",
+            "in": "query",
+            "required": false,
+            "description": "reading-lights-switch: 영역 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "required": false,
+            "description": "reading-lights-switch: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "reading-lights-switch",
+            "label": "Reading Lights",
+            "description": "Publish reading light state for one seat",
+            "state_key": "body",
+            "state_path": "reading_lights.{area}",
+            "areas": [
+              {
+                "label": "Front left",
+                "value": "front_left"
+              },
+              {
+                "label": "Front right",
+                "value": "front_right"
+              },
+              {
+                "label": "Rear left",
+                "value": "rear_left"
+              },
+              {
+                "label": "Rear right",
+                "value": "rear_right"
+              }
+            ],
+            "control": {
+              "kind": "boolean",
+              "field": "value",
+              "area_field": "area",
+              "options": [
+                {
+                  "label": "Off",
+                  "value": false
+                },
+                {
+                  "label": "On",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/seat": {
+      "put": {
+        "summary": "Seat Fore/Aft Position, Seat Fore/Aft Move, Seat Backrest Position, Seat Backrest Move, Seat Height Position, Seat Height Move, Seat Tilt Position, Seat Tilt Move, Seat Lumbar Position, Seat Lumbar Move, Seat Occupancy",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "area",
+            "in": "query",
+            "required": false,
+            "description": "seat-fore-aft-position: 영역 값; seat-fore-aft-move: 영역 값; seat-backrest-position: 영역 값; seat-backrest-move: 영역 값; seat-height-position: 영역 값; seat-height-move: 영역 값; seat-tilt-position: 영역 값; seat-tilt-move: 영역 값; seat-lumbar-position: 영역 값; seat-lumbar-move: 영역 값; seat-occupancy: 영역 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "control",
+            "in": "query",
+            "required": false,
+            "description": "seat-fore-aft-position: 고정값 \"slide\"; seat-fore-aft-move: 고정값 \"slide\"; seat-backrest-position: 고정값 \"recline\"; seat-backrest-move: 고정값 \"recline\"; seat-height-position: 고정값 \"height\"; seat-height-move: 고정값 \"height\"; seat-tilt-position: 고정값 \"tilt\"; seat-tilt-move: 고정값 \"tilt\"; seat-lumbar-position: 고정값 \"lumbar\"; seat-lumbar-move: 고정값 \"lumbar\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "description": "seat-fore-aft-position: 고정값 \"position\"; seat-fore-aft-move: 고정값 \"move\"; seat-backrest-position: 고정값 \"position\"; seat-backrest-move: 고정값 \"move\"; seat-height-position: 고정값 \"position\"; seat-height-move: 고정값 \"move\"; seat-tilt-position: 고정값 \"position\"; seat-tilt-move: 고정값 \"move\"; seat-lumbar-position: 고정값 \"position\"; seat-lumbar-move: 고정값 \"move\"; seat-occupancy: 고정값 \"occupied\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "required": false,
+            "description": "seat-fore-aft-position: 값; seat-fore-aft-move: 값; seat-backrest-position: 값; seat-backrest-move: 값; seat-height-position: 값; seat-height-move: 값; seat-tilt-position: 값; seat-tilt-move: 값; seat-lumbar-position: 값; seat-lumbar-move: 값; seat-occupancy: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "seat-fore-aft-position",
+            "label": "Seat Fore/Aft Position",
+            "visible": false,
+            "description": "Publish normalized seat position",
+            "state_key": "seat",
+            "state_path": "positions.slide.{area}",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              },
+              {
+                "label": "Rear left",
+                "value": "rear_left"
+              },
+              {
+                "label": "Rear right",
+                "value": "rear_right"
+              }
+            ],
+            "control": {
+              "kind": "range",
+              "field": "value",
+              "area_field": "area",
+              "params": {
+                "kind": "position",
+                "control": "slide"
+              },
+              "min": 0,
+              "max": 100,
+              "step": 1
+            }
+          },
+          {
+            "id": "seat-fore-aft-move",
+            "label": "Seat Fore/Aft Move",
+            "visible": false,
+            "description": "Publish seat movement direction",
+            "state_key": "seat",
+            "state_path": "moves.slide.{area}",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              },
+              {
+                "label": "Rear left",
+                "value": "rear_left"
+              },
+              {
+                "label": "Rear right",
+                "value": "rear_right"
+              }
+            ],
+            "control": {
+              "kind": "enum",
+              "field": "value",
+              "area_field": "area",
+              "params": {
+                "kind": "move",
+                "control": "slide"
+              },
+              "options": [
+                {
+                  "label": "Negative",
+                  "value": -1
+                },
+                {
+                  "label": "Stop",
+                  "value": 0
+                },
+                {
+                  "label": "Positive",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          {
+            "id": "seat-backrest-position",
+            "label": "Seat Backrest Position",
+            "visible": false,
+            "description": "Publish normalized seat position",
+            "state_key": "seat",
+            "state_path": "positions.recline.{area}",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              },
+              {
+                "label": "Rear left",
+                "value": "rear_left"
+              },
+              {
+                "label": "Rear right",
+                "value": "rear_right"
+              }
+            ],
+            "control": {
+              "kind": "range",
+              "field": "value",
+              "area_field": "area",
+              "params": {
+                "kind": "position",
+                "control": "recline"
+              },
+              "min": 0,
+              "max": 100,
+              "step": 1
+            }
+          },
+          {
+            "id": "seat-backrest-move",
+            "label": "Seat Backrest Move",
+            "visible": false,
+            "description": "Publish seat movement direction",
+            "state_key": "seat",
+            "state_path": "moves.recline.{area}",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              },
+              {
+                "label": "Rear left",
+                "value": "rear_left"
+              },
+              {
+                "label": "Rear right",
+                "value": "rear_right"
+              }
+            ],
+            "control": {
+              "kind": "enum",
+              "field": "value",
+              "area_field": "area",
+              "params": {
+                "kind": "move",
+                "control": "recline"
+              },
+              "options": [
+                {
+                  "label": "Negative",
+                  "value": -1
+                },
+                {
+                  "label": "Stop",
+                  "value": 0
+                },
+                {
+                  "label": "Positive",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          {
+            "id": "seat-height-position",
+            "label": "Seat Height Position",
+            "visible": false,
+            "description": "Publish normalized seat position",
+            "state_key": "seat",
+            "state_path": "positions.height.{area}",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              },
+              {
+                "label": "Rear left",
+                "value": "rear_left"
+              },
+              {
+                "label": "Rear right",
+                "value": "rear_right"
+              }
+            ],
+            "control": {
+              "kind": "range",
+              "field": "value",
+              "area_field": "area",
+              "params": {
+                "kind": "position",
+                "control": "height"
+              },
+              "min": 0,
+              "max": 100,
+              "step": 1
+            }
+          },
+          {
+            "id": "seat-height-move",
+            "label": "Seat Height Move",
+            "visible": false,
+            "description": "Publish seat movement direction",
+            "state_key": "seat",
+            "state_path": "moves.height.{area}",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              },
+              {
+                "label": "Rear left",
+                "value": "rear_left"
+              },
+              {
+                "label": "Rear right",
+                "value": "rear_right"
+              }
+            ],
+            "control": {
+              "kind": "enum",
+              "field": "value",
+              "area_field": "area",
+              "params": {
+                "kind": "move",
+                "control": "height"
+              },
+              "options": [
+                {
+                  "label": "Negative",
+                  "value": -1
+                },
+                {
+                  "label": "Stop",
+                  "value": 0
+                },
+                {
+                  "label": "Positive",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          {
+            "id": "seat-tilt-position",
+            "label": "Seat Tilt Position",
+            "visible": false,
+            "description": "Publish normalized seat position",
+            "state_key": "seat",
+            "state_path": "positions.tilt.{area}",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              },
+              {
+                "label": "Rear left",
+                "value": "rear_left"
+              },
+              {
+                "label": "Rear right",
+                "value": "rear_right"
+              }
+            ],
+            "control": {
+              "kind": "range",
+              "field": "value",
+              "area_field": "area",
+              "params": {
+                "kind": "position",
+                "control": "tilt"
+              },
+              "min": 0,
+              "max": 100,
+              "step": 1
+            }
+          },
+          {
+            "id": "seat-tilt-move",
+            "label": "Seat Tilt Move",
+            "visible": false,
+            "description": "Publish seat movement direction",
+            "state_key": "seat",
+            "state_path": "moves.tilt.{area}",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              },
+              {
+                "label": "Rear left",
+                "value": "rear_left"
+              },
+              {
+                "label": "Rear right",
+                "value": "rear_right"
+              }
+            ],
+            "control": {
+              "kind": "enum",
+              "field": "value",
+              "area_field": "area",
+              "params": {
+                "kind": "move",
+                "control": "tilt"
+              },
+              "options": [
+                {
+                  "label": "Negative",
+                  "value": -1
+                },
+                {
+                  "label": "Stop",
+                  "value": 0
+                },
+                {
+                  "label": "Positive",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          {
+            "id": "seat-lumbar-position",
+            "label": "Seat Lumbar Position",
+            "visible": false,
+            "description": "Publish normalized seat position",
+            "state_key": "seat",
+            "state_path": "positions.lumbar.{area}",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              }
+            ],
+            "control": {
+              "kind": "range",
+              "field": "value",
+              "area_field": "area",
+              "params": {
+                "kind": "position",
+                "control": "lumbar"
+              },
+              "min": 0,
+              "max": 100,
+              "step": 1
+            }
+          },
+          {
+            "id": "seat-lumbar-move",
+            "label": "Seat Lumbar Move",
+            "visible": false,
+            "description": "Publish seat movement direction",
+            "state_key": "seat",
+            "state_path": "moves.lumbar.{area}",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              }
+            ],
+            "control": {
+              "kind": "enum",
+              "field": "value",
+              "area_field": "area",
+              "params": {
+                "kind": "move",
+                "control": "lumbar"
+              },
+              "options": [
+                {
+                  "label": "Negative",
+                  "value": -1
+                },
+                {
+                  "label": "Stop",
+                  "value": 0
+                },
+                {
+                  "label": "Positive",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          {
+            "id": "seat-occupancy",
+            "label": "Seat Occupancy",
+            "description": "Publish whether the selected seat is occupied",
+            "state_key": "seat",
+            "state_path": "occupied.{area}",
+            "areas": [
+              {
+                "label": "Driver",
+                "value": "driver"
+              },
+              {
+                "label": "Passenger",
+                "value": "passenger"
+              },
+              {
+                "label": "Rear left",
+                "value": "rear_left"
+              },
+              {
+                "label": "Rear right",
+                "value": "rear_right"
+              }
+            ],
+            "control": {
+              "kind": "boolean",
+              "field": "value",
+              "area_field": "area",
+              "params": {
+                "kind": "occupied"
+              },
+              "options": [
+                {
+                  "label": "Empty",
+                  "value": false
+                },
+                {
+                  "label": "Occupied",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/steering-wheel-heat": {
+      "put": {
+        "summary": "Steering Wheel Heat",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "description": "steering-wheel-heat: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "steering-wheel-heat",
+            "label": "Steering Wheel Heat",
+            "description": "Publish steering-wheel heating level",
+            "state_key": "steering_wheel_heat",
+            "state_path": "level",
+            "control": {
+              "kind": "enum",
+              "field": "level",
+              "options": [
+                {
+                  "label": "Off",
+                  "value": 0
+                },
+                {
+                  "label": "Low",
+                  "value": 1
+                },
+                {
+                  "label": "Medium",
+                  "value": 2
+                },
+                {
+                  "label": "High",
+                  "value": 3
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/telltales/simulator": {
+      "put": {
+        "summary": "Telltales",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "color",
+            "in": "query",
+            "required": false,
+            "description": "telltales: 고정값 \"Red\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "description": "telltales: 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "telltales: 영역 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "telltales",
+            "label": "Telltales",
+            "description": "Publish actual state for any supported vehicle telltale",
+            "state_key": "telltales",
+            "state_path": "actual.{area}.state",
+            "areas": [
+              {
+                "label": "Parking Brake",
+                "value": "ParkingBrake"
+              },
+              {
+                "label": "Electronic Parking Brake",
+                "value": "ElectronicParkingBrake"
+              },
+              {
+                "label": "Seat Belt",
+                "value": "SeatBelt"
+              },
+              {
+                "label": "Door Open",
+                "value": "DoorOpen"
+              },
+              {
+                "label": "ABS",
+                "value": "ABS"
+              },
+              {
+                "label": "MDPS",
+                "value": "MDPS"
+              },
+              {
+                "label": "TPMS",
+                "value": "TPMS"
+              },
+              {
+                "label": "Low Volt Battery",
+                "value": "LowVoltBattery"
+              },
+              {
+                "label": "ESC",
+                "value": "ESC"
+              },
+              {
+                "label": "ESC Off",
+                "value": "ESCOff"
+              },
+              {
+                "label": "Airbag",
+                "value": "Airbag"
+              },
+              {
+                "label": "AFS",
+                "value": "AFS"
+              },
+              {
+                "label": "Master Warning",
+                "value": "MasterWarning"
+              },
+              {
+                "label": "Auto Hold",
+                "value": "AutoHold"
+              },
+              {
+                "label": "Auto High Beam",
+                "value": "AutoHighBeam"
+              },
+              {
+                "label": "Headlamp Low",
+                "value": "HeadlampLow"
+              },
+              {
+                "label": "Headlamp High",
+                "value": "HeadlampHigh"
+              },
+              {
+                "label": "Position Lamp",
+                "value": "PositionLamp"
+              },
+              {
+                "label": "Front Fog Lamp",
+                "value": "FrontFogLamp"
+              },
+              {
+                "label": "Rear Fog Lamp",
+                "value": "RearFogLamp"
+              },
+              {
+                "label": "Engine Oil Pressure",
+                "value": "EngineOilPressure"
+              },
+              {
+                "label": "Engine Temperature",
+                "value": "EngineTemperature"
+              },
+              {
+                "label": "Emergency Call",
+                "value": "EmergencyCall"
+              },
+              {
+                "label": "EV System",
+                "value": "EVSystem"
+              },
+              {
+                "label": "Power Down",
+                "value": "PowerDown"
+              },
+              {
+                "label": "RBS",
+                "value": "RBS"
+              },
+              {
+                "label": "Immobilizer",
+                "value": "Immobilizer"
+              },
+              {
+                "label": "Engine",
+                "value": "Engine"
+              },
+              {
+                "label": "LED Headlamp",
+                "value": "LEDHeadlamp"
+              },
+              {
+                "label": "Preheat",
+                "value": "Preheat"
+              },
+              {
+                "label": "Particle Filter",
+                "value": "ParticleFilter"
+              },
+              {
+                "label": "H2 Sensor",
+                "value": "H2Sensor"
+              },
+              {
+                "label": "H2 Leak",
+                "value": "H2Leak"
+              },
+              {
+                "label": "Passenger Airbag Off",
+                "value": "PassengerAirbagOff"
+              },
+              {
+                "label": "Passenger Airbag On",
+                "value": "PassengerAirbagOn"
+              },
+              {
+                "label": "Turn Signal Left",
+                "value": "TurnSignalLeft"
+              },
+              {
+                "label": "Turn Signal Right",
+                "value": "TurnSignalRight"
+              }
+            ],
+            "control": {
+              "kind": "enum",
+              "field": "state",
+              "area_field": "type",
+              "params": {
+                "color": "Red"
+              },
+              "options": [
+                {
+                  "label": "Off",
+                  "value": "Off"
+                },
+                {
+                  "label": "On",
+                  "value": "On"
+                },
+                {
+                  "label": "Blink",
+                  "value": "Blink"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/tire-pressure": {
+      "put": {
+        "summary": "Tire Pressure",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "area",
+            "in": "query",
+            "required": false,
+            "description": "tire-pressure: 영역 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pressure_kpa",
+            "in": "query",
+            "required": false,
+            "description": "tire-pressure: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "tire-pressure",
+            "label": "Tire Pressure",
+            "visible": false,
+            "description": "Publish wheel tire pressure",
+            "state_key": "tire_pressure",
+            "state_path": "pressure_kpa.{area}",
+            "areas": [
+              {
+                "label": "Front left",
+                "value": 1114113
+              },
+              {
+                "label": "Front right",
+                "value": 1114191
+              },
+              {
+                "label": "Rear left",
+                "value": 1179649
+              },
+              {
+                "label": "Rear right",
+                "value": 1179727
+              }
+            ],
+            "control": {
+              "kind": "range",
+              "field": "pressure_kpa",
+              "area_field": "area",
+              "min": 0,
+              "max": 500,
+              "step": 1
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/turn-signal": {
+      "put": {
+        "summary": "Turn Signal State",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "description": "turn-signal-state: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "turn-signal-state",
+            "label": "Turn Signal State",
+            "description": "Publish the actual turn-signal mode",
+            "state_key": "lights",
+            "state_path": "turn_signal_mode",
+            "control": {
+              "kind": "enum",
+              "field": "mode",
+              "options": [
+                {
+                  "label": "Off",
+                  "value": "Off"
+                },
+                {
+                  "label": "Blink left",
+                  "value": "BlinkLeft"
+                },
+                {
+                  "label": "Blink right",
+                  "value": "BlinkRight"
+                },
+                {
+                  "label": "Flash left",
+                  "value": "FlashLeft"
+                },
+                {
+                  "label": "Flash right",
+                  "value": "FlashRight"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/window-lock": {
+      "put": {
+        "summary": "Window Lock",
+        "description": "각 제어 항목의 실제 파라미터 조합 및 값은 x-console-features를 참조한다. 각 파라미터가 모든 항목에서 동시에 필요한 것은 아니다.",
+        "parameters": [
+          {
+            "name": "area",
+            "in": "query",
+            "required": false,
+            "description": "window-lock: 영역 값",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locked",
+            "in": "query",
+            "required": false,
+            "description": "window-lock: 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공. 구체적인 응답 구조는 기능마다 다름.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "콘솔 세션이 활성화되지 않았거나 연결이 준비되지 않음."
+          }
+        },
+        "x-console-features": [
+          {
+            "id": "window-lock",
+            "label": "Window Lock",
+            "description": "Publish the supported rear-window lock state",
+            "state_key": "window_lock",
+            "state_path": "locked.{area}",
+            "areas": [
+              {
+                "label": "All",
+                "value": "all"
+              },
+              {
+                "label": "Rear left",
+                "value": "rear_left"
+              },
+              {
+                "label": "Rear right",
+                "value": "rear_right"
+              }
+            ],
+            "control": {
+              "kind": "boolean",
+              "field": "locked",
+              "area_field": "area",
+              "options": [
+                {
+                  "label": "Unlock",
+                  "value": false
+                },
+                {
+                  "label": "Lock",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vehicle/hvac/mode": {
+      "put": {
+        "summary": "공조 모드 변경",
+        "description": "콘솔 코드에서 확인했으며 값과 응답은 직접 검증하지 않았다.",
+        "parameters": [
+          {
+            "name": "mode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "요청 성공"
+          },
+          "503": {
+            "description": "콘솔 연결 준비 안 됨"
+          }
+        }
+      }
+    }
+  }
+}

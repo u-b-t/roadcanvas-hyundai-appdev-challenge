@@ -28,4 +28,4 @@ jobs:
           printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title"
           .githooks/commit-msg "$RUNNER_TEMP/pr-title"
       - name: Check formatting, Android lint, build and test
-        run: ./gradlew ktlintCheck lintDebug assembleDebug testDebugUnitTest --no-daemon
+        run: ./gradlew ktlintCheck lintDebug assembleDebug assembleDebugAndroidTest testDebugUnitTest --no-daemon
