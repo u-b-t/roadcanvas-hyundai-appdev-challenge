@@ -53,8 +53,10 @@ jobs:
             unzip -q "$archive" -d "$unpacked"
             system_img=$(find "$unpacked" -name system.img -type f -print -quit)
             if [ -z "$system_img" ]; then echo '이미지 압축 파일에 system.img가 없습니다.' >&2; exit 1; fi
-            mkdir -p "$image"
-            cp -R "$(dirname "$system_img")"/. "$image"/
+            if [ -e "$image" ]; then echo "이미지 대상 경로가 이미 있습니다: $image" >&2; exit 1; fi
+            mkdir -p "$(dirname "$image")"
+            mv "$(dirname "$system_img")" "$image"
+            python3 -c 'from pathlib import Path; import shutil,sys; Path(sys.argv[1]).unlink(); shutil.rmtree(sys.argv[2], ignore_errors=True)' "$archive" "$unpacked"
           fi
           if ! "$emulator" -list-avds | grep -q '^Pleos_Connect$'; then
             avdmanager="$sdk/cmdline-tools/latest/bin/avdmanager"
