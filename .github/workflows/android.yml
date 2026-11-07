@@ -28,8 +28,20 @@ jobs:
         run: |
           printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title"
           .githooks/commit-msg "$RUNNER_TEMP/pr-title"
-      - name: Check formatting, Android lint, build and test
-        run: ./gradlew ktlintCheck lintDebug assembleDebug assembleDebugAndroidTest :app:unitTestCoverageReport --no-daemon
+      - name: Check formatting, Android lint and build
+        run: ./gradlew ktlintCheck lintDebug assembleDebug assembleDebugAndroidTest --no-daemon
+
+  unit-test:
+    runs-on: [self-hosted, macOS, ARM64, mac-mini]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Run unit tests and generate coverage
+        run: ./gradlew :app:clean :app:unitTestCoverageReport --no-daemon
       - name: Find unit test results
         id: test-results
         if: ${{ !cancelled() }}
