@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   ui-test:
@@ -19,6 +20,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Remove previous build outputs
+        run: ./gradlew :app:clean --no-daemon
       - name: Prepare Pleos emulator
         shell: bash
         run: |
@@ -59,6 +62,7 @@ jobs:
             python3 -c 'from pathlib import Path; import shutil,sys; Path(sys.argv[1]).unlink(); shutil.rmtree(sys.argv[2], ignore_errors=True)' "$archive" "$unpacked"
           fi
           if ! "$emulator" -list-avds | grep -q '^Pleos_Connect$'; then
+            python3 -c 'from pathlib import Path; import re,sys; p=Path(sys.argv[1]); f=p/"source.properties"; s=f.read_text(); s=re.sub(r"(?m)^SystemImage.TagId=.*$", "SystemImage.TagId=pleos_car_emulator", s); f.write_text(s); (p/"package.xml").unlink(missing_ok=True)' "$image"
             avdmanager="$sdk/cmdline-tools/latest/bin/avdmanager"
             if [ ! -x "$avdmanager" ]; then echo "avdmanager를 찾을 수 없습니다: $avdmanager" >&2; exit 1; fi
             echo no | "$avdmanager" create avd -n Pleos_Connect -k 'system-images;android-34;pleos_car_emulator;arm64-v8a'
@@ -112,3 +116,21 @@ jobs:
           exit 1
       - name: Run Cucumber UI tests
         run: python3 scripts/run-device-tests.py
+      - name: Find UI test results
+        id: results
+        if: ${{ !cancelled() }}
+        run: |
+          files=$(find app/build/outputs/androidTest-results/connected -name 'TEST-*.xml' -type f -print 2>/dev/null | sort | paste -sd, -)
+          if [ -n "$files" ]; then
+            echo "files=$files" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Upload UI test results to Codecov
+        if: ${{ !cancelled() && steps.results.outputs.files != '' }}
+        uses: codecov/codecov-action@v5
+        with:
+          use_oidc: true
+          report_type: test_results
+          files: ${{ steps.results.outputs.files }}
+          disable_search: true
+          flags: ui
+          fail_ci_if_error: true
