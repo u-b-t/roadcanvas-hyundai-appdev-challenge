@@ -28,7 +28,7 @@
 - 시나리오를 바탕으로 상태 변환, 분기와 오류 처리 등 독립적인 Kotlin 로직에는 단위 테스트를 작성한다. SDK·차량 서비스 의존성은 대체 구현으로 분리하고, 테스트가 구현을 그대로 복제하지 않고 관찰 가능한 동작을 검증하도록 한다.
 - 공통 최소 검증은 `./gradlew ktlintCheck lintDebug assembleDebug assembleDebugAndroidTest testDebugUnitTest`와 연결된 Pleos 에뮬레이터에서 `python3 scripts/run-device-tests.py`다. 후자는 테스트가 0개이거나 건너뛰어진 경우에도 실패한다. 여러 기기가 연결되어 있으면 실행 전 `ANDROID_SERIAL`을 지정한다. 실제 차량 상태 시나리오는 Virtual Console로도 확인한다. 각 시나리오의 자동 테스트 또는 수동 검증 결과와 미검증 사항을 PR에 적는다.
 - Vehicle SDK 사용 시 도메인 capability, 필요한 권한 및 오류 처리를 확인한다. 실차 지원 여부를 에뮬레이터 결과만으로 단정하지 않는다. 키와 토큰은 소스나 Git에 넣지 않는다.
-- GitHub Actions는 PR과 `main` push에서 ktlint·Android Lint·앱과 Android 테스트 APK 빌드·단위 테스트를 실행한다. 현재 GitHub Actions는 에뮬레이터 테스트를 실행하지 않으므로 PR 전에 로컬에서 별도로 실행하고 결과를 기록한다. CI 결과가 실제로 실행되기 전에는 통과했다고 주장하지 않는다.
+- GitHub Actions는 PR과 `main` push에서 ktlint·Android Lint·앱과 Android 테스트 APK 빌드·단위 테스트를 실행한다. Pleos UI 테스트는 `mac-mini` self-hosted 러너에서 실행하고 JUnit 결과를 Codecov에 업로드한다. 러너가 오프라인이면 작업은 대기한다. CI 결과가 실제로 실행되기 전에는 통과했다고 주장하지 않는다.
 
 ## 빌드와 실행
 
