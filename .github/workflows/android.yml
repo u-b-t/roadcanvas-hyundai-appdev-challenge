@@ -30,6 +30,27 @@ jobs:
           .githooks/commit-msg "$RUNNER_TEMP/pr-title"
       - name: Check formatting, Android lint, build and test
         run: ./gradlew ktlintCheck lintDebug assembleDebug assembleDebugAndroidTest :app:unitTestCoverageReport --no-daemon
+      - name: Find unit test results
+        id: test-results
+        if: ${{ !cancelled() }}
+        run: |
+          result_dir=app/build/test-results/testDebugUnitTest
+          if [ -d "$result_dir" ]; then
+            files=$(find "$result_dir" -maxdepth 1 -type f -name 'TEST-*.xml' | sort | paste -sd, -)
+            if [ -n "$files" ]; then
+              echo "files=$files" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+      - name: Upload unit test results to Codecov
+        if: ${{ !cancelled() && steps.test-results.outputs.files != '' }}
+        uses: codecov/codecov-action@v5
+        with:
+          use_oidc: true
+          report_type: test_results
+          files: ${{ steps.test-results.outputs.files }}
+          disable_search: true
+          flags: unit
+          fail_ci_if_error: true
       - name: Check unit coverage report
         id: coverage
         run: |
