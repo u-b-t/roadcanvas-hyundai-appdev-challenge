@@ -15,6 +15,8 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "io.cucumber.android.runner.CucumberAndroidJUnitRunner"
+        testInstrumentationRunnerArguments["optionsAnnotationPackage"] = "kr.roadcanvas.app.test"
     }
 
     compileOptions {
@@ -36,4 +38,11 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
+
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("io.cucumber:cucumber-android:7.18.1")
+    androidTestImplementation("io.cucumber:cucumber-picocontainer:7.18.1")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
