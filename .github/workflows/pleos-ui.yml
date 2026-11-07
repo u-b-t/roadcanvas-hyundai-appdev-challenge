@@ -98,6 +98,7 @@ jobs:
               exit 1
             fi
             "$emulator" -avd "$avd" -no-snapshot > "$RUNNER_TEMP/pleos-emulator.log" 2>&1 &
+            emulator_pid=$!
             serial=emulator-5554
           fi
           config="$HOME/.android/avd/$avd.avd/config.ini"
@@ -107,6 +108,11 @@ jobs:
           fi
           echo "ANDROID_SERIAL=$serial" >> "$GITHUB_ENV"
           for attempt in {1..60}; do
+            if [ -n "${emulator_pid:-}" ] && ! kill -0 "$emulator_pid" 2>/dev/null; then
+              echo '에뮬레이터 프로세스가 종료됐습니다.' >&2
+              tail -100 "$RUNNER_TEMP/pleos-emulator.log"
+              exit 1
+            fi
             if [ "$("$adb" -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; then
               exit 0
             fi
