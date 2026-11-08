@@ -10,6 +10,11 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  # 같은 PR의 새 push가 이전 실행을 취소한다. main push는 실행마다 그룹이 달라 취소되지 않는다.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
