@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- 경로 지도 확인용 디버그 전용 화면. adb로 직접 실행하며 앱 화면 흐름에는 넣지 않는다. -->
+        <activity android:name=".debug.RouteMapPreviewActivity" android:exported="true" />
+    </application>
+</manifest>

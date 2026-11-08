@@ -54,6 +54,13 @@
 - `./gradlew assembleDebug`로 빌드한다. 결과물은 `app/build/outputs/apk/debug/app-debug.apk`다.
 - Android SDK와 JDK 경로는 각 개발 환경에서 설정한다. `local.properties`는 커밋하지 않는다.
 
+## 네이버 지도
+
+- 경로 지도는 네이버 지도 Android SDK(`com.naver.maps:map-sdk`)를 쓴다. 화면은 `kr.roadcanvas.app.map`의 `RouteMap`(좌표 목록과 `RouteMapOptions`)만 사용하고, 구현은 `AppContainer.routeMapComponent`로 주입한다. androidTest는 네트워크가 필요 없는 `FakeRouteMapComponent`를 쓴다.
+- 키 등록: NCP 콘솔 Maps에서 Application을 등록하고 Dynamic Map을 선택한 뒤 Android 앱 패키지명 `kr.roadcanvas.app`을 등록한다. 발급된 Client ID(키 ID)를 환경 변수 `NAVER_MAP_CLIENT_ID` 또는 `local.properties`의 `NAVER_MAP_CLIENT_ID=<키 ID>`로 넣는다. 환경 변수가 우선한다. 키를 소스나 Git에 넣지 않는다.
+- 키가 없으면 빈 값으로 빌드되고 지도 영역에 키 없음 안내를 표시한다. CI는 키 없이 빌드하고 테스트한다. 인증 실패(401, 429, 800 등)는 `RoadCanvasApplication`이 설정한 리스너가 로그(`NaverMapSetup` 태그)를 남기고 지도 영역에 오류 코드와 함께 안내한다.
+- debug 빌드에서 `adb shell am start -n kr.roadcanvas.app/.debug.RouteMapPreviewActivity`로 모의 원 경로를 지도에 그린 미리보기를 연다. 앱 화면 흐름에는 포함되지 않는다.
+
 ## Pleos Connect Emulator
 
 - Pleos Connect Emulator **v2.1.0**, Android API 34를 사용한다. AVD는 Cold Boot와 RAM 4GB로 설정한다. AVD 이름과 이미지 아키텍처는 각 환경에서 확인한다.

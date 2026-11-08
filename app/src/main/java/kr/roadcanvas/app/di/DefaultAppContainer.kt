@@ -3,6 +3,9 @@ package kr.roadcanvas.app.di
 import kr.roadcanvas.app.drawing.CompletedDrawingRepository
 import kr.roadcanvas.app.drawing.DrawingStorage
 import kr.roadcanvas.app.drawing.InProgressDrawingRepository
+import kr.roadcanvas.app.map.MapAuth
+import kr.roadcanvas.app.map.RouteMapComponent
+import kr.roadcanvas.app.map.naver.NaverRouteMapComponent
 import kr.roadcanvas.app.vehicle.DrivingRestrictionProvider
 import kr.roadcanvas.app.vehicle.IntegrationSource
 import kr.roadcanvas.app.vehicle.LocationProvider
@@ -24,7 +27,8 @@ class DefaultAppContainer(
     selection: VehicleIntegrationSelection,
     drawingStorage: DrawingStorage,
     routeConfig: SimulatedRouteConfig = SimulatedRouteConfig(),
-    carUxRestrictionsClient: () -> CarUxRestrictionsClient = { UnavailableCarUxRestrictionsClient }
+    carUxRestrictionsClient: () -> CarUxRestrictionsClient = { UnavailableCarUxRestrictionsClient },
+    mapAuth: MapAuth = MapAuth(clientId = "")
 ) : AppContainer {
     override val vehicleIntegrationInfo: VehicleIntegrationInfo = selection.resolve()
 
@@ -49,4 +53,6 @@ class DefaultAppContainer(
 
     override val inProgressDrawingRepository: InProgressDrawingRepository =
         drawingStorage.inProgress
+
+    override val routeMapComponent: RouteMapComponent = NaverRouteMapComponent(mapAuth)
 }

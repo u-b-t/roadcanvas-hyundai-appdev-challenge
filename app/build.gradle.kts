@@ -1,4 +1,5 @@
 import com.android.build.api.dsl.VariantDimension
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -22,6 +23,7 @@ android {
         versionName = "0.1.0"
         testInstrumentationRunner = "kr.roadcanvas.app.test.RoadCanvasTestRunner"
         testInstrumentationRunnerArguments["optionsAnnotationPackage"] = "kr.roadcanvas.app.test"
+        naverMapFields()
     }
 
     buildTypes {
@@ -87,6 +89,28 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
+/**
+ * 네이버 지도 키 ID를 환경 변수 NAVER_MAP_CLIENT_ID 또는 local.properties의 같은 이름 값에서 읽는다.
+ * 값이 없으면 빈 값으로 빌드하고 앱은 지도 영역에 키 없음 안내를 표시한다.
+ */
+fun VariantDimension.naverMapFields() {
+    val name = "NAVER_MAP_CLIENT_ID"
+    val localProperties = rootProject.file("local.properties")
+    val fromLocal = if (localProperties.isFile) {
+        Properties().apply { localProperties.inputStream().use(::load) }.getProperty(name)
+    } else {
+        null
+    }
+    val clientId = (
+        providers.environmentVariable(name).orNull?.takeIf { it.isNotBlank() }
+            ?: fromLocal
+        )
+        ?.trim()
+        .orEmpty()
+    manifestPlaceholders["naverMapClientId"] = clientId
+    buildConfigField("String", name, "\"$clientId\"")
+}
+
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.activity:activity-compose:1.10.1")
@@ -95,6 +119,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.5")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("com.naver.maps:map-sdk:3.24.0")
 
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")

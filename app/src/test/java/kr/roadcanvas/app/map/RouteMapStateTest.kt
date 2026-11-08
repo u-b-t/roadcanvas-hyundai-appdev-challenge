@@ -1,0 +1,84 @@
+package kr.roadcanvas.app.map
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+class RouteMapStateTest {
+    private val route = listOf(
+        RoutePoint(37.5665, 126.9780),
+        RoutePoint(37.5666, 126.9781),
+        RoutePoint(37.5667, 126.9782)
+    )
+
+    @Test
+    fun `키가 없으면 좌표와 관계없이 키 없음 안내를 표시한다`() {
+        val state = RouteMapState.of(route, RouteMapOptions(), MapAuthState.KeyMissing)
+
+        assertEquals(RouteMapState.KeyMissing, state)
+        assertEquals("지도 키가 설정되지 않아 지도를 표시할 수 없습니다.", state.notice)
+    }
+
+    @Test
+    fun `인증에 실패하면 오류 코드를 안내에 포함한다`() {
+        val state = RouteMapState.of(
+            route,
+            RouteMapOptions(),
+            MapAuthState.Failed("429", "quota")
+        )
+
+        assertEquals(RouteMapState.AuthFailed("429"), state)
+        assertEquals("지도 인증에 실패해 지도를 표시할 수 없습니다. (오류 429)", state.notice)
+    }
+
+    @Test
+    fun `좌표가 2개 미만이면 경로를 그리지 않고 마지막 위치를 알려준다`() {
+        val empty = RouteMapState.of(emptyList(), RouteMapOptions(), MapAuthState.Configured)
+        val single = RouteMapState.of(route.take(1), RouteMapOptions(), MapAuthState.Configured)
+
+        assertEquals(RouteMapState.NotEnoughPoints(lastPoint = null), empty)
+        assertEquals(RouteMapState.NotEnoughPoints(lastPoint = route.first()), single)
+        assertEquals("경로를 그리려면 위치가 2개 이상 필요합니다.", single.notice)
+    }
+
+    @Test
+    fun `완료 경로는 전체가 보이게 맞추고 출발점과 도착점을 표시한다`() {
+        val state = RouteMapState.of(route, RouteMapOptions(), MapAuthState.Configured)
+
+        assertEquals(
+            RouteMapState.Route(
+                points = route,
+                camera = RouteCamera.FIT_BOUNDS,
+                startMarker = route.first(),
+                endMarker = route.last()
+            ),
+            state
+        )
+        assertNull(state.notice)
+    }
+
+    @Test
+    fun `진행 중 경로는 최신 위치를 따라가고 도착점은 표시하지 않는다`() {
+        val state = RouteMapState.of(
+            route,
+            RouteMapOptions(inProgress = true),
+            MapAuthState.Configured
+        ) as RouteMapState.Route
+
+        assertEquals(RouteCamera.FOLLOW_LATEST, state.camera)
+        assertEquals(route.first(), state.startMarker)
+        assertNull(state.endMarker)
+    }
+
+    @Test
+    fun `마커 표시를 끄면 출발점과 도착점 마커가 없다`() {
+        val state = RouteMapState.of(
+            route,
+            RouteMapOptions(showEndpointMarkers = false),
+            MapAuthState.Configured
+        ) as RouteMapState.Route
+
+        assertNull(state.startMarker)
+        assertNull(state.endMarker)
+    }
+}
