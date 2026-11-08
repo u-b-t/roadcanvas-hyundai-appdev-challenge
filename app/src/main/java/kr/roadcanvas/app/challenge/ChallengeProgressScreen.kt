@@ -43,6 +43,7 @@ import kr.roadcanvas.app.ui.components.OverlayCard
 import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 
 const val CIRCLE_PROGRESS_TITLE = "동그라미 챌린지 진행"
+const val FREE_DRAWING_PROGRESS_TITLE = "자유그림 진행"
 const val ELAPSED_LABEL = "경과 시간"
 const val DISTANCE_LABEL = "이동 거리"
 const val DISTANCE_TO_START_LABEL = "출발점까지"
@@ -63,16 +64,19 @@ const val GIVE_UP_FAILED_MESSAGE = "기록을 지우지 못했어요. 기록은 
 private const val CONFIRM_LABEL = "확인"
 
 /**
- * 준비 화면의 시작 버튼에 연결할 동작. 기록 서비스에 필요한 권한을 요청한 뒤 새 기록을 실행하고
+ * 준비 화면의 시작 버튼에 연결할 동작. 기록 서비스에 필요한 권한을 요청한 뒤 [mode]의 새 기록을 실행하고
  * [onStarted]로 진행 화면에 넘어간다. 권한을 거절하면 서비스가 시작하지 못해 진행 화면이 실패를 안내한다.
  */
 @Composable
-fun rememberChallengeStarter(onStarted: () -> Unit): () -> Unit {
+fun rememberChallengeStarter(
+    mode: DrawingMode = DrawingMode.CIRCLE,
+    onStarted: () -> Unit
+): () -> Unit {
     val context = LocalContext.current
     val currentOnStarted by rememberUpdatedState(onStarted)
-    val start = remember(context) {
+    val start = remember(context, mode) {
         {
-            context.appContainer.recordingRunner.run(RecordingRequest.New(DrawingMode.CIRCLE))
+            context.appContainer.recordingRunner.run(RecordingRequest.New(mode))
             currentOnStarted()
         }
     }
@@ -89,13 +93,18 @@ fun rememberChallengeStarter(onStarted: () -> Unit): () -> Unit {
     }
 }
 
-/** 진행 화면에 기록 상태 구독과 종료·포기를 연결한다. */
+/**
+ * 진행 화면에 기록 상태 구독과 종료·포기를 연결한다.
+ * 화면의 모드는 기록 상태의 모드를 따르고, 아직 모르면 시작한 [mode], 그것도 없으면 동그라미 챌린지로 본다.
+ * 포기하거나 준비 화면으로 돌아갈 때 그 모드를 넘긴다.
+ */
 @Composable
 fun ChallengeProgressRoute(
     onFinished: (RecordingState.Finished) -> Unit,
-    onGaveUp: () -> Unit,
-    onBackToReady: () -> Unit,
-    modifier: Modifier = Modifier
+    onGaveUp: (DrawingMode) -> Unit,
+    onBackToReady: (DrawingMode) -> Unit,
+    modifier: Modifier = Modifier,
+    mode: DrawingMode? = null
 ) {
     val context = LocalContext.current
     val viewModel: ChallengeProgressViewModel = viewModel(
@@ -117,11 +126,12 @@ fun ChallengeProgressRoute(
     // 도전 중에는 종료나 포기로만 화면을 떠난다.
     BackHandler(enabled = state.phase != ChallengeProgressPhase.FAILED) {}
 
+    val screenMode = state.mode ?: mode ?: DrawingMode.CIRCLE
     ChallengeProgressScreen(
-        state = state,
+        state = state.copy(mode = screenMode),
         onFinish = { viewModel.finish(onFinished) },
-        onGiveUp = { viewModel.giveUp(onGaveUp) },
-        onBackToReady = onBackToReady,
+        onGiveUp = { viewModel.giveUp { onGaveUp(screenMode) } },
+        onBackToReady = { onBackToReady(screenMode) },
         modifier = modifier
     )
 
@@ -168,7 +178,10 @@ fun ChallengeProgressScreen(
         },
         controls = {
             OverlayCard(modifier = Modifier.fillMaxWidth()) {
-                Text(text = CIRCLE_PROGRESS_TITLE, style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    text = progressTitleOf(state.mode ?: DrawingMode.CIRCLE),
+                    style = MaterialTheme.typography.headlineSmall
+                )
                 when (state.phase) {
                     ChallengeProgressPhase.PREPARING -> StatusText(PROGRESS_PREPARING)
                     ChallengeProgressPhase.FAILED -> StatusText(PROGRESS_FAILED)
@@ -236,17 +249,27 @@ fun ChallengeProgressScreen(
     }
 }
 
+/** 진행 화면 제목 */
+fun progressTitleOf(mode: DrawingMode): String = when (mode) {
+    DrawingMode.CIRCLE -> CIRCLE_PROGRESS_TITLE
+    DrawingMode.FREE_DRAWING -> FREE_DRAWING_PROGRESS_TITLE
+}
+
 @Composable
 private fun StatusText(text: String) {
     Text(text = text, style = MaterialTheme.typography.titleLarge)
 }
 
-/** 주행 중에는 한눈에 읽도록 측정값을 크게 보여주고, 정차 중에는 회전 진행률까지 보여준다. */
+/**
+ * 주행 중에는 한눈에 읽도록 측정값을 크게 보여주고, 정차 중에는 회전 진행률까지 보여준다.
+ * 출발점까지 거리와 회전 진행률은 원을 그리는 도전에만 보여준다.
+ */
 @Composable
 private fun ProgressMeasurements(state: ChallengeProgressUiState) {
     val large = state.driving
     Measurement(ELAPSED_LABEL, formatElapsed(state.elapsedMillis), large)
     Measurement(DISTANCE_LABEL, formatDistance(state.distanceMeters), large)
+    if (!state.showsLapProgress) return
     Measurement(
         DISTANCE_TO_START_LABEL,
         formatDistanceToStart(state.lap.distanceToStartMeters),

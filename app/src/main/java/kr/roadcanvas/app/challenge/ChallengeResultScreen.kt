@@ -29,6 +29,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.shopl.sdg_common.enums.Keyboard
 import com.shopl.sdg_common.util.keyboardAsState
 import kr.roadcanvas.app.appContainer
+import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.DrawingNameValidation
 import kr.roadcanvas.app.drawing.normalizeDrawingName
 import kr.roadcanvas.app.drawing.validateDrawingName
@@ -54,12 +55,13 @@ const val RESULT_UNAVAILABLE = "종료한 기록을 불러오지 못했어요"
 const val RESULT_SAVING = "결과를 저장하고 있어요"
 const val RESULT_SAVED = "결과를 저장했어요"
 const val RESULT_SAVE_FAILED = "결과를 저장하지 못했어요"
+const val RESULT_NOT_SAVED = "이동한 경로가 없어 저장하지 않았어요"
 const val RETRY_SAVE_LABEL = "다시 저장"
 const val TRY_AGAIN_LABEL = "다시 도전"
 const val FIT_CIRCLE_LEGEND = "지도의 주황 원은 점수를 계산한 맞춤 원이에요"
 private const val TAG = "ChallengeResult"
 
-/** 결과 화면에 점수 계산과 완료 기록 저장을 연결한다. */
+/** [mode]의 결과 화면에 결과 계산과 완료 기록 저장을 연결한다. */
 @Composable
 fun ChallengeResultRoute(
     startedAtMillis: Long,
@@ -67,7 +69,8 @@ fun ChallengeResultRoute(
     onTryAgain: () -> Unit,
     onModeSelect: () -> Unit,
     onMyDrawings: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    mode: DrawingMode = DrawingMode.CIRCLE
 ) {
     val context = LocalContext.current
     val viewModel: ChallengeResultViewModel = viewModel(
@@ -91,15 +94,26 @@ fun ChallengeResultRoute(
     // 진행 화면은 이미 닫혔으므로 뒤로 가면 모드 선택으로 간다.
     BackHandler(onBack = onModeSelect)
 
-    ChallengeResultScreen(
-        state = state,
-        onRetrySave = viewModel::retrySave,
-        onSaveName = viewModel::saveName,
-        onTryAgain = onTryAgain,
-        onModeSelect = onModeSelect,
-        onMyDrawings = onMyDrawings,
-        modifier = modifier
-    )
+    when (mode) {
+        DrawingMode.CIRCLE -> ChallengeResultScreen(
+            state = state,
+            onRetrySave = viewModel::retrySave,
+            onSaveName = viewModel::saveName,
+            onTryAgain = onTryAgain,
+            onModeSelect = onModeSelect,
+            onMyDrawings = onMyDrawings,
+            modifier = modifier
+        )
+        DrawingMode.FREE_DRAWING -> FreeDrawingResultScreen(
+            state = state,
+            onRetrySave = viewModel::retrySave,
+            onSaveName = viewModel::saveName,
+            onDrawAgain = onTryAgain,
+            onModeSelect = onModeSelect,
+            onMyDrawings = onMyDrawings,
+            modifier = modifier
+        )
+    }
 }
 
 @Composable
@@ -176,7 +190,7 @@ fun ChallengeResultScreen(
 
 @Composable
 private fun ResultSummary(result: ChallengeResult, bestComparison: BestRecordComparison?) {
-    Text(text = "${result.score.score}점", style = MaterialTheme.typography.displayMedium)
+    Text(text = "${result.score?.score ?: 0}점", style = MaterialTheme.typography.displayMedium)
     bestComparison?.let {
         Text(
             text = it.text,
@@ -244,10 +258,11 @@ private fun ScoreComponentRow(component: ScoreComponent) {
 }
 
 @Composable
-private fun SaveStatus(status: ResultSaveStatus, onRetrySave: () -> Unit) {
+internal fun SaveStatus(status: ResultSaveStatus, onRetrySave: () -> Unit) {
     when (status) {
         ResultSaveStatus.SAVING -> StatusText(RESULT_SAVING)
         ResultSaveStatus.SAVED -> StatusText(RESULT_SAVED)
+        ResultSaveStatus.NOT_SAVED -> StatusText(RESULT_NOT_SAVED)
         ResultSaveStatus.FAILED -> {
             Text(
                 text = RESULT_SAVE_FAILED,
@@ -266,7 +281,7 @@ private fun SaveStatus(status: ResultSaveStatus, onRetrySave: () -> Unit) {
 
 /** 저장한 결과에 이름을 붙이는 입력창과 저장 버튼. 이름이 선택 입력인 모드는 비워 두고 넘어갈 수 있다. */
 @Composable
-private fun ResultNameEditor(
+internal fun ResultNameEditor(
     state: ChallengeResultUiState.Calculated,
     onSaveName: (String) -> Unit
 ) {

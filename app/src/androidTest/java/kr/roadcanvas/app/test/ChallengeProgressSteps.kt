@@ -25,8 +25,10 @@ import kr.roadcanvas.app.challenge.CIRCLE_READY_TITLE
 import kr.roadcanvas.app.challenge.CIRCLE_RESULT_TITLE
 import kr.roadcanvas.app.challenge.DISTANCE_TO_START_LABEL
 import kr.roadcanvas.app.challenge.FINISH_LABEL
+import kr.roadcanvas.app.challenge.FREE_DRAWING_RESULT_TITLE
 import kr.roadcanvas.app.challenge.START_LABEL
 import kr.roadcanvas.app.challenge.TURN_PROGRESS_LABEL
+import kr.roadcanvas.app.challenge.progressTitleOf
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
@@ -89,30 +91,39 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
 
     @Given("경로 점 {int}개를 기록한 진행 중인 도전이 저장되어 있다")
     fun saveInProgress(count: Int) {
+        saveInProgress(count, DrawingMode.CIRCLE)
+    }
+
+    fun saveInProgress(count: Int, mode: DrawingMode) {
         val repository = fakeContainer.inProgressDrawingRepository
         runBlocking {
-            repository.start(DrawingMode.CIRCLE, System.currentTimeMillis())
+            repository.start(mode, System.currentTimeMillis())
             repository.appendPoints(
                 (0 until count).map { RoutePoint(37.5665 + 0.0009 * it, 126.978, it.toLong()) }
             )
         }
     }
 
-    /** [path]를 기록한 진행 중인 도전을 저장해 두고, 앱을 다시 실행해 이어간 뒤 종료해 결과 화면을 연다. */
-    fun finishSavedChallenge(path: List<RoutePoint>) {
+    /** [path]를 기록한 [mode] 도전을 저장해 두고, 앱을 다시 실행해 이어간 뒤 종료해 결과 화면을 연다. */
+    fun finishSavedChallenge(path: List<RoutePoint>, mode: DrawingMode = DrawingMode.CIRCLE) {
         runBlocking {
             val repository = fakeContainer.inProgressDrawingRepository
-            repository.start(DrawingMode.CIRCLE, System.currentTimeMillis() - path.size * 1_000L)
+            repository.start(mode, System.currentTimeMillis() - path.size * 1_000L)
             repository.appendPoints(path)
         }
         openApp()
-        waitForText(CIRCLE_PROGRESS_TITLE)
+        waitForText(progressTitleOf(mode))
         waitForResume()
         val finish = hasText(FINISH_LABEL) and hasClickAction() and isEnabled()
         waitUntil { composeRule.onAllNodes(finish).fetchSemanticsNodes().isNotEmpty() }
         composeRule.onNode(finish).performClick()
-        waitForText(CIRCLE_RESULT_TITLE)
+        waitForText(resultTitles.getValue(mode))
     }
+
+    private val resultTitles = mapOf(
+        DrawingMode.CIRCLE to CIRCLE_RESULT_TITLE,
+        DrawingMode.FREE_DRAWING to FREE_DRAWING_RESULT_TITLE
+    )
 
     @Given("진행 중 기록 저장이 실패하도록 설정되어 있다")
     fun failInProgressStorage() {

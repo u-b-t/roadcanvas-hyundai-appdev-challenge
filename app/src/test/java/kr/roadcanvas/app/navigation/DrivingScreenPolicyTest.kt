@@ -10,6 +10,8 @@ class DrivingScreenPolicyTest {
         Routes.MODE_SELECT,
         Routes.CIRCLE_READY,
         Routes.CIRCLE_RESULT,
+        Routes.FREE_READY,
+        Routes.FREE_RESULT,
         Routes.MY_DRAWINGS
     )
 

@@ -24,6 +24,7 @@ import kr.roadcanvas.app.challenge.ChallengeProgressRoute
 import kr.roadcanvas.app.challenge.ChallengeReadyRoute
 import kr.roadcanvas.app.challenge.ChallengeResultRoute
 import kr.roadcanvas.app.challenge.rememberChallengeStarter
+import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.modeselect.ModeSelectScreen
 import kr.roadcanvas.app.mydrawings.MyDrawingsRoute
 import kr.roadcanvas.app.splash.SPLASH_DURATION_MILLIS
@@ -35,7 +36,18 @@ object Routes {
     const val MODE_SELECT = "modeSelect"
 
     const val CIRCLE_READY = "circleReady"
-    const val CIRCLE_PROGRESS = "circleProgress"
+    const val FREE_READY = "freeReady"
+
+    /**
+     * 모든 모드가 함께 쓰는 진행 화면. 주행 중에도 보여주는 화면이 하나로 유지되도록 경로를 나누지 않는다.
+     * [ARG_MODE]는 시작한 모드이며, 없으면 기록 상태의 모드를 쓴다.
+     */
+    const val ARG_MODE = "mode"
+    private const val PROGRESS = "circleProgress"
+    const val CIRCLE_PROGRESS = "$PROGRESS?$ARG_MODE={$ARG_MODE}"
+
+    fun progress(mode: DrawingMode? = null) =
+        if (mode == null) PROGRESS else "$PROGRESS?$ARG_MODE=${mode.key}"
 
     /**
      * 종료한 기록은 진행 중 기록 저장소에 그대로 남아 있고, 시작·종료 시각을 인자로 넘긴다.
@@ -45,9 +57,31 @@ object Routes {
     const val ARG_STARTED_AT = "startedAtMillis"
     const val ARG_ENDED_AT = "endedAtMillis"
     const val CIRCLE_RESULT = "circleResult/{$ARG_STARTED_AT}/{$ARG_ENDED_AT}"
+    const val FREE_RESULT = "freeResult/{$ARG_STARTED_AT}/{$ARG_ENDED_AT}"
 
     fun circleResult(startedAtMillis: Long, endedAtMillis: Long) =
         "circleResult/$startedAtMillis/$endedAtMillis"
+
+    fun freeResult(startedAtMillis: Long, endedAtMillis: Long) =
+        "freeResult/$startedAtMillis/$endedAtMillis"
+
+    /** [mode]의 준비 화면 */
+    fun ready(mode: DrawingMode) = when (mode) {
+        DrawingMode.CIRCLE -> CIRCLE_READY
+        DrawingMode.FREE_DRAWING -> FREE_READY
+    }
+
+    /** [mode]의 결과 화면 경로 형식 */
+    fun resultPattern(mode: DrawingMode) = when (mode) {
+        DrawingMode.CIRCLE -> CIRCLE_RESULT
+        DrawingMode.FREE_DRAWING -> FREE_RESULT
+    }
+
+    /** [mode]의 결과 화면 */
+    fun result(mode: DrawingMode, startedAtMillis: Long, endedAtMillis: Long) = when (mode) {
+        DrawingMode.CIRCLE -> circleResult(startedAtMillis, endedAtMillis)
+        DrawingMode.FREE_DRAWING -> freeResult(startedAtMillis, endedAtMillis)
+    }
 
     const val MY_DRAWINGS = "myDrawings"
 }
@@ -86,15 +120,21 @@ fun RoadCanvasNavHost(
                         // 종료했지만 저장하지 못한 도전은 결과 화면이 다시 저장하고,
                         // 진행 중이던 도전은 진행 화면이 기록을 이어간다.
                         val unsaved = recorder.unsavedFinish()
-                        val resume = unsaved == null && recorder.hasInProgress()
+                        val resumeMode = if (unsaved == null) recorder.inProgressMode() else null
                         navController.navigate(Routes.MODE_SELECT) {
                             popUpTo(Routes.SPLASH) { inclusive = true }
                         }
                         when {
                             unsaved != null -> navController.navigate(
-                                Routes.circleResult(unsaved.startedAtMillis, unsaved.endedAtMillis)
+                                Routes.result(
+                                    unsaved.mode,
+                                    unsaved.startedAtMillis,
+                                    unsaved.endedAtMillis
+                                )
                             )
-                            resume -> navController.navigate(Routes.CIRCLE_PROGRESS)
+                            resumeMode != null -> navController.navigate(
+                                Routes.progress(resumeMode)
+                            )
                         }
                     }
                 }
@@ -103,52 +143,72 @@ fun RoadCanvasNavHost(
         screen(Routes.MODE_SELECT) {
             ModeSelectScreen(
                 onCircleChallengeClick = { navController.navigate(Routes.CIRCLE_READY) },
+                onFreeDrawingClick = { navController.navigate(Routes.FREE_READY) },
                 onMyDrawingsClick = { navController.navigate(Routes.MY_DRAWINGS) }
             )
         }
-        screen(Routes.CIRCLE_READY) {
-            val startChallenge = rememberChallengeStarter(
-                onStarted = {
-                    navController.navigate(Routes.CIRCLE_PROGRESS) {
-                        popUpTo(Routes.CIRCLE_READY) { inclusive = true }
+        DrawingMode.entries.forEach { mode ->
+            screen(Routes.ready(mode)) {
+                val startChallenge = rememberChallengeStarter(
+                    mode = mode,
+                    onStarted = {
+                        navController.navigate(Routes.progress(mode)) {
+                            popUpTo(Routes.ready(mode)) { inclusive = true }
+                        }
                     }
+                )
+                ChallengeReadyRoute(
+                    mode = mode,
+                    onStart = startChallenge,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
+        screen(
+            Routes.CIRCLE_PROGRESS,
+            arguments = listOf(
+                navArgument(Routes.ARG_MODE) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
                 }
             )
-            ChallengeReadyRoute(
-                onStart = startChallenge,
-                onBack = { navController.popBackStack() }
-            )
-        }
-        screen(Routes.CIRCLE_PROGRESS) {
+        ) { entry ->
             fun leaveTo(route: String) = navController.navigate(route) {
                 popUpTo(Routes.CIRCLE_PROGRESS) { inclusive = true }
             }
             ChallengeProgressRoute(
-                onFinished = { leaveTo(Routes.circleResult(it.startedAtMillis, it.endedAtMillis)) },
-                onGaveUp = { leaveTo(Routes.CIRCLE_READY) },
-                onBackToReady = { leaveTo(Routes.CIRCLE_READY) }
+                mode = entry.arguments?.getString(Routes.ARG_MODE)?.let(DrawingMode::fromKey),
+                onFinished = {
+                    leaveTo(Routes.result(it.mode, it.startedAtMillis, it.endedAtMillis))
+                },
+                onGaveUp = { leaveTo(Routes.ready(it)) },
+                onBackToReady = { leaveTo(Routes.ready(it)) }
             )
         }
-        screen(
-            Routes.CIRCLE_RESULT,
-            arguments = listOf(
-                navArgument(Routes.ARG_STARTED_AT) { type = NavType.LongType },
-                navArgument(Routes.ARG_ENDED_AT) { type = NavType.LongType }
-            )
-        ) { entry ->
-            val arguments = requireNotNull(entry.arguments)
-            fun leaveTo(route: String) = navController.navigate(route) {
-                popUpTo(Routes.MODE_SELECT)
+        DrawingMode.entries.forEach { mode ->
+            screen(
+                Routes.resultPattern(mode),
+                arguments = listOf(
+                    navArgument(Routes.ARG_STARTED_AT) { type = NavType.LongType },
+                    navArgument(Routes.ARG_ENDED_AT) { type = NavType.LongType }
+                )
+            ) { entry ->
+                val arguments = requireNotNull(entry.arguments)
+                fun leaveTo(route: String) = navController.navigate(route) {
+                    popUpTo(Routes.MODE_SELECT)
+                }
+                ChallengeResultRoute(
+                    mode = mode,
+                    startedAtMillis = arguments.getLong(Routes.ARG_STARTED_AT),
+                    endedAtMillis = arguments.getLong(Routes.ARG_ENDED_AT),
+                    onTryAgain = { leaveTo(Routes.ready(mode)) },
+                    onModeSelect = {
+                        navController.popBackStack(Routes.MODE_SELECT, inclusive = false)
+                    },
+                    onMyDrawings = { leaveTo(Routes.MY_DRAWINGS) }
+                )
             }
-            ChallengeResultRoute(
-                startedAtMillis = arguments.getLong(Routes.ARG_STARTED_AT),
-                endedAtMillis = arguments.getLong(Routes.ARG_ENDED_AT),
-                onTryAgain = { leaveTo(Routes.CIRCLE_READY) },
-                onModeSelect = {
-                    navController.popBackStack(Routes.MODE_SELECT, inclusive = false)
-                },
-                onMyDrawings = { leaveTo(Routes.MY_DRAWINGS) }
-            )
         }
         screen(Routes.MY_DRAWINGS) {
             MyDrawingsRoute(

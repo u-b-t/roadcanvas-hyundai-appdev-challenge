@@ -8,6 +8,7 @@ import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.TestPaths
 import kr.roadcanvas.app.score.ZeroScoreReason
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -25,13 +26,13 @@ class ChallengeResultStateTest {
             START + 90_000
         )
 
-        assertTrue(result.score.score >= 90)
+        assertTrue(result.score!!.score >= 90)
         assertEquals(90_000L, result.durationMillis)
         assertEquals(START + 90_000, result.completedAtMillis)
         // 반지름 50m 원의 둘레
         assertEquals(314.0, result.distanceMeters, 2.0)
         val drawing = result.toCompletedDrawing()
-        assertEquals(result.score.score, drawing.score)
+        assertEquals(result.score!!.score, drawing.score)
         assertEquals(8, drawing.metrics.size)
         assertEquals(50.0, drawing.metrics.getValue("radiusMeters"), 1.0)
     }
@@ -45,7 +46,7 @@ class ChallengeResultStateTest {
             START + 30_000
         )
 
-        assertEquals(ZeroScoreReason.NO_MOVEMENT, result.score.zeroReason)
+        assertEquals(ZeroScoreReason.NO_MOVEMENT, result.score!!.zeroReason)
         assertEquals("이동 거리가 50m보다 짧아요", result.zeroReasonText)
         assertEquals(emptyMap<String, Double>(), result.toCompletedDrawing().metrics)
     }
@@ -94,7 +95,7 @@ class ChallengeResultStateTest {
         val result = challengeResultOf(DrawingMode.CIRCLE, emptyList(), START, START - 1)
 
         assertEquals(0L, result.durationMillis)
-        assertEquals(ZeroScoreReason.INSUFFICIENT_POINTS, result.score.zeroReason)
+        assertEquals(ZeroScoreReason.INSUFFICIENT_POINTS, result.score!!.zeroReason)
     }
 
     @Test
@@ -164,7 +165,7 @@ class ChallengeResultStateTest {
         )
 
         val circle = result.fitCircle!!
-        val metrics = result.score.metrics!!
+        val metrics = result.score!!.metrics!!
         assertEquals(metrics.radiusMeters, circle.radiusMeters, 0.0)
         assertEquals(metrics.center.latitude, circle.center.latitude, 0.0)
         assertEquals(metrics.center.longitude, circle.center.longitude, 0.0)
@@ -194,6 +195,83 @@ class ChallengeResultStateTest {
         assertEquals("신기록! 이전 최고 80점보다 8점 높아요", bestRecordComparisonOf(88, 80).text)
         assertEquals("최고 기록 80점과 같아요", bestRecordComparisonOf(80, 80).text)
         assertEquals("최고 기록 90점까지 15점 남았어요", bestRecordComparisonOf(75, 90).text)
+    }
+
+    @Test
+    fun `자유그림은 점수를 계산하지 않고 점수 0과 빈 세부 지표로 저장한다`() {
+        val result = challengeResultOf(
+            DrawingMode.FREE_DRAWING,
+            path(TestPaths.circle(50.0)),
+            START,
+            START + 90_000
+        )
+
+        assertNull(result.score)
+        assertNull(result.zeroReasonText)
+        assertTrue(result.savable)
+        assertEquals(314.0, result.distanceMeters, 2.0)
+        val drawing = result.toCompletedDrawing()
+        assertEquals(DrawingMode.FREE_DRAWING, drawing.mode)
+        assertEquals(0, drawing.score)
+        assertEquals(emptyMap<String, Double>(), drawing.metrics)
+        assertEquals(90_000L, drawing.durationMillis)
+    }
+
+    @Test
+    fun `이동 거리가 기준보다 짧은 자유그림은 저장하지 않는다`() {
+        val stationary = challengeResultOf(
+            DrawingMode.FREE_DRAWING,
+            path(TestPaths.stationary(30)),
+            START,
+            START + 30_000
+        )
+        val empty = challengeResultOf(DrawingMode.FREE_DRAWING, emptyList(), START, START + 1)
+
+        assertFalse(stationary.savable)
+        assertFalse(empty.savable)
+    }
+
+    @Test
+    fun `이동하지 않은 동그라미 챌린지도 저장한다`() {
+        val result = challengeResultOf(
+            DrawingMode.CIRCLE,
+            path(TestPaths.stationary(30)),
+            START,
+            START + 30_000
+        )
+
+        assertTrue(result.savable)
+        assertEquals(0, result.toCompletedDrawing().score)
+    }
+
+    @Test
+    fun `저장한 자유그림을 다시 보여줄 때도 점수를 계산하지 않는다`() {
+        val drawing = challengeResultOf(
+            DrawingMode.FREE_DRAWING,
+            path(TestPaths.circle(50.0)),
+            START,
+            START + 90_000
+        ).toCompletedDrawing()
+
+        val result = challengeResultOf(drawing)
+
+        assertEquals(DrawingMode.FREE_DRAWING, result.mode)
+        assertNull(result.score)
+        assertEquals(drawing.distanceMeters, result.distanceMeters, 0.0)
+    }
+
+    @Test
+    fun `자유그림은 점수 구성, 고칠 점, 맞춤 원이 없다`() {
+        val result = challengeResultOf(
+            DrawingMode.FREE_DRAWING,
+            path(TestPaths.circle(50.0)),
+            START,
+            START + 90_000
+        )
+
+        assertTrue(result.scoreComponents.isEmpty())
+        assertNull(result.improvementTip)
+        assertNull(result.fitCircle)
     }
 
     private companion object {

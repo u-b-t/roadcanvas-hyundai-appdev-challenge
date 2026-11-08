@@ -341,7 +341,7 @@ class ChallengeRecorderTest {
         val job = runRecorder(RecordingRequest.New(DrawingMode.CIRCLE))
 
         assertTrue(job.isCompleted)
-        assertEquals(RecordingState.Failed(error), recorder.state.value)
+        assertEquals(RecordingState.Failed(error, DrawingMode.CIRCLE), recorder.state.value)
         assertEquals(0, locationProvider.requestCount.value)
     }
 
@@ -368,6 +368,49 @@ class ChallengeRecorderTest {
         assertEquals(START, state.startedAtMillis)
         assertEquals(emptyList<RoutePoint>(), state.path)
         assertEquals(emptyList<RoutePoint>(), savedPath())
+    }
+
+    @Test
+    fun `자유그림도 같은 기록 흐름으로 기록하고 종료하면 모드를 남긴다`() = runTest(dispatcher) {
+        runRecorder(RecordingRequest.New(DrawingMode.FREE_DRAWING))
+        send(37.5665)
+        send(37.5674)
+
+        assertEquals(DrawingMode.FREE_DRAWING, recorder.inProgressMode())
+        val finished = requireNotNull(recorder.finish())
+
+        assertEquals(DrawingMode.FREE_DRAWING, finished.mode)
+        assertEquals(2, finished.path.size)
+        assertEquals(
+            DrawingMode.FREE_DRAWING,
+            (repository.load() as StorageResult.Success).value?.mode
+        )
+        assertNull(recorder.inProgressMode())
+    }
+
+    @Test
+    fun `저장된 자유그림을 이어서 기록하면 자유그림으로 기록한다`() = runTest(dispatcher) {
+        repository.start(DrawingMode.FREE_DRAWING, START)
+        repository.appendPoints(listOf(RoutePoint(37.5665, LONGITUDE, START)))
+
+        assertEquals(DrawingMode.FREE_DRAWING, recorder.inProgressMode())
+        runRecorder(RecordingRequest.Resume)
+        send(37.5674)
+
+        val state = recorder.state.value as RecordingState.Recording
+        assertEquals(DrawingMode.FREE_DRAWING, state.mode)
+        assertEquals(2, state.path.size)
+    }
+
+    @Test
+    fun `기록을 시작하지 못하면 시작하려던 모드를 실패 상태에 남긴다`() = runTest(dispatcher) {
+        repository.failure = IllegalStateException("저장 실패")
+
+        runRecorder(RecordingRequest.New(DrawingMode.FREE_DRAWING))
+
+        assertEquals(DrawingMode.FREE_DRAWING, (recorder.state.value as RecordingState.Failed).mode)
+        recorder.fail(IllegalStateException("서비스 시작 실패"), DrawingMode.CIRCLE)
+        assertEquals(DrawingMode.CIRCLE, (recorder.state.value as RecordingState.Failed).mode)
     }
 
     private companion object {

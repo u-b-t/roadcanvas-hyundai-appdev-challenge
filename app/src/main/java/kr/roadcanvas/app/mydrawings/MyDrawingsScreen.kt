@@ -62,6 +62,7 @@ import kr.roadcanvas.app.drawing.validateDrawingName
 import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RoutePoint
+import kr.roadcanvas.app.modeselect.displayName
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.CarEmptyState
@@ -95,6 +96,7 @@ const val ADD_NAME_LABEL = "이름 붙이기"
 
 const val MY_DRAWINGS_LIST_TAG = "myDrawingsList"
 const val MY_DRAWINGS_ITEM_SCORE_TAG = "myDrawingsItemScore"
+const val MY_DRAWINGS_ITEM_MODE_TAG = "myDrawingsItemMode"
 const val DRAWING_DETAIL_TAG = "drawingDetail"
 const val DRAWING_DETAIL_OVERLAY_TAG = "drawingDetailOverlay"
 const val DRAWING_DETAIL_NAME_TAG = "drawingDetailName"
@@ -361,7 +363,10 @@ fun listItemTexts(summary: CompletedDrawingSummary): Pair<String, String> {
     }
 }
 
-/** SDG 리스트 항목처럼 썸네일, 두 줄 글자와 오른쪽 값을 한 줄에 둔다. 고른 항목은 Primary 배경으로 표시한다. */
+/**
+ * SDG 리스트 항목처럼 썸네일, 모드·날짜·거리와 시간 글자와 오른쪽 점수를 한 줄에 둔다.
+ * 점수가 없는 자유그림은 점수를 표시하지 않는다. 고른 항목은 Primary 배경으로 표시한다.
+ */
 @Composable
 private fun DrawingListItem(
     summary: CompletedDrawingSummary,
@@ -383,6 +388,12 @@ private fun DrawingListItem(
         val (title, subtitle) = listItemTexts(summary)
         Column(modifier = Modifier.weight(1f)) {
             Text(
+                text = summary.mode.displayName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.testTag(MY_DRAWINGS_ITEM_MODE_TAG)
+            )
+            Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -395,16 +406,18 @@ private fun DrawingListItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Text(
-            text = formatScore(summary.score),
-            style = MaterialTheme.typography.titleLarge,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
-            modifier = Modifier.testTag(MY_DRAWINGS_ITEM_SCORE_TAG)
-        )
+        if (summary.mode.scored) {
+            Text(
+                text = formatScore(summary.score),
+                style = MaterialTheme.typography.titleLarge,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                modifier = Modifier.testTag(MY_DRAWINGS_ITEM_SCORE_TAG)
+            )
+        }
     }
 }
 
@@ -562,9 +575,14 @@ private fun RenameEditor(
     )
 }
 
-/** 이름, 날짜, 큰 점수와 거리·소요 시간을 한 카드에 보여준다. */
+/** 모드, 이름, 날짜, 큰 점수와 거리·소요 시간을 한 카드에 보여준다. 점수가 없는 자유그림은 점수를 뺀다. */
 @Composable
 private fun ScoreCard(drawing: CompletedDrawing) {
+    Text(
+        text = drawing.mode.displayName,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary
+    )
     drawing.name?.let {
         Text(
             text = it,
@@ -578,17 +596,19 @@ private fun ScoreCard(drawing: CompletedDrawing) {
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
-    Column {
-        Text(
-            text = SCORE_LABEL,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = formatScore(drawing.score),
-            style = MaterialTheme.typography.displaySmall,
-            color = MaterialTheme.colorScheme.primary
-        )
+    if (drawing.mode.scored) {
+        Column {
+            Text(
+                text = SCORE_LABEL,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = formatScore(drawing.score),
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
     }
     Row(modifier = Modifier.fillMaxWidth()) {
         listOf(

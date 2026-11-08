@@ -14,30 +14,40 @@ import kr.roadcanvas.app.score.CircleScoreResult
 import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.ZeroScoreReason
 
-/** 종료한 도전 하나의 점수 계산 결과 */
+/**
+ * 자유그림을 완료 기록으로 저장할 최소 이동 거리(m). 이보다 짧으면 이동하지 않은 것으로 보고 저장하지 않는다.
+ * 정차 중 위치 오차로 생기는 짧은 경로를 그림으로 남기지 않기 위한 값이다.
+ */
+const val FREE_DRAWING_MIN_DISTANCE_METERS = 10.0
+
+/** 종료한 도전 하나의 결과. 점수를 매기는 모드만 [score]가 있다. */
 data class ChallengeResult(
     val mode: DrawingMode,
     val path: List<RoutePoint>,
     val completedAtMillis: Long,
     val durationMillis: Long,
     val distanceMeters: Double,
-    val score: CircleScoreResult,
-    /** 0점 사유 안내. 점수를 계산한 설정의 기준값을 넣는다. 0점이 아니면 null이다. */
+    val score: CircleScoreResult?,
+    /** 0점 사유 안내. 점수를 계산한 설정의 기준값을 넣는다. 0점이 아니거나 점수가 없으면 null이다. */
     val zeroReasonText: String?
 ) {
-    /** 완료 기록으로 저장할 값. 0점이면 세부 지표 없이 저장한다. */
+    /** 완료 기록으로 저장할지. 점수가 없는 모드는 이동하지 않았으면 저장하지 않는다. */
+    val savable: Boolean
+        get() = mode.scored || distanceMeters >= FREE_DRAWING_MIN_DISTANCE_METERS
+
+    /** 완료 기록으로 저장할 값. 0점이거나 점수가 없는 모드는 세부 지표 없이 점수 0으로 저장한다. */
     fun toCompletedDrawing() = CompletedDrawing(
         mode = mode,
         completedAtMillis = completedAtMillis,
         path = path,
-        score = score.score,
-        metrics = score.metrics?.toNamedValues().orEmpty(),
+        score = score?.score ?: 0,
+        metrics = score?.metrics?.toNamedValues().orEmpty(),
         distanceMeters = distanceMeters,
         durationMillis = durationMillis
     )
 }
 
-/** 시작부터 종료까지 기록한 [path]로 점수를 계산한다. */
+/** 시작부터 종료까지 기록한 [path]로 결과를 만든다. 점수를 매기는 모드만 점수를 계산한다. */
 fun challengeResultOf(
     mode: DrawingMode,
     path: List<RoutePoint>,
@@ -50,7 +60,6 @@ fun challengeResultOf(
     completedAtMillis = endedAtMillis,
     durationMillis = (endedAtMillis - startedAtMillis).coerceAtLeast(0L),
     distanceMeters = pathDistanceMeters(path),
-    score = calculator.calculate(path.map { GeoPoint(it.latitude, it.longitude) }),
     calculator = calculator
 )
 
@@ -64,7 +73,6 @@ fun challengeResultOf(
     completedAtMillis = drawing.completedAtMillis,
     durationMillis = drawing.durationMillis,
     distanceMeters = drawing.distanceMeters,
-    score = calculator.calculate(drawing.path.map { GeoPoint(it.latitude, it.longitude) }),
     calculator = calculator
 )
 
@@ -74,17 +82,23 @@ private fun scoredResult(
     completedAtMillis: Long,
     durationMillis: Long,
     distanceMeters: Double,
-    score: CircleScoreResult,
     calculator: CircleScoreCalculator
-) = ChallengeResult(
-    mode = mode,
-    path = path,
-    completedAtMillis = completedAtMillis,
-    durationMillis = durationMillis,
-    distanceMeters = distanceMeters,
-    score = score,
-    zeroReasonText = score.zeroReason?.let { zeroScoreReasonText(it, calculator.config) }
-)
+): ChallengeResult {
+    val score = if (mode.scored) {
+        calculator.calculate(path.map { GeoPoint(it.latitude, it.longitude) })
+    } else {
+        null
+    }
+    return ChallengeResult(
+        mode = mode,
+        path = path,
+        completedAtMillis = completedAtMillis,
+        durationMillis = durationMillis,
+        distanceMeters = distanceMeters,
+        score = score,
+        zeroReasonText = score?.zeroReason?.let { zeroScoreReasonText(it, calculator.config) }
+    )
+}
 
 /** 세부 지표를 저장소에 기록하는 이름과 값. 이름은 저장된 기록을 읽을 때 쓰므로 바꾸지 않는다. */
 fun CircleScoreMetrics.toNamedValues(): Map<String, Double> = mapOf(
@@ -122,7 +136,7 @@ private const val TIP_THRESHOLD = 0.9
 
 /** 점수를 이루는 세 항목. 0점이라 세부 지표가 없으면 빈 목록이다. */
 val ChallengeResult.scoreComponents: List<ScoreComponent>
-    get() = score.metrics?.let {
+    get() = score?.metrics?.let {
         listOf(
             ScoreComponent(CIRCULARITY_LABEL, it.circularity, "반지름을 일정하게 유지해 보세요"),
             ScoreComponent(CLOSURE_LABEL, it.closure, "출발점으로 돌아와 끝내 보세요"),
@@ -136,7 +150,7 @@ val ChallengeResult.improvementTip: String?
 
 /** 지도에 경로와 함께 그릴 맞춤 원. 0점이라 원을 맞추지 않았으면 null이다. */
 val ChallengeResult.fitCircle: RouteCircle?
-    get() = score.metrics?.let {
+    get() = score?.metrics?.let {
         RouteCircle(MapPoint(it.center.latitude, it.center.longitude), it.radiusMeters)
     }
 
@@ -173,7 +187,10 @@ fun bestRecordComparisonOf(score: Int, previousBest: Int?): BestRecordComparison
 enum class ResultSaveStatus {
     SAVING,
     SAVED,
-    FAILED
+    FAILED,
+
+    /** 이동하지 않은 자유그림이라 저장하지 않고 진행 중 기록만 지웠다. */
+    NOT_SAVED
 }
 
 /** 저장한 완료 기록에 이름을 붙이는 단계 */
@@ -185,7 +202,7 @@ enum class NameSaveStatus {
     FAILED
 }
 
-/** 결과 화면 상태: 계산 중 → 저장 중 → 저장됨 또는 저장 실패 */
+/** 결과 화면 상태: 계산 중 → 저장 중 → 저장됨 또는 저장 실패. 저장하지 않는 기록은 바로 저장 안 함이다. */
 sealed interface ChallengeResultUiState {
     /** 종료한 기록을 불러와 점수를 계산하는 중 */
     data object Calculating : ChallengeResultUiState

@@ -31,8 +31,8 @@ sealed interface RecordingState {
         val durationMillis: Long get() = endedAtMillis - startedAtMillis
     }
 
-    /** 기록을 시작하거나 이어가지 못했다. */
-    data class Failed(val cause: Throwable) : RecordingState
+    /** 기록을 시작하거나 이어가지 못했다. [mode]는 시작하려던 모드이며 모르면 null이다. */
+    data class Failed(val cause: Throwable, val mode: DrawingMode? = null) : RecordingState
 }
 
 /** 기록을 새로 시작할지, 저장된 진행 중 기록을 이어갈지 */

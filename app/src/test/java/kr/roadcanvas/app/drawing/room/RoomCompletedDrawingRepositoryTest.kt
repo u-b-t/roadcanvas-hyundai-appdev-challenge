@@ -139,6 +139,25 @@ class RoomCompletedDrawingRepositoryTest {
     }
 
     @Test
+    fun `자유그림 기록은 모드를 구분해 저장하고 최고 점수에 섞지 않는다`() = runTest {
+        repository.save(drawing(completedAtMillis = 1, score = 70))
+        val freeId = repository.save(
+            drawing(completedAtMillis = 2, score = 0)
+                .copy(mode = DrawingMode.FREE_DRAWING, metrics = emptyMap())
+        ).value()
+
+        assertEquals(DrawingMode.FREE_DRAWING, repository.find(freeId).value()?.mode)
+        assertEquals(
+            listOf(DrawingMode.FREE_DRAWING, DrawingMode.CIRCLE),
+            repository.summaries().value().map { it.mode }
+        )
+        assertEquals(freeId, repository.findId(DrawingMode.FREE_DRAWING, 2).value())
+        assertNull(repository.findId(DrawingMode.CIRCLE, 2).value())
+        assertEquals(70, repository.bestScore(DrawingMode.CIRCLE).value())
+        assertEquals(0, repository.bestScore(DrawingMode.FREE_DRAWING).value())
+    }
+
+    @Test
     fun `저장된 값을 읽지 못하면 실패 결과를 돌려준다`() = runTest {
         database.completedDrawingDao().insertDrawing(
             CompletedDrawingEntity(

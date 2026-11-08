@@ -34,6 +34,8 @@ private const val EXTRA_MODE = "mode"
 
 const val RECORDING_CHANNEL_NAME = "도전 기록"
 const val RECORDING_NOTIFICATION_TITLE = "동그라미 챌린지 기록 중"
+const val FREE_DRAWING_NOTIFICATION_TITLE = "자유그림 기록 중"
+const val RESUMED_NOTIFICATION_TITLE = "주행 경로 기록 중"
 const val RECORDING_NOTIFICATION_TEXT = "정차한 뒤 앱에서 종료하거나 포기할 수 있어요"
 
 /**
@@ -60,19 +62,18 @@ class ChallengeRecordingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val recorder = appContainer.challengeRecorder
+        val newMode = intent?.getStringExtra(EXTRA_MODE)?.let(DrawingMode::fromKey)
         try {
-            startInForeground()
+            startInForeground(newMode)
         } catch (e: Exception) {
             // Android 위치 권한이 없거나 백그라운드에서 시작하면 포그라운드 서비스를 시작할 수 없다.
             Log.e(TAG, "기록 서비스를 포그라운드로 시작하지 못했습니다.", e)
-            recorder.fail(e)
+            recorder.fail(e, newMode)
             stopSelf()
             return START_NOT_STICKY
         }
         if (recording?.isActive != true) {
-            val request = intent?.getStringExtra(EXTRA_MODE)
-                ?.let { RecordingRequest.New(DrawingMode.fromKey(it)) }
-                ?: RecordingRequest.Resume
+            val request = newMode?.let(RecordingRequest::New) ?: RecordingRequest.Resume
             Log.i(TAG, "기록 시작: $request")
             recording = scope.launch {
                 recorder.run(request)
@@ -88,7 +89,7 @@ class ChallengeRecordingService : Service() {
         super.onDestroy()
     }
 
-    private fun startInForeground() {
+    private fun startInForeground(mode: DrawingMode?) {
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
             NotificationChannel(
@@ -100,7 +101,7 @@ class ChallengeRecordingService : Service() {
         ServiceCompat.startForeground(
             this,
             NOTIFICATION_ID,
-            notification(),
+            notification(mode),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             } else {
@@ -109,7 +110,8 @@ class ChallengeRecordingService : Service() {
         )
     }
 
-    private fun notification(): Notification {
+    /** 이어서 기록할 때는 서비스를 시작하는 시점에 모드를 모르므로 모드 없는 제목을 쓴다. */
+    private fun notification(mode: DrawingMode?): Notification {
         val openApp = PendingIntent.getActivity(
             this,
             0,
@@ -118,7 +120,13 @@ class ChallengeRecordingService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-            .setContentTitle(RECORDING_NOTIFICATION_TITLE)
+            .setContentTitle(
+                when (mode) {
+                    DrawingMode.CIRCLE -> RECORDING_NOTIFICATION_TITLE
+                    DrawingMode.FREE_DRAWING -> FREE_DRAWING_NOTIFICATION_TITLE
+                    null -> RESUMED_NOTIFICATION_TITLE
+                }
+            )
             .setContentText(RECORDING_NOTIFICATION_TEXT)
             .setContentIntent(openApp)
             .setOngoing(true)

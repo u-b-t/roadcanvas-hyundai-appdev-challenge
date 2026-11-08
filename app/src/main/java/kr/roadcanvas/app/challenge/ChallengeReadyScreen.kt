@@ -43,6 +43,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.shopl.sdg_resource.R as SdgR
 import kr.roadcanvas.app.appContainer
+import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RoutePoint
@@ -55,7 +56,9 @@ import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 
 const val CIRCLE_READY_TITLE = "동그라미 챌린지 준비"
+const val FREE_DRAWING_READY_TITLE = "자유그림 준비"
 const val CHALLENGE_GOAL = "원을 그리고 출발점으로 돌아와요"
+const val FREE_DRAWING_GOAL = "달린 길이 그대로 그림이 돼요"
 const val CHALLENGE_RULE_START_STOP = "정차한 뒤 시작하고 끝내요"
 const val CHALLENGE_RULE_NO_PAUSE = "도중에 일시정지할 수 없어요"
 
@@ -67,9 +70,15 @@ val START_BUTTON_HEIGHT = 112.dp
 
 private val GuideIconSize = 32.dp
 
-/** 목표와 진행 방법. 운전 중에도 한눈에 읽도록 아이콘과 짧은 문장 세 개로 줄인다. */
-private val ReadyGuides = listOf(
-    SdgR.drawable.ic_retry to CHALLENGE_GOAL,
+/**
+ * 목표와 진행 방법. 운전 중에도 한눈에 읽도록 아이콘과 짧은 문장 세 개로 줄인다.
+ * 목표만 모드마다 다르고 진행 방법은 같다.
+ */
+private fun readyGuidesOf(mode: DrawingMode) = listOf(
+    when (mode) {
+        DrawingMode.CIRCLE -> SdgR.drawable.ic_retry to CHALLENGE_GOAL
+        DrawingMode.FREE_DRAWING -> SdgR.drawable.ic_common_edit to FREE_DRAWING_GOAL
+    },
     SdgR.drawable.ic_common_play to CHALLENGE_RULE_START_STOP,
     SdgR.drawable.ic_ban to CHALLENGE_RULE_NO_PAUSE
 )
@@ -78,6 +87,7 @@ const val READY_STATUS_READY = "시작할 준비가 되었어요"
 const val READY_STATUS_LOCATING = "위치 확인 중"
 const val READY_STATUS_WAITING_FOR_STOP = "정차한 뒤 시작할 수 있어요"
 const val READY_STATUS_UNSUPPORTED = "이 차량에서는 동그라미 챌린지를 사용할 수 없어요"
+const val FREE_DRAWING_STATUS_UNSUPPORTED = "이 차량에서는 자유그림을 사용할 수 없어요"
 const val READY_STATUS_PERMISSION_REQUIRED = "위치 권한이 필요해요"
 const val READY_STATUS_PERMISSION_IN_SETTINGS = "설정에서 위치 권한을 허용해 주세요"
 const val READY_STATUS_BLOCKED = "위치 접근이 차단되어 있어요"
@@ -93,9 +103,14 @@ const val RETRY_LABEL = "다시 시도"
 private const val CONFIRM_LABEL = "확인"
 private const val TAG = "ChallengeReady"
 
-/** 준비 화면에 시작 조건 구독과 권한 요청을 연결한다. */
+/** 준비 화면에 시작 조건 구독과 권한 요청을 연결한다. 시작 조건은 모든 모드가 같다. */
 @Composable
-fun ChallengeReadyRoute(onStart: () -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun ChallengeReadyRoute(
+    onStart: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    mode: DrawingMode = DrawingMode.CIRCLE
+) {
     val context = LocalContext.current
     val viewModel: ChallengeReadyViewModel = viewModel(
         factory = viewModelFactory {
@@ -139,7 +154,8 @@ fun ChallengeReadyRoute(onStart: () -> Unit, onBack: () -> Unit, modifier: Modif
         },
         onRetry = viewModel::retry,
         modifier = modifier,
-        currentLocation = currentLocation?.let { RoutePoint(it.latitude, it.longitude) }
+        currentLocation = currentLocation?.let { RoutePoint(it.latitude, it.longitude) },
+        mode = mode
     )
 }
 
@@ -153,7 +169,8 @@ fun ChallengeReadyScreen(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
     currentLocation: RoutePoint? = null,
-    onShowBlockedNotice: () -> Boolean = { false }
+    onShowBlockedNotice: () -> Boolean = { false },
+    mode: DrawingMode = DrawingMode.CIRCLE
 ) {
     // 차량의 차단 안내를 띄우지 못하면 앱 안에서 같은 내용을 안내한다.
     var showBlockedNotice by rememberSaveable { mutableStateOf(false) }
@@ -177,15 +194,18 @@ fun ChallengeReadyScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     KeepWordsText(
-                        text = CIRCLE_READY_TITLE,
+                        text = readyTitleOf(mode),
                         style = MaterialTheme.typography.headlineSmall
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    ReadyGuides.forEach { (icon, guide) -> GuideRow(icon = icon, text = guide) }
+                    readyGuidesOf(mode).forEach { (icon, guide) ->
+                        GuideRow(icon = icon, text = guide)
+                    }
                 }
             }
             StartCard(
                 status = status,
+                mode = mode,
                 onStart = onStart,
                 onRequestPermission = onRequestPermission,
                 onOpenSettings = onOpenSettings,
@@ -235,6 +255,7 @@ private fun GuideRow(@DrawableRes icon: Int, text: String) {
 @Composable
 private fun StartCard(
     status: ChallengeReadyStatus,
+    mode: DrawingMode,
     onStart: () -> Unit,
     onRequestPermission: (List<String>) -> Unit,
     onOpenSettings: () -> Unit,
@@ -244,7 +265,7 @@ private fun StartCard(
 ) {
     OverlayCard(modifier = modifier) {
         KeepWordsText(
-            text = status.message,
+            text = status.messageFor(mode),
             style = MaterialTheme.typography.headlineSmall,
             color = if (status.canStart) {
                 MaterialTheme.colorScheme.primary
@@ -279,20 +300,28 @@ private fun StartCard(
     }
 }
 
-private val ChallengeReadyStatus.message: String
-    get() = when (this) {
-        ChallengeReadyStatus.Ready -> READY_STATUS_READY
-        ChallengeReadyStatus.LocatingPosition -> READY_STATUS_LOCATING
-        ChallengeReadyStatus.WaitingForStop -> READY_STATUS_WAITING_FOR_STOP
-        ChallengeReadyStatus.Unsupported -> READY_STATUS_UNSUPPORTED
-        is ChallengeReadyStatus.PermissionRequired -> if (permanentlyDenied) {
-            READY_STATUS_PERMISSION_IN_SETTINGS
-        } else {
-            READY_STATUS_PERMISSION_REQUIRED
-        }
-        ChallengeReadyStatus.Blocked -> READY_STATUS_BLOCKED
-        is ChallengeReadyStatus.Error -> READY_STATUS_ERROR
+/** 준비 화면 제목 */
+fun readyTitleOf(mode: DrawingMode): String = when (mode) {
+    DrawingMode.CIRCLE -> CIRCLE_READY_TITLE
+    DrawingMode.FREE_DRAWING -> FREE_DRAWING_READY_TITLE
+}
+
+private fun ChallengeReadyStatus.messageFor(mode: DrawingMode): String = when (this) {
+    ChallengeReadyStatus.Ready -> READY_STATUS_READY
+    ChallengeReadyStatus.LocatingPosition -> READY_STATUS_LOCATING
+    ChallengeReadyStatus.WaitingForStop -> READY_STATUS_WAITING_FOR_STOP
+    ChallengeReadyStatus.Unsupported -> when (mode) {
+        DrawingMode.CIRCLE -> READY_STATUS_UNSUPPORTED
+        DrawingMode.FREE_DRAWING -> FREE_DRAWING_STATUS_UNSUPPORTED
     }
+    is ChallengeReadyStatus.PermissionRequired -> if (permanentlyDenied) {
+        READY_STATUS_PERMISSION_IN_SETTINGS
+    } else {
+        READY_STATUS_PERMISSION_REQUIRED
+    }
+    ChallengeReadyStatus.Blocked -> READY_STATUS_BLOCKED
+    is ChallengeReadyStatus.Error -> READY_STATUS_ERROR
+}
 
 private fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this

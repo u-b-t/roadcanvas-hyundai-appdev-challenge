@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kr.roadcanvas.app.drawing.CompletedDrawingRepository
+import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.DrawingNameValidation
 import kr.roadcanvas.app.drawing.InProgressDrawingRepository
 import kr.roadcanvas.app.drawing.StorageResult
@@ -20,7 +21,8 @@ import kr.roadcanvas.app.recording.RecordingState
 import kr.roadcanvas.app.score.CircleScoreCalculator
 
 /**
- * [startedAtMillis]에 시작해 [endedAtMillis]에 종료한 도전의 점수를 계산하고 완료 기록으로 저장한다.
+ * [startedAtMillis]에 시작해 [endedAtMillis]에 종료한 도전의 결과를 만들고 완료 기록으로 저장한다.
+ * 점수를 매기는 모드만 점수를 계산한다. 이동하지 않은 자유그림은 저장하지 않고 진행 중 기록만 지운다.
  *
  * 저장에 성공하면 부여된 ID를 [SavedStateHandle]에 남기고 진행 중 기록을 지운다.
  * 화면이 다시 만들어지거나 프로세스가 다시 만들어져도 ID가 있으면 저장하지 않고 그 기록을 보여준다.
@@ -90,9 +92,18 @@ class ChallengeResultViewModel(
             showSaved(savedId)
             return
         }
+        val notSavedMode = savedStateHandle.get<String>(KEY_NOT_SAVED_MODE)
+        if (notSavedMode != null) {
+            showNotSaved(DrawingMode.fromKey(notSavedMode))
+            return
+        }
         val result = finishedResult()
         if (result == null) {
             mutableState.value = ChallengeResultUiState.Unavailable
+            return
+        }
+        if (!result.savable) {
+            skipSaving(result)
             return
         }
         val existing = completedRepository.findId(result.mode, result.completedAtMillis)
@@ -129,16 +140,35 @@ class ChallengeResultViewModel(
 
     /**
      * 이 도전을 뺀 같은 모드 기록의 최고 점수와 비교한다. 저장 전후 모두 같은 값이 되도록
-     * 같은 완료 시각의 기록(이 도전)은 뺀다. 기록을 불러오지 못하면 null이다.
+     * 같은 완료 시각의 기록(이 도전)은 뺀다. 기록을 불러오지 못하거나 점수가 없는 모드면 null이다.
      */
     private suspend fun bestComparison(result: ChallengeResult): BestRecordComparison? {
+        val score = result.score ?: return null
         val loaded = completedRepository.summaries()
         if (loaded is StorageResult.Failure) onStorageFailure(loaded.cause)
         val summaries = (loaded as? StorageResult.Success)?.value ?: return null
         val previousBest = summaries
             .filter { it.mode == result.mode && it.completedAtMillis != result.completedAtMillis }
             .maxOfOrNull { it.score }
-        return bestRecordComparisonOf(result.score.score, previousBest)
+        return bestRecordComparisonOf(score.score, previousBest)
+    }
+
+    /** 저장하지 않기로 한 것을 [SavedStateHandle]에 남겨 화면이 다시 만들어져도 저장하지 않는다. */
+    private suspend fun skipSaving(result: ChallengeResult) = withContext(NonCancellable) {
+        savedStateHandle[KEY_NOT_SAVED_MODE] = result.mode.key
+        mutableState.value = ChallengeResultUiState.Calculated(result, ResultSaveStatus.NOT_SAVED)
+        clearInProgress()
+    }
+
+    /**
+     * 저장하지 않기로 한 결과를 다시 보여준다. 진행 중 기록을 이미 지웠으면 경로 없이 시간만 보여준다.
+     * 이동하지 않은 기록이라 경로가 없어도 보여줄 내용은 같다.
+     */
+    private suspend fun showNotSaved(mode: DrawingMode) {
+        val result = finishedResult()
+            ?: challengeResultOf(mode, emptyList(), startedAtMillis, endedAtMillis, calculator)
+        mutableState.value = ChallengeResultUiState.Calculated(result, ResultSaveStatus.NOT_SAVED)
+        clearInProgress()
     }
 
     /** 메모리의 종료 상태가 이 도전이면 그 경로를, 아니면 저장된 진행 중 기록의 경로를 쓴다. */
@@ -200,5 +230,6 @@ class ChallengeResultViewModel(
 
     companion object {
         const val KEY_SAVED_ID = "savedDrawingId"
+        const val KEY_NOT_SAVED_MODE = "notSavedMode"
     }
 }

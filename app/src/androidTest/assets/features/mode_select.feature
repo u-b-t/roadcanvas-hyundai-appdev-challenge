@@ -1,12 +1,13 @@
 Feature: 모드 선택
   앱 시작 후 커버 이미지 위에 놓인 목록에서 동그라미 챌린지와 자유그림을 고르고, 저장한 그림 목록으로 들어갈 수 있다.
   목록과 내 그림 버튼은 운전석에 가까운 화면 왼쪽, 커버 이미지의 어두운 영역 위에 둔다.
-  주 동작인 동그라미 챌린지를 가장 크게 강조색으로 보이고, 내 그림은 보조 버튼, 준비 중인 자유그림은 비활성 모양으로 보인다.
+  주 동작인 동그라미 챌린지를 가장 크게 강조색으로 보이고, 자유그림은 강조색 없는 보조 항목, 내 그림은 보조 버튼으로 보인다.
 
   Issues:
   - [#11 모드 선택 화면 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/11)
   - [#48 모드 선택 화면을 커버 이미지 배경과 목록 오버레이로 개편](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/48)
   - [#59 모드 선택 화면의 강조 순서와 크기 다듬기](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/59)
+  - [#77 자유그림 모드 열기와 기록 흐름 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/77)
 
   Scenario: 커버 이미지를 화면 전체 배경으로 표시한다
     Given 모드 선택 화면을 연다
@@ -45,14 +46,13 @@ Feature: 모드 선택
     When "동그라미 챌린지" 항목을 누른다
     Then 화면에 "동그라미 챌린지 준비"가 표시된다
 
-  Scenario: 자유그림은 준비 중이라 안내만 보이고 그리기를 시작하지 않는다
+  Scenario: 자유그림을 누르면 자유그림 준비 화면으로 이동한다
     Given 모드 선택 화면을 연다
-    Then "자유그림" 항목에 "준비 중"이 표시된다
-    And "동그라미 챌린지" 항목에는 화살표가 있다
-    And "자유그림" 항목에는 화살표가 없다
+    Then "동그라미 챌린지" 항목에는 화살표가 있다
+    And "자유그림" 항목에는 화살표가 있다
+    And 화면에 "준비 중"이 보이지 않는다
     When "자유그림" 항목을 누른다
-    Then 화면에 "자유그림은 아직 준비 중이에요"가 표시된다
-    And 모드 선택 화면에 머문다
+    Then 화면에 "자유그림 준비"가 표시된다
 
   Scenario: 내 그림 버튼을 누르면 내 그림 목록으로 이동한다
     Given 모드 선택 화면을 연다
