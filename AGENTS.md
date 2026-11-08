@@ -111,6 +111,7 @@
 - P·R·N·D, 가속·브레이크와 스티어링 각도를 조작할 수 있다. 주행 화면은 D 선택 후 ACCEL을 길게 눌러 시험한다.
 - 주행 상태 검증이 필요하면 대상 에뮬레이터와 현재 차량 상태를 먼저 확인한다. Virtual Console을 열고 기어를 D로 변경한 뒤, 콘솔 표시와 앱의 실제 반응을 모두 확인한다. D 변경만으로 속도가 생기지는 않으므로 속도가 필요한 경우에만 ACCEL을 조작한다. 테스트 종료 후 직접 변경한 기어·페달 값은 가능한 한 원래 상태로 복원한다.
 - 브라우저 조작 도구가 없으면 현재 버전에서 확인된 콘솔의 비공식 로컬 HTTP 인터페이스를 사용할 수 있다. `GET /vehicle/state`에서 `gear.bridge_ready`와 `gear.actual.value`를 확인하고, `PUT /vehicle/gear?gear=Drive` 또는 `gear=Park`로 변경한 뒤 상태를 다시 조회한다. 이 인터페이스는 SDK의 공식 API가 아니므로 버전마다 달라질 수 있다.
+- Virtual Console은 위치(GNSS)를 바꾸지 않는다. 콘솔로 주행해도 FusedLocation 위치는 그대로다. 콘솔 주행을 위치로 이어 시험하려면 콘솔 페이지를 열어 둔 채 `python3 scripts/console-gps-bridge.py --adb "$ANDROID_HOME/platform-tools/adb"`를 실행한다. 0.5초마다 `/vehicle/state`의 기어·속도·핸들 각도를 읽어 위치를 계산하고 `adb emu geo fix`로 보낸다. D는 전진, R은 후진, P·N은 정지다. 시작 위치는 `--lat`, `--lon`, `--heading`으로 정하고 핸들 방향이 반대면 `--invert-steering`을 쓴다. 콘솔 페이지가 비활성(`controls.emulator_active`가 false)이면 위치를 보내지 않는다. 콘솔의 비공식 인터페이스에 의존하는 개발용 도구다.
 - 브라우저 페이지가 열려 있지 않으면 로컬 인터페이스를 사용할 때 `POST /browser/session?client=<고유식별자>`를 1초 간격으로 보내 연결을 유지해야 한다. 확인된 콘솔의 세션 제한은 3초다. 테스트가 끝나면 `POST /browser/session?client=<고유식별자>&closing=1`로 자신이 만든 세션만 닫는다. 이미 사용 중인 다른 세션은 건드리지 않는다. `/vehicle/state`의 `bridge_ready`가 false이거나 요청이 실패하면 성공으로 간주하지 말고 오류를 기록한다.
 - 테스트 대상 상태가 D에서 표시 제한되는 앱이라면 그 제한 화면을 결과로 보고, 주행 중 기능을 사용했다고 주장하지 않는다. 스크린샷도 요청한 화면이 실제로 보이는지 확인한다.
 - P 상태에서 왼쪽 위 Theme 버튼으로 Highway와 Forest를 전환한다. Highway에서는 1인칭과 3인칭을 선택할 수 있다. 교차로 좌회전·우회전이나 실제 경로 주행 기능은 확인되지 않았다.
