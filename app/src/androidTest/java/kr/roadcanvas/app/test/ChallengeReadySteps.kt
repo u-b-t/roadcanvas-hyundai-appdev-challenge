@@ -33,6 +33,9 @@ class ChallengeReadySteps(private val ruleHolder: ComposeRuleHolder) {
             .container as FakeAppContainer
     private var scenario: TestScreen<ComponentActivity>? = null
 
+    /** 준비 화면에 들어가기 전 주행 규제 구독자 수. 화면 전체의 정차 안내가 늘 구독한다. */
+    private var baseRestrictionSubscribers = 0
+
     @Given("동그라미 챌린지 준비 화면을 연다")
     fun openChallengeReady() {
         composeRule.mainClock.autoAdvance = true
@@ -41,6 +44,8 @@ class ChallengeReadySteps(private val ruleHolder: ComposeRuleHolder) {
         }
         // 실제 앱과 같은 뒤로 가기 흐름을 위해 모드 선택에서 들어간다.
         waitForText(MODE_SELECT_TITLE)
+        composeRule.waitForIdle()
+        baseRestrictionSubscribers = fakeContainer.drivingRestrictionProvider.subscriberCount.value
         composeRule.onNode(hasText(CIRCLE_CHALLENGE_NAME) and hasClickAction()).performClick()
         waitForText(CIRCLE_READY_TITLE)
         // 준비 화면이 시작 조건을 구독한 뒤에 테스트 위치를 보내야 화면이 받는다.
@@ -104,7 +109,8 @@ class ChallengeReadySteps(private val ruleHolder: ComposeRuleHolder) {
         waitForText(MODE_SELECT_TITLE)
         composeRule.waitUntil(WAIT_TIMEOUT_MILLIS) {
             fakeContainer.locationProvider.subscriberCount.value == 0 &&
-                fakeContainer.drivingRestrictionProvider.subscriberCount.value == 0
+                fakeContainer.drivingRestrictionProvider.subscriberCount.value ==
+                baseRestrictionSubscribers
         }
     }
 
