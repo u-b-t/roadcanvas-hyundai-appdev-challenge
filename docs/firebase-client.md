@@ -32,3 +32,5 @@ Room에서 완료 기록을 보관하고 동일한 ID로 재시도한다. 업로
 규칙과 인덱스는 Firebase CLI에서 `firebase emulators:exec --only firestore ...`로 로컬 검증하고, 실제 배포는 `firebase deploy --only firestore --project <프로젝트 ID>`로 수행한다. 배포는 원격 설정을 변경한다. 이 문서는 서버 측 점수 계산이나 위치 위조 검증을 약속하지 않는다.
 
 검증 시나리오 초안은 `docs/firebase-data.feature`에 둔다. Firebase 전용 자동 테스트 코드는 작성하지 않기로 했으므로 Android Cucumber에 연결되어 있지 않으며 수동 검증 결과와 구분한다.
+
+목록 페이지, 내 순위와 닉네임 변경 절차는 [클라이언트 조회·프로필 계약](firebase-client-queries.md)을 따른다.
