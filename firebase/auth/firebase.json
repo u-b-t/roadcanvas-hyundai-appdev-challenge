@@ -1,0 +1,10 @@
+{
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "RoadCanvas",
+        "supportEmail": "support@roadcanvas-f9f2a.firebaseapp.com"
+      }
+    }
+  }
+}
