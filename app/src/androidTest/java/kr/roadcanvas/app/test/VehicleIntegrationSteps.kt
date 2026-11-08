@@ -28,6 +28,7 @@ import kr.roadcanvas.app.vehicle.LocationSample
 import kr.roadcanvas.app.vehicle.VehicleIntegrationSelection
 import kr.roadcanvas.app.vehicle.VehiclePermissions
 import kr.roadcanvas.app.vehicle.fake.FakeAppContainer
+import kr.roadcanvas.app.vehicle.fake.FakeLocationProvider
 import kr.roadcanvas.app.vehicle.simulated.GeoPoint
 import kr.roadcanvas.app.vehicle.simulated.SimulatedLocationProvider
 import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteGenerator
@@ -172,7 +173,8 @@ class VehicleIntegrationSteps {
     fun buildContainer() {
         container = DefaultAppContainer(
             VehicleIntegrationSelection.parse(locationKey, drivingKey, routeType.key),
-            fakeDrawingStorage()
+            fakeDrawingStorage(),
+            pleosLocationProvider = { FakeLocationProvider() }
         )
     }
 

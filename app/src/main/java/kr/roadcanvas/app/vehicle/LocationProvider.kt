@@ -1,5 +1,6 @@
 package kr.roadcanvas.app.vehicle
 
+import android.content.Context
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -9,4 +10,11 @@ interface LocationProvider {
 
     /** 수집하는 동안 위치를 받는다. 수집을 멈추면 위치 수신도 멈춘다. */
     fun locations(): Flow<LocationSample>
+
+    /**
+     * 위치 접근이 [LocationAvailability.Blocked]일 때 차량의 차단 안내를 띄운다.
+     * 안내 화면을 여는 데 쓰므로 [activityContext]는 Activity여야 한다.
+     * 안내를 띄우지 못했거나 지원하지 않는 구현이면 false를 돌려준다.
+     */
+    fun showAccessBlockedNotice(activityContext: Context): Boolean = false
 }

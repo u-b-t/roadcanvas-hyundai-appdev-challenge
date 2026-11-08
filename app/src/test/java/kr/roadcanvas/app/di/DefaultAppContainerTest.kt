@@ -8,8 +8,10 @@ import kr.roadcanvas.app.vehicle.DrivingRestriction
 import kr.roadcanvas.app.vehicle.IntegrationSource
 import kr.roadcanvas.app.vehicle.VehicleIntegrationSelection
 import kr.roadcanvas.app.vehicle.fake.FakeCarUxRestrictionsClient
+import kr.roadcanvas.app.vehicle.fake.FakeLocationProvider
 import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteConfig
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -37,14 +39,17 @@ class DefaultAppContainerTest {
     }
 
     @Test
-    fun `릴리스 기본값은 위치만 실제 구현 전까지 모의 구현으로 대체한다`() {
+    fun `릴리스 기본값은 Pleos 위치와 AAOS 주행 규제를 쓴다`() {
+        val pleosLocation = FakeLocationProvider()
         val container = DefaultAppContainer(
             VehicleIntegrationSelection.parse("pleos", "aaos", "circle"),
-            fakeDrawingStorage()
+            fakeDrawingStorage(),
+            pleosLocationProvider = { pleosLocation }
         )
 
+        assertSame(pleosLocation, container.locationProvider)
         assertEquals(
-            "위치: 모의 · 주행 규제: AAOS (Pleos 미구현)",
+            "위치: Pleos · 주행 규제: AAOS",
             container.vehicleIntegrationInfo.label
         )
     }

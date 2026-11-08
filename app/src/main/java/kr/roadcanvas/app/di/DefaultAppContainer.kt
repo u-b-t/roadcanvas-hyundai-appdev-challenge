@@ -21,12 +21,14 @@ import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteGenerator
 
 /**
  * 빌드 속성으로 고른 구현을 구성한다. 실제 구현이 없는 동안에는 모의 구현을 사용한다.
+ * Pleos 위치 구현은 Context가 필요하므로 Application이 [pleosLocationProvider]로 만들어 넘긴다.
  * [carUxRestrictionsClient]는 AAOS 주행 규제를 고른 경우에만 만든다.
  */
 class DefaultAppContainer(
     selection: VehicleIntegrationSelection,
     drawingStorage: DrawingStorage,
     routeConfig: SimulatedRouteConfig = SimulatedRouteConfig(),
+    pleosLocationProvider: () -> LocationProvider = { error("Pleos 위치 구현이 주어지지 않았습니다.") },
     carUxRestrictionsClient: () -> CarUxRestrictionsClient = { UnavailableCarUxRestrictionsClient },
     mapAuth: MapAuth = MapAuth(clientId = "")
 ) : AppContainer {
@@ -38,6 +40,7 @@ class DefaultAppContainer(
                 route = SimulatedRouteGenerator.generate(selection.simulatedRoute, routeConfig),
                 intervalMillis = routeConfig.intervalMillis
             )
+            IntegrationSource.PLEOS -> pleosLocationProvider()
             else -> error("${vehicleIntegrationInfo.location.key} 위치 구현이 없습니다.")
         }
 

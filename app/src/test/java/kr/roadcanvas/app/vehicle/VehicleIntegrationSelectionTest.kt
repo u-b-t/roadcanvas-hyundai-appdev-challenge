@@ -26,12 +26,22 @@ class VehicleIntegrationSelectionTest {
     }
 
     @Test
-    fun `아직 구현되지 않은 실제 구현은 모의 구현으로 대체하고 표시한다`() {
+    fun `실제 구현을 고르면 모의 구현으로 대체하지 않는다`() {
         val info = VehicleIntegrationSelection.parse("pleos", "aaos", "circle").resolve()
 
-        assertEquals(IntegrationSource.SIMULATED, info.location)
-        assertEquals(IntegrationSource.AAOS, info.driving)
-        assertEquals("위치: 모의 · 주행 규제: AAOS (Pleos 미구현)", info.label)
+        assertEquals(
+            VehicleIntegrationInfo(IntegrationSource.PLEOS, IntegrationSource.AAOS),
+            info
+        )
+        assertEquals("위치: Pleos · 주행 규제: AAOS", info.label)
+    }
+
+    @Test
+    fun `Pleos 위치는 실제 구현을 그대로 사용한다`() {
+        val info = VehicleIntegrationSelection.parse("pleos", "simulated", "circle").resolve()
+
+        assertEquals(IntegrationSource.PLEOS, info.location)
+        assertEquals("위치: Pleos · 주행 규제: 모의", info.label)
     }
 
     @Test(expected = IllegalArgumentException::class)
