@@ -3,6 +3,8 @@ package kr.roadcanvas.app.di
 import kr.roadcanvas.app.drawing.CompletedDrawingRepository
 import kr.roadcanvas.app.drawing.InProgressDrawingRepository
 import kr.roadcanvas.app.map.RouteMapComponent
+import kr.roadcanvas.app.recording.ChallengeRecorder
+import kr.roadcanvas.app.recording.RecordingRunner
 import kr.roadcanvas.app.vehicle.DrivingRestrictionProvider
 import kr.roadcanvas.app.vehicle.LocationProvider
 import kr.roadcanvas.app.vehicle.VehicleIntegrationInfo
@@ -15,4 +17,6 @@ interface AppContainer {
     val completedDrawingRepository: CompletedDrawingRepository
     val inProgressDrawingRepository: InProgressDrawingRepository
     val routeMapComponent: RouteMapComponent
+    val challengeRecorder: ChallengeRecorder
+    val recordingRunner: RecordingRunner
 }

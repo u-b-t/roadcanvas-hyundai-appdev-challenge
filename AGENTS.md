@@ -49,6 +49,13 @@
 - 스키마를 바꾸면 `DrawingDatabase.VERSION`을 올리고 `MIGRATIONS`에 마이그레이션을 추가한다. 빌드가 `app/schemas/`에 버전별 스키마를 기록하므로 함께 커밋한다. androidTest는 이 스키마로 마이그레이션을 검증한다.
 - 저장소 단위 테스트는 Robolectric과 in-memory DB로 실행한다. 테스트용 대체 구현은 `app/src/sharedTest/`의 `kr.roadcanvas.app.drawing.fake`에 있고 `failure`를 지정해 실패를 주입한다.
 
+## 도전 기록
+
+- 기록 세션은 `kr.roadcanvas.app.recording`의 `ChallengeRecorder` 하나를 앱 전체에서 공유하고, `AppContainer.recordingRunner`가 실행한다. 앱은 `foregroundServiceType="location"`인 `ChallengeRecordingService`에서, androidTest와 단위 테스트는 `app/src/sharedTest/`의 `FakeRecordingRunner`로 코루틴에서 실행한다.
+- Android 14(targetSdk 34)에서 위치 타입 포그라운드 서비스는 `ACCESS_COARSE_LOCATION` 또는 `ACCESS_FINE_LOCATION`이 없으면 `SecurityException`으로 시작하지 못한다. Pleos 위치 권한만으로는 안 되는 것을 에뮬레이터에서 확인했으므로 시작 버튼을 누를 때 대략적인 위치 권한과 알림 권한을 요청한다. 에뮬레이터에서 직접 허용하려면 `adb shell pm grant --user 10 kr.roadcanvas.app android.permission.ACCESS_COARSE_LOCATION`을 쓴다.
+- 서비스는 기록한 점 수를 logcat `ChallengeRecording` 태그로 남긴다. 주행 중 화면이 차단된 동안의 기록 여부는 `adb logcat -s ChallengeRecording`으로 확인한다.
+- 진행 중 기록이 저장되어 있으면 앱을 다시 실행할 때 진행 화면으로 가서 이어서 기록한다. 종료하면 위치 구독만 멈추고 진행 중 기록은 남긴 채 시작·종료 시각을 결과 화면 경로 인자로 넘긴다. 결과 화면은 완료 기록 저장에 성공한 뒤 진행 중 기록을 지운다.
+
 ## 빌드와 실행
 
 - JDK 17 이상과 Android SDK 플랫폼 35가 필요하다. 앱의 `minSdk`는 28, `targetSdk`는 34다.

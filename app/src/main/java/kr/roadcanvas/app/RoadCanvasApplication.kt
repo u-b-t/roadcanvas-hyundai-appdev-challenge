@@ -2,15 +2,19 @@ package kr.roadcanvas.app
 
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.di.DefaultAppContainer
 import kr.roadcanvas.app.drawing.room.DrawingDatabase
 import kr.roadcanvas.app.drawing.room.toStorage
 import kr.roadcanvas.app.map.MapAuth
 import kr.roadcanvas.app.map.naver.NaverMapSetup
+import kr.roadcanvas.app.recording.ServiceRecordingRunner
 import kr.roadcanvas.app.vehicle.VehicleIntegrationSelection
 import kr.roadcanvas.app.vehicle.aaos.AndroidCarUxRestrictionsClient
 import kr.roadcanvas.app.vehicle.pleos.PleosLocationProvider
+
+private const val TAG = "RoadCanvas"
 
 open class RoadCanvasApplication : Application() {
     lateinit var container: AppContainer
@@ -35,7 +39,9 @@ open class RoadCanvasApplication : Application() {
         drawingStorage = DrawingDatabase.create(this).toStorage(),
         pleosLocationProvider = { PleosLocationProvider.create(this) },
         carUxRestrictionsClient = { AndroidCarUxRestrictionsClient(this) },
-        mapAuth = mapAuth
+        mapAuth = mapAuth,
+        recordingRunner = { ServiceRecordingRunner(this) },
+        onRecordingStorageFailure = { Log.w(TAG, "경로 점을 저장하지 못했습니다.", it) }
     )
 }
 
