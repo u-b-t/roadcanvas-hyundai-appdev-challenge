@@ -1,11 +1,12 @@
 Feature: 동그라미 챌린지 진행
   시작한 도전의 주행 경로를 기록하고 정차한 뒤 종료하거나 포기한다.
-  주행 중 화면이 차단되어도 기록은 계속되고, 앱이 다시 실행되면 진행 중이던 도전을 이어서 기록한다.
+  주행 중에도 진행 화면은 가리지 않고 경로와 측정값을 갱신하며, 화면이 멈춰도 기록은 계속되고, 앱이 다시 실행되면 진행 중이던 도전을 이어서 기록한다.
 
   Issues:
   - [#18 동그라미 챌린지 진행 및 경로 기록 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/18)
   - [#19 동그라미 챌린지 결과 화면 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/19)
   - [#38 종료 후 저장 전 프로세스 종료 시 결과 화면으로 복원](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/38)
+  - [#43 주행 중 진행 화면 표시를 위한 Distraction Optimization 선언](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/43)
 
   Scenario: 시작하면 받은 위치를 경로에 기록하고 경과 시간과 이동 거리를 표시한다
     Given 동그라미 챌린지 진행 화면에서 기록을 시작했다

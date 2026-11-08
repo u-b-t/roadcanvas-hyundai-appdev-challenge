@@ -1,9 +1,15 @@
 package kr.roadcanvas.app.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NamedNavArgument
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -20,6 +26,7 @@ import kr.roadcanvas.app.modeselect.ModeSelectScreen
 import kr.roadcanvas.app.mydrawings.MyDrawingsRoute
 import kr.roadcanvas.app.splash.SPLASH_DURATION_MILLIS
 import kr.roadcanvas.app.splash.SplashScreen
+import kr.roadcanvas.app.vehicle.DrivingRestriction
 
 object Routes {
     const val SPLASH = "splash"
@@ -49,13 +56,23 @@ fun RoadCanvasNavHost(
     navController: NavHostController = rememberNavController(),
     splashDurationMillis: Long = SPLASH_DURATION_MILLIS
 ) {
-    val recorder = LocalContext.current.appContainer.challengeRecorder
+    val container = LocalContext.current.appContainer
+    val recorder = container.challengeRecorder
+    val restriction = container.drivingRestrictionProvider.restriction
+        .collectAsStateWithLifecycle()
+
+    // 모든 화면은 주행 규제에 따라 정차 안내로 가릴지 정하는 screen으로 등록한다.
+    fun NavGraphBuilder.screen(
+        route: String,
+        arguments: List<NamedNavArgument> = emptyList(),
+        content: @Composable (NavBackStackEntry) -> Unit
+    ) = gatedComposable(route, arguments, restriction, content)
     NavHost(
         navController = navController,
         startDestination = Routes.SPLASH,
         modifier = modifier
     ) {
-        composable(Routes.SPLASH) {
+        screen(Routes.SPLASH) {
             val scope = rememberCoroutineScope()
             SplashScreen(
                 durationMillis = splashDurationMillis,
@@ -78,13 +95,13 @@ fun RoadCanvasNavHost(
                 }
             )
         }
-        composable(Routes.MODE_SELECT) {
+        screen(Routes.MODE_SELECT) {
             ModeSelectScreen(
                 onCircleChallengeClick = { navController.navigate(Routes.CIRCLE_READY) },
                 onMyDrawingsClick = { navController.navigate(Routes.MY_DRAWINGS) }
             )
         }
-        composable(Routes.CIRCLE_READY) {
+        screen(Routes.CIRCLE_READY) {
             val startChallenge = rememberChallengeStarter(
                 onStarted = {
                     navController.navigate(Routes.CIRCLE_PROGRESS) {
@@ -97,7 +114,7 @@ fun RoadCanvasNavHost(
                 onBack = { navController.popBackStack() }
             )
         }
-        composable(Routes.CIRCLE_PROGRESS) {
+        screen(Routes.CIRCLE_PROGRESS) {
             fun leaveTo(route: String) = navController.navigate(route) {
                 popUpTo(Routes.CIRCLE_PROGRESS) { inclusive = true }
             }
@@ -107,7 +124,7 @@ fun RoadCanvasNavHost(
                 onBackToReady = { leaveTo(Routes.CIRCLE_READY) }
             )
         }
-        composable(
+        screen(
             Routes.CIRCLE_RESULT,
             arguments = listOf(
                 navArgument(Routes.ARG_STARTED_AT) { type = NavType.LongType },
@@ -128,7 +145,7 @@ fun RoadCanvasNavHost(
                 onMyDrawings = { leaveTo(Routes.MY_DRAWINGS) }
             )
         }
-        composable(Routes.MY_DRAWINGS) {
+        screen(Routes.MY_DRAWINGS) {
             MyDrawingsRoute(
                 onStartChallenge = {
                     navController.navigate(Routes.CIRCLE_READY) {
@@ -139,4 +156,14 @@ fun RoadCanvasNavHost(
             )
         }
     }
+}
+
+private fun NavGraphBuilder.gatedComposable(
+    route: String,
+    arguments: List<NamedNavArgument>,
+    restriction: State<DrivingRestriction>,
+    content: @Composable (NavBackStackEntry) -> Unit
+) = composable(route, arguments) { entry ->
+    val current by restriction
+    StopNoticeGate(reason = stopNoticeReasonOf(route, current)) { content(entry) }
 }

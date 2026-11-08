@@ -1,9 +1,11 @@
 Feature: 동그라미 챌린지 준비
   시작 전에 챌린지의 목표와 진행 방법을 안내하고, 위치와 주행 규제 상태를 확인해 정차 상태에서만 도전을 시작한다.
   조건이 충족되지 않으면 무엇을 해야 하는지 알려주고 시작 버튼을 막는다.
+  주행 중에는 화면 전체를 정차 안내로 가린다(주행 중 화면 기능 참고).
 
   Issues:
   - [#17 동그라미 챌린지 준비 화면 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/17)
+  - [#43 주행 중 진행 화면 표시를 위한 Distraction Optimization 선언](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/43)
 
   Scenario: 챌린지의 목표와 진행 방법을 안내한다
     Given 동그라미 챌린지 준비 화면을 연다
@@ -57,18 +59,6 @@ Feature: 동그라미 챌린지 준비
     And "시작" 버튼이 비활성화되어 있다
     When "다시 시도" 버튼을 누른다
     Then 위치를 다시 요청한다
-
-  Scenario Outline: 주행 규제가 조작 가능이 아니면 정차 후 시작하라고 안내한다
-    Given 동그라미 챌린지 준비 화면을 연다
-    And 테스트에서 위도 37.5665, 경도 126.978 위치를 보낸다
-    When 테스트에서 주행 규제 상태를 "<상태>"로 바꾼다
-    Then 화면에 "정차한 뒤 시작할 수 있어요"가 표시된다
-    And "시작" 버튼이 비활성화되어 있다
-
-    Examples:
-      | 상태    |
-      | 조작 제한 |
-      | 확인 불가 |
 
   Scenario: 버튼으로 모드 선택에 돌아가면 시작 조건 구독을 해제한다
     Given 동그라미 챌린지 준비 화면을 연다
