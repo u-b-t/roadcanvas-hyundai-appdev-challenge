@@ -28,6 +28,7 @@ import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
 import kr.roadcanvas.app.modeselect.MY_DRAWINGS_LABEL
+import kr.roadcanvas.app.mydrawings.DRAWING_DETAIL_OVERLAY_TAG
 import kr.roadcanvas.app.mydrawings.DRAWING_DETAIL_TAG
 import kr.roadcanvas.app.mydrawings.MY_DRAWINGS_ITEM_SCORE_TAG
 import kr.roadcanvas.app.mydrawings.MY_DRAWINGS_LIST_TAG
@@ -38,6 +39,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 
 private const val WAIT_TIMEOUT_MILLIS = 5_000L
+private const val FAKE_MAP_PREFIX = "대체 경로 지도"
 private val TABLE_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
 /** 내 그림 시나리오. 대체 완료 기록 저장소에 기록을 넣고 실제 화면 흐름으로 들어간다. */
@@ -125,6 +127,43 @@ class MyDrawingsSteps(private val ruleHolder: ComposeRuleHolder) {
         val list = composeRule.onNodeWithTag(MY_DRAWINGS_LIST_TAG).getUnclippedBoundsInRoot()
         val detail = composeRule.onNodeWithTag(DRAWING_DETAIL_TAG).getUnclippedBoundsInRoot()
         assertTrue("목록이 상세 왼쪽에 있어야 한다", list.right <= detail.left)
+    }
+
+    @Then("목록의 {string} 항목에 {string}가 표시된다")
+    @Then("목록의 {string} 항목에 {string}이 표시된다")
+    fun assertListItemShows(date: String, text: String) {
+        val item = hasText(date) and hasText(text) and hasClickAction() and inList
+        waitFor(item)
+        composeRule.onNode(item).assertIsDisplayed()
+    }
+
+    @Then("상세 지도 위 왼쪽 오버레이에 {string}과 {string} 버튼이 표시된다")
+    fun assertDetailOverlay(score: String, button: String) {
+        val inOverlay = hasAnyAncestor(hasTestTag(DRAWING_DETAIL_OVERLAY_TAG))
+        waitFor(hasText(score) and inOverlay, useUnmergedTree = true)
+        waitFor(hasText(button) and hasClickAction() and inOverlay)
+        val overlay = composeRule.onNodeWithTag(
+            DRAWING_DETAIL_OVERLAY_TAG
+        ).getUnclippedBoundsInRoot()
+        val detail = composeRule.onNodeWithTag(DRAWING_DETAIL_TAG).getUnclippedBoundsInRoot()
+        val list = composeRule.onNodeWithTag(MY_DRAWINGS_LIST_TAG).getUnclippedBoundsInRoot()
+        assertTrue("오버레이 $overlay, 목록 $list", overlay.left >= list.right)
+        assertTrue(
+            "오버레이 $overlay, 상세 $detail",
+            overlay.right <= (detail.left + detail.right) / 2
+        )
+    }
+
+    @Then("경로 지도는 오버레이 오른쪽 영역에 맞춰 그려진다")
+    fun assertMapAvoidsOverlay() {
+        // 대체 지도는 지도 콘텐츠 영역 가운데에 경로 설명을 표시한다.
+        val map = hasText(FAKE_MAP_PREFIX, substring = true)
+        waitFor(map)
+        val overlay = composeRule.onNodeWithTag(
+            DRAWING_DETAIL_OVERLAY_TAG
+        ).getUnclippedBoundsInRoot()
+        val notice = composeRule.onNode(map).getUnclippedBoundsInRoot()
+        assertTrue("오버레이 $overlay, 지도 안내 $notice", notice.left >= overlay.right)
     }
 
     private val inList = hasAnyAncestor(hasTestTag(MY_DRAWINGS_LIST_TAG))

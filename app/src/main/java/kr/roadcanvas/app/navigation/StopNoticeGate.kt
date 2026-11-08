@@ -1,19 +1,19 @@
 package kr.roadcanvas.app.navigation
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.shopl.sdg_common.foundation.SDGColor
+import com.shopl.sdg_resource.R as SdgR
+import kr.roadcanvas.app.ui.components.CarEmptyState
+import kr.roadcanvas.app.ui.components.DriverSideLayout
 
 private const val GATED_CONTENT_KEY = "gatedContent"
 
@@ -33,24 +33,30 @@ fun StopNoticeGate(reason: String?, content: @Composable () -> Unit) {
     }
 }
 
+/** 정차 안내 문구 영역의 너비. 운전석 쪽 왼쪽에 두되 두 줄 안내가 한 줄씩 들어가게 조작 영역보다 넓다. */
+private val STOP_NOTICE_WIDTH = 640.dp
+
+/** 주행 중 가린 화면 대신 보여주는 안내. SDG 빈 상태 구성으로 운전석에 가까운 왼쪽에 둔다. */
 @Composable
 private fun StopNotice(reason: String) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = STOP_NOTICE_TITLE,
-                style = MaterialTheme.typography.headlineLarge,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = reason,
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
+    DriverSideLayout(
+        controlsWidth = STOP_NOTICE_WIDTH,
+        controls = {
+            Spacer(modifier = Modifier.weight(1f))
+            CarEmptyState(
+                title = STOP_NOTICE_TITLE,
+                body = reason,
+                horizontalAlignment = Alignment.Start
+            ) {
+                Icon(
+                    painter = painterResource(SdgR.drawable.ic_common_warning),
+                    contentDescription = null,
+                    tint = SDGColor.Primary400,
+                    modifier = Modifier.size(72.dp)
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+        },
+        content = {}
+    )
 }
