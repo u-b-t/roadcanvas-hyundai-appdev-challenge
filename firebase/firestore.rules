@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function owner(uid) { return signedIn() && request.auth.uid == uid; }
+    function shortText(value, maxLength) {
+      return value is string && value.size() > 0 && value.size() <= maxLength;
+    }
+    function validProfile(data) {
+      return data.keys().hasOnly(['nickname', 'createdAt']) &&
+        data.keys().hasAll(['nickname', 'createdAt']) &&
+        shortText(data.nickname, 30) && data.createdAt is timestamp;
+    }
+    function validDrawing(data) {
+      return data.keys().hasOnly(['mode', 'startedAt', 'finishedAt', 'distanceMeters', 'durationMillis', 'score', 'algorithmVersion', 'pointChunkCount']) &&
+        data.keys().hasAll(['mode', 'startedAt', 'finishedAt', 'distanceMeters', 'durationMillis', 'pointChunkCount']) &&
+        data.mode in ['CIRCLE', 'FREE_DRAWING'] &&
+        data.startedAt is timestamp && data.finishedAt is timestamp && data.finishedAt >= data.startedAt &&
+        data.distanceMeters is number && data.distanceMeters >= 0 &&
+        data.durationMillis is int && data.durationMillis >= 0 &&
+        data.pointChunkCount is int && data.pointChunkCount >= 0 && data.pointChunkCount <= 10000 &&
+        (data.mode == 'CIRCLE' ?
+          ('score' in data && data.score is int && data.score >= 0 && data.score <= 100 &&
+           'algorithmVersion' in data && shortText(data.algorithmVersion, 40)) :
+          !('score' in data) && !('algorithmVersion' in data));
+    }
+    function validEntry(uid, data) {
+      let drawing = get(/databases/$(database)/documents/users/$(uid)/drawings/$(data.drawingId));
+      return data.keys().hasOnly(['nickname', 'score', 'achievedAt', 'drawingId', 'algorithmVersion']) &&
+        data.keys().hasAll(['nickname', 'score', 'achievedAt', 'drawingId', 'algorithmVersion']) &&
+        shortText(data.nickname, 30) && data.score is int && data.score >= 0 && data.score <= 100 &&
+        data.achievedAt is timestamp && shortText(data.drawingId, 128) && shortText(data.algorithmVersion, 40) &&
+        drawing.data.mode == 'CIRCLE' && drawing.data.score == data.score &&
+        drawing.data.algorithmVersion == data.algorithmVersion;
+    }
+    match /users/{uid} {
+      allow read, delete: if owner(uid);
+      allow create, update: if owner(uid) && validProfile(request.resource.data);
+      match /drawings/{drawingId} {
+        allow read, delete: if owner(uid);
+        allow create, update: if owner(uid) && validDrawing(request.resource.data);
+        match /chunks/{chunkId} {
+          allow read, delete: if owner(uid);
+          allow create, update: if owner(uid) &&
+            request.resource.data.keys().hasOnly(['index', 'pointsJson']) &&
+            request.resource.data.keys().hasAll(['index', 'pointsJson']) &&
+            request.resource.data.index is int && request.resource.data.index >= 0 &&
+            shortText(request.resource.data.pointsJson, 200000);
+        }
+      }
+    }
+    match /leaderboards/circle/entries/{uid} {
+      allow read: if signedIn();
+      allow create, update: if owner(uid) && validEntry(uid, request.resource.data);
+      allow delete: if owner(uid);
+    }
+  }
+}
