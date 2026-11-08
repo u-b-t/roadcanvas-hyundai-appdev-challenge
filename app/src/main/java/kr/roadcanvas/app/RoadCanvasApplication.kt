@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.util.Log
 import com.google.firebase.FirebaseApp
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,11 +18,14 @@ import kr.roadcanvas.app.drawing.room.toStorage
 import kr.roadcanvas.app.map.MapAuth
 import kr.roadcanvas.app.map.naver.NaverMapSetup
 import kr.roadcanvas.app.recording.ServiceRecordingRunner
+import kr.roadcanvas.app.upload.DrawingRegistration
+import kr.roadcanvas.app.upload.FirestoreDrawingUploader
 import kr.roadcanvas.app.vehicle.VehicleIntegrationSelection
 import kr.roadcanvas.app.vehicle.aaos.AndroidCarUxRestrictionsClient
 import kr.roadcanvas.app.vehicle.pleos.PleosLocationProvider
 
 private const val TAG = "RoadCanvas"
+/** 익명 인증과 완료 그림 등록을 다시 시도하는 간격 */
 private const val ACCOUNT_RETRY_DELAY_MILLIS = 30_000L
 
 open class RoadCanvasApplication : Application() {
@@ -47,13 +51,29 @@ open class RoadCanvasApplication : Application() {
         }
     }
 
-    /** 인증에 실패하면 앱이 실행 중인 동안 일정 간격으로 다시 시도한다. */
+    /**
+     * 인증에 실패하면 앱이 실행 중인 동안 일정 간격으로 다시 시도한다.
+     * 인증되면 기기의 완료 그림을 주기적으로 Firebase에 등록한다.
+     */
     private suspend fun registerAccount() {
         val registration = container.accountRegistration
         registration.register()
         while (registration.state.value is AccountState.Failed) {
             delay(ACCOUNT_RETRY_DELAY_MILLIS)
             registration.register()
+        }
+        val account = (registration.state.value as? AccountState.Ready)?.account ?: return
+        val drawings =
+            DrawingRegistration(container.completedDrawingRepository, FirestoreDrawingUploader())
+        while (true) {
+            try {
+                drawings.register(account)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.w(TAG, "완료 그림 등록을 다시 시도합니다.", error)
+            }
+            delay(ACCOUNT_RETRY_DELAY_MILLIS)
         }
     }
 
