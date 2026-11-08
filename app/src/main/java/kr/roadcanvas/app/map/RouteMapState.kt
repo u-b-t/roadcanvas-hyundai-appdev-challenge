@@ -1,5 +1,8 @@
 package kr.roadcanvas.app.map
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.unit.dp
+
 /** 지도에 표시할 경로의 한 지점 */
 data class RoutePoint(val latitude: Double, val longitude: Double)
 
@@ -7,8 +10,13 @@ data class RoutePoint(val latitude: Double, val longitude: Double)
  * 경로 지도 표시 옵션.
  * [showEndpointMarkers]가 true이면 출발점과 도착점에 마커를 둔다. 진행 중 경로에는 도착점이 없으므로 출발점만 표시한다.
  * [inProgress]가 true이면 최신 위치를 따라가고, false이면 전체 경로가 보이게 맞춘다.
+ * [contentPadding]은 지도 위에 올린 오버레이가 가리는 영역이다. 경로·안내와 지도 로고는 이 영역을 피해 둔다.
  */
-data class RouteMapOptions(val showEndpointMarkers: Boolean = true, val inProgress: Boolean = false)
+data class RouteMapOptions(
+    val showEndpointMarkers: Boolean = true,
+    val inProgress: Boolean = false,
+    val contentPadding: PaddingValues = PaddingValues(0.dp)
+)
 
 /** 경로를 그릴 때 카메라를 맞추는 방식 */
 enum class RouteCamera {

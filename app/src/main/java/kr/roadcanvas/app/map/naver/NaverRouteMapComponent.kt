@@ -1,6 +1,7 @@
 package kr.roadcanvas.app.map.naver
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -41,15 +43,21 @@ class NaverRouteMapComponent(private val auth: MapAuth) : RouteMapComponent {
         val state = RouteMapState.of(points, options, authState)
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
             if (state is RouteMapState.Route || state is RouteMapState.NotEnoughPoints) {
-                NaverRouteMapView(state, Modifier.fillMaxSize())
+                NaverRouteMapView(state, options.contentPadding, Modifier.fillMaxSize())
             }
-            state.notice?.let { RouteMapNotice(it, Modifier.padding(16.dp)) }
+            state.notice?.let {
+                RouteMapNotice(it, Modifier.padding(options.contentPadding).padding(16.dp))
+            }
         }
     }
 }
 
 @Composable
-private fun NaverRouteMapView(state: RouteMapState, modifier: Modifier) {
+private fun NaverRouteMapView(
+    state: RouteMapState,
+    contentPadding: PaddingValues,
+    modifier: Modifier
+) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val mapView = remember { MapView(context) }
@@ -67,8 +75,24 @@ private fun NaverRouteMapView(state: RouteMapState, modifier: Modifier) {
         }
     }
 
-    val fitBoundsPadding = with(LocalDensity.current) { 48.dp.roundToPx() }
-    LaunchedEffect(naverMap, state) {
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    // 오버레이가 가린 영역을 지도 콘텐츠 패딩으로 주면 카메라 중심과 로고·법적 고지가 그 밖으로 옮겨진다.
+    LaunchedEffect(naverMap, contentPadding, density, layoutDirection) {
+        naverMap?.let { map ->
+            with(density) {
+                map.setContentPadding(
+                    contentPadding.calculateLeftPadding(layoutDirection).roundToPx(),
+                    contentPadding.calculateTopPadding().roundToPx(),
+                    contentPadding.calculateRightPadding(layoutDirection).roundToPx(),
+                    contentPadding.calculateBottomPadding().roundToPx()
+                )
+            }
+        }
+    }
+
+    val fitBoundsPadding = with(density) { 48.dp.roundToPx() }
+    LaunchedEffect(naverMap, state, contentPadding) {
         naverMap?.let { overlays.show(it, state, fitBoundsPadding) }
     }
 

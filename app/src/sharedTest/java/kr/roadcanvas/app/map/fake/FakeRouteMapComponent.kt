@@ -1,6 +1,8 @@
 package kr.roadcanvas.app.map.fake
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,8 +19,13 @@ class FakeRouteMapComponent : RouteMapComponent {
     @Composable
     override fun Content(points: List<RoutePoint>, options: RouteMapOptions, modifier: Modifier) {
         val state = RouteMapState.of(points, options, MapAuthState.Configured)
-        Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            RouteMapNotice(describe(state))
+        Box(modifier = modifier) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(options.contentPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                RouteMapNotice(describe(state))
+            }
         }
     }
 
