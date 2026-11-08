@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 
 const val MODE_SELECT_TITLE = "모드 선택"
 const val CIRCLE_CHALLENGE_NAME = "동그라미 챌린지"
@@ -35,9 +36,6 @@ const val FREE_DRAW_DESCRIPTION = "도로 위에 자유롭게 그려요"
 const val COMING_SOON_LABEL = "준비 중"
 const val FREE_DRAW_COMING_SOON_NOTICE = "자유그림은 아직 준비 중이에요"
 const val MY_DRAWINGS_LABEL = "내 그림"
-
-/** 차량 화면에서 누르기 쉬운 최소 터치 크기. */
-val MIN_TOUCH_TARGET = 76.dp
 
 @Composable
 fun ModeSelectScreen(

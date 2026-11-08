@@ -39,10 +39,10 @@ import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RoutePoint
-import kr.roadcanvas.app.modeselect.MIN_TOUCH_TARGET
 import kr.roadcanvas.app.recording.RecordingPermissions
 import kr.roadcanvas.app.recording.RecordingRequest
 import kr.roadcanvas.app.recording.RecordingState
+import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 
 const val CIRCLE_PROGRESS_TITLE = "동그라미 챌린지 진행"
 const val ELAPSED_LABEL = "경과 시간"

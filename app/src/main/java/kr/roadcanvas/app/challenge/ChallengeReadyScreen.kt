@@ -42,7 +42,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kr.roadcanvas.app.appContainer
-import kr.roadcanvas.app.modeselect.MIN_TOUCH_TARGET
+import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 
 const val CIRCLE_READY_TITLE = "동그라미 챌린지 준비"
 const val CHALLENGE_GOAL_HEADING = "목표"

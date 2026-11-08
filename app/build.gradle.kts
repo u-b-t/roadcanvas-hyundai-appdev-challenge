@@ -56,6 +56,12 @@ android {
         unitTests.isIncludeAndroidResources = true
     }
 
+    lint {
+        // SDG가 끌어오는 lifecycle 2.9의 LiveData 검사기는 AGP 8.7 Lint에서 IncompatibleClassChangeError로 중단된다.
+        // 앱은 LiveData를 쓰지 않으므로 이 검사만 끈다.
+        disable += "NullSafeMutableLiveData"
+    }
+
     buildFeatures {
         buildConfig = true
         compose = true
@@ -112,10 +118,14 @@ fun VariantDimension.naverMapFields() {
 }
 
 dependencies {
-    implementation(platform("androidx.compose:compose-bom:2024.12.01"))
+    implementation(platform("androidx.compose:compose-bom:2025.05.01"))
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
+    // SDG 디자인 시스템. SDG 코드는 Hilt를 쓰지 않으므로 앱에 Hilt를 들이지 않는다.
+    implementation("com.shoplworks:SDG-Android:1.26.3") {
+        exclude(group = "com.google.dagger", module = "hilt-android")
+    }
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
@@ -133,7 +143,7 @@ dependencies {
     testImplementation("androidx.test:core:1.6.1")
     testImplementation("org.robolectric:robolectric:4.14.1")
 
-    androidTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2025.05.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation("androidx.room:room-testing:2.6.1")
