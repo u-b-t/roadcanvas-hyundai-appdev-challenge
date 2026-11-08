@@ -38,3 +38,5 @@
 ## 현재 제한
 
 작품 문서와 하위 청크·투표의 영구 삭제는 아직 제공하지 않는다. 비공개 전환은 조회를 제한하지만 서버 데이터 자체를 삭제하지 않는다. 삭제·탈퇴, 공개 범위와 땅따먹기는 별도 설계가 필요하다. 규칙 변경을 실제 Firebase에 적용하려면 올바른 프로젝트에서 `firebase deploy --only firestore:rules,firestore:indexes,auth --project <프로젝트 ID>`를 실행한다. `firebase.json`의 인증 공급자 목록은 기존 Google 설정과 익명 인증을 함께 유지한다.
+
+목록 페이지, 내 순위와 닉네임 변경 절차는 [클라이언트 조회·프로필 계약](firebase-client-queries.md)을 따른다.
