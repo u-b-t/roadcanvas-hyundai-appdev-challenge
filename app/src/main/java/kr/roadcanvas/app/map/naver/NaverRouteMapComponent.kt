@@ -28,6 +28,7 @@ import com.naver.maps.map.NaverMap
 import com.naver.maps.map.overlay.LocationOverlay
 import com.naver.maps.map.overlay.Marker
 import com.naver.maps.map.overlay.PathOverlay
+import kr.roadcanvas.app.map.CurrentPosition
 import kr.roadcanvas.app.map.MapAuth
 import kr.roadcanvas.app.map.RouteCamera
 import kr.roadcanvas.app.map.RouteMapComponent
@@ -35,6 +36,7 @@ import kr.roadcanvas.app.map.RouteMapNotice
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RouteMapState
 import kr.roadcanvas.app.map.RoutePoint
+import kr.roadcanvas.app.map.showsCurrentPosition
 
 /** 네이버 지도 SDK로 경로를 그린다. 키가 없거나 인증에 실패하면 지도 대신 안내를 표시한다. */
 class NaverRouteMapComponent(private val auth: MapAuth) : RouteMapComponent {
@@ -44,7 +46,12 @@ class NaverRouteMapComponent(private val auth: MapAuth) : RouteMapComponent {
         val state = RouteMapState.of(points, options, authState)
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
             if (state.showsMap) {
-                NaverRouteMapView(state, options.contentPadding, Modifier.fillMaxSize())
+                NaverRouteMapView(
+                    state,
+                    options.contentPadding,
+                    options.currentPosition,
+                    Modifier.fillMaxSize()
+                )
             }
             state.notice?.let {
                 RouteMapNotice(it, Modifier.padding(options.contentPadding).padding(16.dp))
@@ -62,6 +69,7 @@ private val RouteMapState.showsMap: Boolean
 private fun NaverRouteMapView(
     state: RouteMapState,
     contentPadding: PaddingValues,
+    currentPosition: CurrentPosition?,
     modifier: Modifier
 ) {
     val context = LocalContext.current
@@ -100,6 +108,13 @@ private fun NaverRouteMapView(
     val fitBoundsPadding = with(density) { 48.dp.roundToPx() }
     LaunchedEffect(naverMap, state, contentPadding) {
         naverMap?.let { overlays.show(it, state, fitBoundsPadding) }
+    }
+    // 카메라는 경로 표시 상태로만 맞추고, 현재 위치 표시는 경로를 다시 그린 뒤 그 위에 덧붙인다.
+    val positionIconSize = with(density) { CURRENT_POSITION_ICON_SIZE.roundToPx() }
+    LaunchedEffect(naverMap, state, contentPadding, currentPosition) {
+        naverMap?.let {
+            overlays.showCurrentPosition(it, state, currentPosition, positionIconSize)
+        }
     }
 
     AndroidView(factory = { mapView }, modifier = modifier)
@@ -151,6 +166,31 @@ private class RouteOverlays {
         }
     }
 
+    /**
+     * 경로 위에 현재 위치를 진행 방향 화살표와 함께 표시한다. 출발점 마커와 구분되도록 지도의 위치 표시를 쓴다.
+     * 경로를 그리지 않는 상태거나 [position]이 없으면 [show]가 정한 표시를 그대로 둔다.
+     */
+    fun showCurrentPosition(
+        map: NaverMap,
+        state: RouteMapState,
+        position: CurrentPosition?,
+        iconSize: Int
+    ) {
+        if (!state.showsCurrentPosition || position == null) return
+        val overlay = map.locationOverlay
+        overlay.position = position.point.toLatLng()
+        // 기본 크기는 차량 화면에서 화살표가 잘 보이지 않아 키운다.
+        overlay.iconWidth = iconSize
+        overlay.iconHeight = iconSize
+        overlay.subIconWidth = iconSize
+        overlay.subIconHeight = iconSize
+        val bearing = position.bearingDegrees
+        overlay.subIcon = if (bearing == null) null else LocationOverlay.DEFAULT_SUB_ICON_ARROW
+        overlay.bearing = bearing?.toFloat() ?: 0f
+        overlay.isVisible = true
+        locationOverlay = overlay
+    }
+
     fun detach() {
         detachRoute()
         hideLocation()
@@ -177,6 +217,9 @@ private class RouteOverlays {
         }
         val position = point.toLatLng()
         overlay.position = position
+        overlay.iconWidth = LocationOverlay.SIZE_AUTO
+        overlay.iconHeight = LocationOverlay.SIZE_AUTO
+        overlay.subIcon = null
         overlay.isVisible = true
         locationOverlay = overlay
         map.moveCamera(followCamera(position))
@@ -198,6 +241,9 @@ private class RouteOverlays {
 
     private fun RoutePoint.toLatLng() = LatLng(latitude, longitude)
 }
+
+/** 경로 위 현재 위치 표시와 진행 방향 화살표의 크기 */
+private val CURRENT_POSITION_ICON_SIZE = 36.dp
 
 /** 현재 위치나 진행 중 경로를 처음 표시할 때의 확대 수준. 반지름 수십 m의 원과 주변 도로가 보이는 정도다. */
 private const val FOLLOW_ZOOM = 17.0

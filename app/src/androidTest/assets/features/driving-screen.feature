@@ -1,6 +1,6 @@
 Feature: 주행 중 화면
   앱은 Distraction Optimization을 선언해 주행 중에도 플랫폼이 화면을 가리지 않는다.
-  주행 규제가 조작 제한이거나 확인 불가이면 진행 화면만 그대로 보여주고,
+  주행 규제가 조작 제한이거나 확인 불가이면 진행 화면만 그대로 보여주되 종료·포기 버튼은 숨기고,
   나머지 화면은 정차 후 이용할 수 있다고 안내하며 조작을 막는다. 정차하면 원래 화면으로 돌아온다.
   정차 안내는 어둡게 처리한 커버 배경 위에 큰 경고 아이콘과 짧은 문장으로 운전석에 가까운 화면 왼쪽에 표시한다.
 
@@ -8,6 +8,7 @@ Feature: 주행 중 화면
   - [#43 주행 중 진행 화면 표시를 위한 Distraction Optimization 선언](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/43)
   - [#50 내 그림·스플래시·정차 안내 화면에 SDG 적용](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/50)
   - [#62 정차 안내와 스플래시를 커버 스타일로 통일하고 시작 깜빡임 제거](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/62)
+  - [#55 진행 화면에 출발점 안내와 주행 중 큰 정보 표시 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/55)
 
   Scenario: 앱 화면이 Distraction Optimization을 선언한다
     Then 앱 실행 화면은 Distraction Optimization을 선언한다
@@ -60,7 +61,7 @@ Feature: 주행 중 화면
     When 테스트에서 주행 규제 상태를 "조작 가능"로 바꾼다
     Then 화면에 "동그라미 챌린지 결과"가 표시된다
 
-  Scenario Outline: 주행 중에도 진행 화면은 가리지 않고 경로와 측정값을 갱신한다
+  Scenario Outline: 주행 중에도 진행 화면은 가리지 않고 경로와 측정값을 갱신하며 종료·포기 버튼은 숨긴다
     Given 동그라미 챌린지 진행 화면에서 기록을 시작했다
     When 테스트에서 주행 규제 상태를 "<상태>"로 바꾼다
     And 테스트에서 위도 37.5665, 경도 126.978 위치를 기록한다
@@ -69,8 +70,8 @@ Feature: 주행 중 화면
     And 화면에 "경과 시간"이 표시된다
     And 화면에 "대체 경로 지도 · 지점 2개 · 최신 위치 따라가기"가 표시된다
     And 화면에 "정차 후 이용할 수 있어요"가 보이지 않는다
-    And "종료" 버튼이 비활성화되어 있다
-    And "포기" 버튼이 비활성화되어 있다
+    And 화면에 "종료"가 보이지 않는다
+    And 화면에 "포기"가 보이지 않는다
 
     Examples:
       | 상태    |

@@ -12,12 +12,14 @@ data class RoutePoint(val latitude: Double, val longitude: Double)
  * [inProgress]가 true이면 최신 위치를 따라가고, false이면 전체 경로가 보이게 맞춘다.
  * [showCurrentLocation]이 true이면 경로선 대신 마지막 좌표를 현재 위치로 표시한다.
  * [contentPadding]은 지도 위에 올린 오버레이가 가리는 영역이다. 경로·안내와 지도 로고는 이 영역을 피해 둔다.
+ * [currentPosition]을 주면 경로 위에 현재 위치와 진행 방향을 출발점 마커와 구분해 표시한다. 카메라 이동에는 영향이 없다.
  */
 data class RouteMapOptions(
     val showEndpointMarkers: Boolean = true,
     val inProgress: Boolean = false,
     val showCurrentLocation: Boolean = false,
-    val contentPadding: PaddingValues = PaddingValues(0.dp)
+    val contentPadding: PaddingValues = PaddingValues(0.dp),
+    val currentPosition: CurrentPosition? = null
 )
 
 /** 경로를 그릴 때 카메라를 맞추는 방식 */

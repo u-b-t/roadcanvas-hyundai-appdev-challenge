@@ -1,11 +1,15 @@
 package kr.roadcanvas.app.map.fake
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlin.math.roundToInt
+import kr.roadcanvas.app.map.CurrentPosition
 import kr.roadcanvas.app.map.MapAuthState
 import kr.roadcanvas.app.map.RouteCamera
 import kr.roadcanvas.app.map.RouteMapComponent
@@ -13,6 +17,7 @@ import kr.roadcanvas.app.map.RouteMapNotice
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RouteMapState
 import kr.roadcanvas.app.map.RoutePoint
+import kr.roadcanvas.app.map.showsCurrentPosition
 
 /** 네트워크와 지도 SDK 없이 경로 지도 표시 상태를 글로 보여주는 대체 컴포넌트 */
 class FakeRouteMapComponent : RouteMapComponent {
@@ -20,11 +25,15 @@ class FakeRouteMapComponent : RouteMapComponent {
     override fun Content(points: List<RoutePoint>, options: RouteMapOptions, modifier: Modifier) {
         val state = RouteMapState.of(points, options, MapAuthState.Configured)
         Box(modifier = modifier) {
-            Box(
+            Column(
                 modifier = Modifier.fillMaxSize().padding(options.contentPadding),
-                contentAlignment = Alignment.Center
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 RouteMapNotice(describe(state))
+                options.currentPosition?.takeIf { state.showsCurrentPosition }?.let {
+                    RouteMapNotice(describe(it))
+                }
             }
         }
     }
@@ -44,6 +53,12 @@ class FakeRouteMapComponent : RouteMapComponent {
                 "대체 경로 지도 · 현재 위치 표시"
             }
             else -> state.notice.orEmpty()
+        }
+
+        /** 현재 위치 표시. 진행 방향은 가장 가까운 정수 각도로 보여준다. */
+        fun describe(position: CurrentPosition): String {
+            val bearing = position.bearingDegrees?.let { "진행 방향 ${it.roundToInt() % 360}도" }
+            return "대체 현재 위치 · ${bearing ?: "진행 방향 없음"}"
         }
     }
 }
