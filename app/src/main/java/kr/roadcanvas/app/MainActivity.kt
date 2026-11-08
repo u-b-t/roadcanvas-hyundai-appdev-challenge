@@ -17,6 +17,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val vehicleIntegrationInfo = appContainer.vehicleIntegrationInfo
+        val drivingRestriction = appContainer.drivingRestrictionProvider.restriction
         setContent {
             MaterialTheme {
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -24,6 +25,7 @@ class MainActivity : ComponentActivity() {
                     if (BuildConfig.DEBUG) {
                         VehicleIntegrationBadge(
                             info = vehicleIntegrationInfo,
+                            drivingRestriction = drivingRestriction,
                             modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp)
                         )
                     }

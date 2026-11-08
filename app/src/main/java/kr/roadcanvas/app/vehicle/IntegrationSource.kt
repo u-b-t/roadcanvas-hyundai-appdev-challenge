@@ -4,6 +4,6 @@ package kr.roadcanvas.app.vehicle
 enum class IntegrationSource(val key: String, val label: String, val isImplemented: Boolean) {
     SIMULATED("simulated", "모의", isImplemented = true),
     PLEOS("pleos", "Pleos", isImplemented = false),
-    AAOS("aaos", "AAOS", isImplemented = false),
+    AAOS("aaos", "AAOS", isImplemented = true),
     TEST("test", "테스트", isImplemented = true)
 }

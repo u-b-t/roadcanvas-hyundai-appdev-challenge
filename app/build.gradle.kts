@@ -12,6 +12,7 @@ plugins {
 android {
     namespace = "kr.roadcanvas.app"
     compileSdk = 35
+    useLibrary("android.car")
 
     defaultConfig {
         applicationId = "kr.roadcanvas.app"
