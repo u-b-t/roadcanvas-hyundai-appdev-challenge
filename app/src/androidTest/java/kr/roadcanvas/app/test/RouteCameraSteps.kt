@@ -1,8 +1,8 @@
 package kr.roadcanvas.app.test
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -90,27 +90,27 @@ class RouteCameraSteps(private val ruleHolder: ComposeRuleHolder) {
         }
     }
 
+    /** 지도처럼 언어 방향과 관계없이 화면 왼쪽 위 기준 좌표로 경로 영역을 그린다. */
     @Composable
     private fun RouteCameraArea() {
         val density = LocalDensity.current
         val layoutDirection = LocalLayoutDirection.current
         var size by remember { mutableStateOf(IntSize.Zero) }
-        Box(modifier = Modifier.fillMaxSize().onSizeChanged { size = it }) {
-            if (size != IntSize.Zero) {
-                val contentPadding = MapInsets.of(
-                    driverSideOverlayContentPadding(),
-                    density,
-                    layoutDirection
-                )
-                val area = (contentPadding + RouteCameraPadding.insets(density, layoutDirection))
-                    .inset(size.width, size.height)
-                with(density) {
-                    Box(
-                        modifier = Modifier
-                            .offset { IntOffset(area.left, area.top) }
-                            .size(area.width.toDp(), area.height.toDp())
-                            .testTag(ROUTE_CAMERA_AREA_TAG)
-                    )
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Box(modifier = Modifier.fillMaxSize().onSizeChanged { size = it }) {
+                if (size != IntSize.Zero) {
+                    val padding = driverSideOverlayContentPadding()
+                    val contentPadding = MapInsets.of(padding, density, layoutDirection)
+                    val cameraInsets = RouteCameraPadding.insets(density, layoutDirection)
+                    val area = (contentPadding + cameraInsets).inset(size.width, size.height)
+                    with(density) {
+                        Box(
+                            modifier = Modifier
+                                .absoluteOffset { IntOffset(area.left, area.top) }
+                                .size(area.width.toDp(), area.height.toDp())
+                                .testTag(ROUTE_CAMERA_AREA_TAG)
+                        )
+                    }
                 }
             }
         }
