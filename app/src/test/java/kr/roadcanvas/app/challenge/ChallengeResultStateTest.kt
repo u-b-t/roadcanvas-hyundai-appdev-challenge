@@ -260,6 +260,20 @@ class ChallengeResultStateTest {
         assertEquals(drawing.distanceMeters, result.distanceMeters, 0.0)
     }
 
+    @Test
+    fun `자유그림은 점수 구성, 고칠 점, 맞춤 원이 없다`() {
+        val result = challengeResultOf(
+            DrawingMode.FREE_DRAWING,
+            path(TestPaths.circle(50.0)),
+            START,
+            START + 90_000
+        )
+
+        assertTrue(result.scoreComponents.isEmpty())
+        assertNull(result.improvementTip)
+        assertNull(result.fitCircle)
+    }
+
     private companion object {
         const val START = 1_700_000_000_000L
     }

@@ -484,6 +484,15 @@ class ChallengeResultViewModelTest {
         assertEquals("남산 하트", savedSummaries().single().name)
     }
 
+    @Test
+    fun `자유그림은 점수가 없어 최고 기록과 비교하지 않는다`() = runTest(dispatcher) {
+        saveInProgress(circlePath(), mode = DrawingMode.FREE_DRAWING)
+
+        val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
+
+        assertNull(state.bestComparison)
+    }
+
     private fun stationaryPath() = TestPaths.stationary(5).mapIndexed { i, it ->
         RoutePoint(it.latitude, it.longitude, START + i * 1_000L)
     }
