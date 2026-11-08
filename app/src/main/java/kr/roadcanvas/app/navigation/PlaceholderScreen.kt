@@ -9,7 +9,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
 const val CIRCLE_RESULT_TITLE = "동그라미 챌린지 결과"
-const val MY_DRAWINGS_TITLE = "내 그림 목록"
 
 /** 아직 구현하지 않은 화면 자리에 제목만 표시한다. */
 @Composable
