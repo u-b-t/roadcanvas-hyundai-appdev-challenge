@@ -6,6 +6,8 @@ import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.di.DefaultAppContainer
 import kr.roadcanvas.app.drawing.room.DrawingDatabase
 import kr.roadcanvas.app.drawing.room.toStorage
+import kr.roadcanvas.app.map.MapAuth
+import kr.roadcanvas.app.map.naver.NaverMapSetup
 import kr.roadcanvas.app.vehicle.VehicleIntegrationSelection
 import kr.roadcanvas.app.vehicle.aaos.AndroidCarUxRestrictionsClient
 
@@ -13,8 +15,12 @@ open class RoadCanvasApplication : Application() {
     lateinit var container: AppContainer
         private set
 
+    /** 빌드에 넣은 네이버 지도 키 ID와 SDK가 알린 인증 실패 상태 */
+    val mapAuth = MapAuth(BuildConfig.NAVER_MAP_CLIENT_ID)
+
     override fun onCreate() {
         super.onCreate()
+        NaverMapSetup.configure(this, mapAuth)
         container = createContainer()
     }
 
@@ -26,7 +32,8 @@ open class RoadCanvasApplication : Application() {
             simulatedRoute = BuildConfig.VEHICLE_SIM_ROUTE
         ),
         drawingStorage = DrawingDatabase.create(this).toStorage(),
-        carUxRestrictionsClient = { AndroidCarUxRestrictionsClient(this) }
+        carUxRestrictionsClient = { AndroidCarUxRestrictionsClient(this) },
+        mapAuth = mapAuth
     )
 }
 

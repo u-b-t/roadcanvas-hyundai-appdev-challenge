@@ -3,12 +3,14 @@ package kr.roadcanvas.app.di
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kr.roadcanvas.app.drawing.fake.fakeDrawingStorage
+import kr.roadcanvas.app.map.naver.NaverRouteMapComponent
 import kr.roadcanvas.app.vehicle.DrivingRestriction
 import kr.roadcanvas.app.vehicle.IntegrationSource
 import kr.roadcanvas.app.vehicle.VehicleIntegrationSelection
 import kr.roadcanvas.app.vehicle.fake.FakeCarUxRestrictionsClient
 import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteConfig
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DefaultAppContainerTest {
@@ -61,5 +63,15 @@ class DefaultAppContainerTest {
 
         assertEquals(DrivingRestriction.UNRESTRICTED, restriction)
         assertEquals(1, client.connectCount)
+    }
+
+    @Test
+    fun `경로 지도는 네이버 지도 컴포넌트를 쓴다`() {
+        val container = DefaultAppContainer(
+            VehicleIntegrationSelection.parse("simulated", "simulated", "circle"),
+            fakeDrawingStorage()
+        )
+
+        assertTrue(container.routeMapComponent is NaverRouteMapComponent)
     }
 }
