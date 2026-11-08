@@ -67,6 +67,8 @@ import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.CarEmptyState
 import kr.roadcanvas.app.ui.components.DriverSideLayout
+import kr.roadcanvas.app.ui.components.OVERLAY_CARD_COLOR
+import kr.roadcanvas.app.ui.components.OVERLAY_CARD_ELEVATION
 import kr.roadcanvas.app.ui.components.OverlayCard
 import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 import kr.roadcanvas.app.ui.theme.CONTROL_PANEL_WIDTH
@@ -100,6 +102,7 @@ const val MY_DRAWINGS_ITEM_MODE_TAG = "myDrawingsItemMode"
 const val DRAWING_DETAIL_TAG = "drawingDetail"
 const val DRAWING_DETAIL_OVERLAY_TAG = "drawingDetailOverlay"
 const val DRAWING_DETAIL_NAME_TAG = "drawingDetailName"
+const val DRAWING_DELETE_BUTTON_TAG = "drawingDeleteButton"
 
 /** 운전석 쪽 목록 영역의 너비. 썸네일, 날짜와 점수가 한 줄에 들어가도록 조작 영역보다 넓다. */
 private val LIST_PANEL_WIDTH = 440.dp
@@ -137,7 +140,7 @@ fun MyDrawingsRoute(
 }
 
 /**
- * 기록이 있으면 왼쪽 목록과 오른쪽 상세를 나란히 두고, 상세는 경로 지도를 가득 채운 뒤 왼쪽에 점수 카드와 삭제 버튼을 올린다.
+ * 기록이 있으면 왼쪽 목록과 오른쪽 상세를 나란히 두고, 상세는 경로 지도를 가득 채운 뒤 왼쪽 위에 점수 카드, 왼쪽 아래에 삭제 버튼을 올린다.
  * 기록이 없거나 불러오지 못하면 왼쪽 조작 영역에 버튼을, 오른쪽에 SDG 빈 상태 안내를 둔다.
  */
 @Composable
@@ -384,7 +387,7 @@ private fun DrawingListItem(
         horizontalArrangement = Arrangement.spacedBy(CONTROL_SPACING),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        ModeThumbnail(mode = summary.mode)
+        RouteThumbnail(points = summary.thumbnail, mode = summary.mode)
         val (title, subtitle) = listItemTexts(summary)
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -421,7 +424,10 @@ private fun DrawingListItem(
     }
 }
 
-/** 상세 영역을 경로 지도로 채우고, 왼쪽 위 오버레이에 점수 카드와 삭제 버튼을 둔다. */
+/**
+ * 상세 영역을 경로 지도로 채우고, 왼쪽 위 오버레이에 점수 카드를 둔다.
+ * 삭제 버튼은 점수 카드와 떨어진 왼쪽 아래에 덜 강조된 모양으로 둔다.
+ */
 @Composable
 private fun DrawingDetail(
     state: MyDrawingsUiState,
@@ -457,10 +463,19 @@ private fun DrawingDetail(
                         DetailOverlayContent(
                             state = state,
                             onRetryDetail = onRetryDetail,
-                            onRequestDelete = onRequestDelete,
                             onStartRename = onStartRename,
                             onCancelRename = onCancelRename,
                             onSaveName = onSaveName
+                        )
+                    }
+                    // 이름을 바꾸는 동안에는 숨겨 입력과 겹치거나 잘못 누르지 않게 한다.
+                    if (state.detail is DrawingDetailState.Loaded && state.rename == null) {
+                        DeleteDrawingButton(
+                            deleting = state.deleting,
+                            onClick = onRequestDelete,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .testTag(DRAWING_DELETE_BUTTON_TAG)
                         )
                     }
                 }
@@ -473,7 +488,6 @@ private fun DrawingDetail(
 private fun ColumnScope.DetailOverlayContent(
     state: MyDrawingsUiState,
     onRetryDetail: () -> Unit,
-    onRequestDelete: () -> Unit,
     onStartRename: () -> Unit,
     onCancelRename: () -> Unit,
     onSaveName: (String) -> Unit
@@ -502,13 +516,6 @@ private fun ColumnScope.DetailOverlayContent(
                     color = MaterialTheme.colorScheme.error
                 )
             }
-            CarButton(
-                text = if (state.deleting) DELETING_LABEL else DELETE_LABEL,
-                onClick = onRequestDelete,
-                enabled = !state.deleting,
-                style = CarButtonStyle.Line,
-                modifier = Modifier.fillMaxWidth()
-            )
         }
         DrawingDetailState.Error -> {
             Text(text = DRAWING_DETAIL_LOAD_ERROR, style = MaterialTheme.typography.titleLarge)
@@ -573,6 +580,43 @@ private fun RenameEditor(
         style = CarButtonStyle.Neutral,
         modifier = Modifier.fillMaxWidth()
     )
+}
+
+/**
+ * 지도 위에 올리는 작은 삭제 버튼. 실수로 누르지 않도록 채우지 않은 반투명 흰 바탕에 회색 아이콘과 글자로 그리고,
+ * 터치 영역은 [MIN_TOUCH_TARGET]을 지킨다.
+ */
+@Composable
+private fun DeleteDrawingButton(
+    deleting: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        enabled = !deleting,
+        modifier = modifier.heightIn(min = MIN_TOUCH_TARGET),
+        shape = SDGCornerRadius.BoxRadius.Radius16,
+        color = OVERLAY_CARD_COLOR,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shadowElevation = OVERLAY_CARD_ELEVATION
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(SdgR.drawable.ic_common_trash),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                text = if (deleting) DELETING_LABEL else DELETE_LABEL,
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+    }
 }
 
 /** 모드, 이름, 날짜, 큰 점수와 거리·소요 시간을 한 카드에 보여준다. 점수가 없는 자유그림은 점수를 뺀다. */
