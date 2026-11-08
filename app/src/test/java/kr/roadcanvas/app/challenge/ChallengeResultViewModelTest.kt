@@ -466,6 +466,24 @@ class ChallengeResultViewModelTest {
         assertNull(recorder.unsavedFinish())
     }
 
+    @Test
+    fun `자유그림은 이름이 필수라 비워 두면 저장하지 않고 이름을 입력하면 저장한다`() = runTest(dispatcher) {
+        saveInProgress(circlePath(), mode = DrawingMode.FREE_DRAWING)
+        val viewModel = viewModel()
+
+        viewModel.saveName("   ")
+
+        val empty = viewModel.uiState.value as ChallengeResultUiState.Calculated
+        assertEquals(NameSaveStatus.IDLE, empty.nameSaveStatus)
+        assertNull(savedSummaries().single().name)
+
+        viewModel.saveName(" 남산 하트 ")
+
+        val named = viewModel.uiState.value as ChallengeResultUiState.Calculated
+        assertEquals(NameSaveStatus.SAVED, named.nameSaveStatus)
+        assertEquals("남산 하트", savedSummaries().single().name)
+    }
+
     private fun stationaryPath() = TestPaths.stationary(5).mapIndexed { i, it ->
         RoutePoint(it.latitude, it.longitude, START + i * 1_000L)
     }
