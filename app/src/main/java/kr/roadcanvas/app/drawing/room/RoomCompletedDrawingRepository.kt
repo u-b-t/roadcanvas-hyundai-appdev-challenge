@@ -17,7 +17,8 @@ class RoomCompletedDrawingRepository(private val dao: CompletedDrawingDao) :
                 completedAtMillis = drawing.completedAtMillis,
                 score = drawing.score,
                 distanceMeters = drawing.distanceMeters,
-                durationMillis = drawing.durationMillis
+                durationMillis = drawing.durationMillis,
+                name = drawing.name
             ),
             points = { id ->
                 drawing.path.mapIndexed { index, point ->
@@ -51,13 +52,17 @@ class RoomCompletedDrawingRepository(private val dao: CompletedDrawingDao) :
                 score = drawing.score,
                 metrics = details.metrics.associate { it.name to it.value },
                 distanceMeters = drawing.distanceMeters,
-                durationMillis = drawing.durationMillis
+                durationMillis = drawing.durationMillis,
+                name = drawing.name
             )
         }
     }
 
     override suspend fun findId(mode: DrawingMode, completedAtMillis: Long): StorageResult<Long?> =
         storageResultOf { dao.findId(mode.key, completedAtMillis) }
+
+    override suspend fun rename(id: Long, name: String?): StorageResult<Unit> =
+        storageResultOf { check(dao.rename(id, name) > 0) { "완료 기록이 없습니다." } }
 
     override suspend fun delete(id: Long): StorageResult<Unit> = storageResultOf { dao.delete(id) }
 
@@ -70,6 +75,7 @@ class RoomCompletedDrawingRepository(private val dao: CompletedDrawingDao) :
         completedAtMillis = completedAtMillis,
         score = score,
         distanceMeters = distanceMeters,
-        durationMillis = durationMillis
+        durationMillis = durationMillis,
+        name = name
     )
 }

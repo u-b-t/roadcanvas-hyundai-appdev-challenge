@@ -31,7 +31,7 @@ abstract class DrawingDatabase : RoomDatabase() {
     abstract fun inProgressDrawingDao(): InProgressDrawingDao
 
     companion object {
-        const val VERSION = 2
+        const val VERSION = 3
         const val NAME = "drawings.db"
 
         /** 진행 중 기록에 종료 시각을 추가한다. 기존 진행 중 기록은 종료하지 않은 도전으로 남는다. */
@@ -41,7 +41,14 @@ abstract class DrawingDatabase : RoomDatabase() {
             }
         }
 
-        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2)
+        /** 완료 기록에 이름을 추가한다. 기존 완료 기록은 이름이 없는 기록으로 남는다. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE completed_drawing ADD COLUMN name TEXT")
+            }
+        }
+
+        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
 
         fun create(context: Context, name: String = NAME): DrawingDatabase =
             Room.databaseBuilder(context, DrawingDatabase::class.java, name)

@@ -18,7 +18,9 @@ data class CompletedDrawingEntity(
     @ColumnInfo(name = "completed_at") val completedAtMillis: Long,
     val score: Int,
     @ColumnInfo(name = "distance_meters") val distanceMeters: Double,
-    @ColumnInfo(name = "duration_millis") val durationMillis: Long
+    @ColumnInfo(name = "duration_millis") val durationMillis: Long,
+    /** 사용자가 붙인 이름. 붙이지 않았으면 null이다. 버전 3에서 추가했다. */
+    val name: String? = null
 )
 
 @Entity(

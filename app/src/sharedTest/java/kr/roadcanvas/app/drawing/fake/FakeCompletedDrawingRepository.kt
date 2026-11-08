@@ -33,7 +33,8 @@ class FakeCompletedDrawingRepository : CompletedDrawingRepository {
                     it.completedAtMillis,
                     it.score,
                     it.distanceMeters,
-                    it.durationMillis
+                    it.durationMillis,
+                    it.name
                 )
             }
     }
@@ -43,6 +44,13 @@ class FakeCompletedDrawingRepository : CompletedDrawingRepository {
     override suspend fun findId(mode: DrawingMode, completedAtMillis: Long) = result {
         drawings.values.filter { it.mode == mode && it.completedAtMillis == completedAtMillis }
             .minOfOrNull { it.id }
+    }
+
+    override suspend fun rename(id: Long, name: String?): StorageResult<Unit> {
+        val drawing = drawings[id]
+            ?: return failure?.let { StorageResult.Failure(it) }
+                ?: StorageResult.Failure(IllegalStateException("완료 기록이 없습니다."))
+        return result { drawings[id] = drawing.copy(name = name) }
     }
 
     override suspend fun delete(id: Long) = result<Unit> { drawings.remove(id) }

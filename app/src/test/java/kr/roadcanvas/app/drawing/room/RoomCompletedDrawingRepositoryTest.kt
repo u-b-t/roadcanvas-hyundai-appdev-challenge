@@ -60,6 +60,32 @@ class RoomCompletedDrawingRepositoryTest {
     }
 
     @Test
+    fun `이름을 붙여 저장하면 상세와 목록에서 이름을 읽는다`() = runTest {
+        val id = repository.save(drawing(completedAtMillis = 1, score = 10).copy(name = "첫 동그라미"))
+            .value()
+
+        assertEquals("첫 동그라미", repository.find(id).value()?.name)
+        assertEquals(listOf("첫 동그라미"), repository.summaries().value().map { it.name })
+    }
+
+    @Test
+    fun `이름을 바꾸거나 지울 수 있고 다른 값은 그대로다`() = runTest {
+        val drawing = drawing(completedAtMillis = 1, score = 10)
+        val id = repository.save(drawing).value()
+
+        repository.rename(id, "한강 한 바퀴").value()
+        assertEquals(drawing.copy(id = id, name = "한강 한 바퀴"), repository.find(id).value())
+
+        repository.rename(id, null).value()
+        assertNull(repository.find(id).value()?.name)
+    }
+
+    @Test
+    fun `없는 기록의 이름은 바꿀 수 없다`() = runTest {
+        assertTrue(repository.rename(42, "이름") is StorageResult.Failure)
+    }
+
+    @Test
     fun `삭제한 기록은 조회되지 않고 경로와 세부 지표도 함께 지운다`() = runTest {
         val kept = repository.save(drawing(completedAtMillis = 1, score = 10)).value()
         val deleted = repository.save(drawing(completedAtMillis = 2, score = 20)).value()

@@ -17,6 +17,9 @@ interface CompletedDrawingRepository {
      */
     suspend fun findId(mode: DrawingMode, completedAtMillis: Long): StorageResult<Long?>
 
+    /** 기록의 이름을 [name]으로 바꾼다. null이면 이름을 지운다. 없는 ID면 실패다. */
+    suspend fun rename(id: Long, name: String?): StorageResult<Unit>
+
     /** 기록을 삭제한다. 없는 ID여도 성공이다. */
     suspend fun delete(id: Long): StorageResult<Unit>
 
