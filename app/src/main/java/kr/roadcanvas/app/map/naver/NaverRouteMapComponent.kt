@@ -122,12 +122,12 @@ private fun NaverRouteMapView(
 
 /** 경로선과 출발·도착 마커, 기준 원, 현재 위치. 좌표가 바뀌면 같은 오버레이에 좌표열을 다시 지정한다. */
 private class RouteOverlays {
-    // 경로선(파란 실선) 아래에 반투명 면과 주황 테두리로 그려 경로와 구분한다.
+    // 경로선(파란 굵은 선) 위에 가는 주황 테두리와 반투명 면으로 그려, 경로와 겹쳐도 원이 보이고 구분된다.
     private val circle = CircleOverlay().apply {
         color = 0x1FFB8C00
-        outlineWidth = 4
-        outlineColor = 0xCCFB8C00.toInt()
-        zIndex = -1
+        outlineWidth = 3
+        outlineColor = 0xFFFB8C00.toInt()
+        globalZIndex = PathOverlay.DEFAULT_GLOBAL_Z_INDEX + 1
     }
     private val path = PathOverlay().apply {
         width = 12
