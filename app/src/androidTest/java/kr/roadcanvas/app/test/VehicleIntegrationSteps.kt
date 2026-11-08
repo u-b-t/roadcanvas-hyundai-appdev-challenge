@@ -20,6 +20,7 @@ import kotlinx.coroutines.withTimeout
 import kr.roadcanvas.app.RoadCanvasApplication
 import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.di.DefaultAppContainer
+import kr.roadcanvas.app.drawing.fake.fakeDrawingStorage
 import kr.roadcanvas.app.vehicle.DrivingRestriction
 import kr.roadcanvas.app.vehicle.IntegrationSource
 import kr.roadcanvas.app.vehicle.LocationAvailability
@@ -170,7 +171,8 @@ class VehicleIntegrationSteps {
     @When("차량 연동을 구성한다")
     fun buildContainer() {
         container = DefaultAppContainer(
-            VehicleIntegrationSelection.parse(locationKey, drivingKey, routeType.key)
+            VehicleIntegrationSelection.parse(locationKey, drivingKey, routeType.key),
+            fakeDrawingStorage()
         )
     }
 

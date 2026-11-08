@@ -2,6 +2,7 @@ package kr.roadcanvas.app.di
 
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kr.roadcanvas.app.drawing.fake.fakeDrawingStorage
 import kr.roadcanvas.app.vehicle.DrivingRestriction
 import kr.roadcanvas.app.vehicle.IntegrationSource
 import kr.roadcanvas.app.vehicle.VehicleIntegrationSelection
@@ -13,7 +14,8 @@ class DefaultAppContainerTest {
     @Test
     fun `디버그 기본값은 모의 위치와 모의로 대체한 주행 규제를 쓴다`() = runTest {
         val container = DefaultAppContainer(
-            VehicleIntegrationSelection.parse("simulated", "aaos", "stationary")
+            VehicleIntegrationSelection.parse("simulated", "aaos", "stationary"),
+            fakeDrawingStorage()
         )
 
         assertEquals(IntegrationSource.SIMULATED, container.vehicleIntegrationInfo.location)
@@ -33,7 +35,8 @@ class DefaultAppContainerTest {
     @Test
     fun `릴리스 기본값도 실제 구현 전에는 모의 구현으로 동작한다`() {
         val container = DefaultAppContainer(
-            VehicleIntegrationSelection.parse("pleos", "aaos", "circle")
+            VehicleIntegrationSelection.parse("pleos", "aaos", "circle"),
+            fakeDrawingStorage()
         )
 
         assertEquals(
