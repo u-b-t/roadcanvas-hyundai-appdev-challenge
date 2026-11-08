@@ -10,15 +10,19 @@ import android.provider.Settings
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,13 +31,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.shopl.sdg_resource.R as SdgR
 import kr.roadcanvas.app.appContainer
 import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
@@ -41,16 +49,30 @@ import kr.roadcanvas.app.map.RoutePoint
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
+import kr.roadcanvas.app.ui.components.KeepWordsText
 import kr.roadcanvas.app.ui.components.OverlayCard
 import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
+import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 
 const val CIRCLE_READY_TITLE = "동그라미 챌린지 준비"
-const val CHALLENGE_GOAL_HEADING = "목표"
-const val CHALLENGE_GOAL = "원에 가깝게 주행한 뒤 출발점 근처로 돌아오세요"
-const val CHALLENGE_RULES_HEADING = "진행 방법"
-const val CHALLENGE_RULE_START_STOP = "시작과 종료는 정차한 뒤 버튼으로 해요"
+const val CHALLENGE_GOAL = "원을 그리고 출발점으로 돌아와요"
+const val CHALLENGE_RULE_START_STOP = "정차한 뒤 시작하고 끝내요"
 const val CHALLENGE_RULE_NO_PAUSE = "도중에 일시정지할 수 없어요"
-const val CHALLENGE_RULE_GIVE_UP = "정차 중에는 언제든 포기할 수 있어요"
+
+/** 목표·진행 방법 안내 문장 옆 아이콘의 테스트 태그 */
+const val READY_GUIDE_ICON_TAG = "ready_guide_icon"
+
+/** 화면에서 가장 큰 조작 요소가 되도록 다른 버튼([MIN_TOUCH_TARGET])보다 키운 시작 버튼 높이 */
+val START_BUTTON_HEIGHT = 112.dp
+
+private val GuideIconSize = 32.dp
+
+/** 목표와 진행 방법. 운전 중에도 한눈에 읽도록 아이콘과 짧은 문장 세 개로 줄인다. */
+private val ReadyGuides = listOf(
+    SdgR.drawable.ic_retry to CHALLENGE_GOAL,
+    SdgR.drawable.ic_common_play to CHALLENGE_RULE_START_STOP,
+    SdgR.drawable.ic_ban to CHALLENGE_RULE_NO_PAUSE
+)
 
 const val READY_STATUS_READY = "시작할 준비가 되었어요"
 const val READY_STATUS_LOCATING = "위치 확인 중"
@@ -148,45 +170,27 @@ fun ChallengeReadyScreen(
             )
         },
         controls = {
-            // 내용이 화면 높이를 넘으면 안내 카드만 스크롤하고 상태와 버튼은 항상 보이게 둔다.
+            // 내용이 화면 높이를 넘으면 안내 카드만 스크롤하고 상태와 시작 버튼은 항상 보이게 둔다.
             OverlayCard(modifier = Modifier.fillMaxWidth().weight(1f, fill = false)) {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(text = CIRCLE_READY_TITLE, style = MaterialTheme.typography.headlineSmall)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = CHALLENGE_GOAL_HEADING,
-                        style = MaterialTheme.typography.titleMedium
+                    KeepWordsText(
+                        text = CIRCLE_READY_TITLE,
+                        style = MaterialTheme.typography.headlineSmall
                     )
-                    Text(text = CHALLENGE_GOAL, style = MaterialTheme.typography.bodyLarge)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = CHALLENGE_RULES_HEADING,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    listOf(
-                        CHALLENGE_RULE_START_STOP,
-                        CHALLENGE_RULE_NO_PAUSE,
-                        CHALLENGE_RULE_GIVE_UP
-                    ).forEach { rule ->
-                        Text(text = rule, style = MaterialTheme.typography.bodyLarge)
-                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    ReadyGuides.forEach { (icon, guide) -> GuideRow(icon = icon, text = guide) }
                 }
             }
-            StatusCard(
+            StartCard(
                 status = status,
+                onStart = onStart,
                 onRequestPermission = onRequestPermission,
                 onOpenSettings = onOpenSettings,
                 onShowBlockedNotice = { showBlockedNotice = !onShowBlockedNotice() },
                 onRetry = onRetry,
-                modifier = Modifier.fillMaxWidth()
-            )
-            CarButton(
-                text = START_LABEL,
-                onClick = onStart,
-                enabled = status.canStart,
                 modifier = Modifier.fillMaxWidth()
             )
             CarButton(
@@ -212,8 +216,26 @@ fun ChallengeReadyScreen(
 }
 
 @Composable
-private fun StatusCard(
+private fun GuideRow(@DrawableRes icon: Int, text: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(GuideIconSize).testTag(READY_GUIDE_ICON_TAG)
+        )
+        KeepWordsText(text = text, style = MaterialTheme.typography.titleLarge)
+    }
+}
+
+/** 상태 안내를 시작 버튼 바로 위에 크게 보이고, 상태를 해결하는 버튼이 있으면 시작 버튼 아래에 둔다. */
+@Composable
+private fun StartCard(
     status: ChallengeReadyStatus,
+    onStart: () -> Unit,
     onRequestPermission: (List<String>) -> Unit,
     onOpenSettings: () -> Unit,
     onShowBlockedNotice: () -> Unit,
@@ -221,9 +243,9 @@ private fun StatusCard(
     modifier: Modifier = Modifier
 ) {
     OverlayCard(modifier = modifier) {
-        Text(
+        KeepWordsText(
             text = status.message,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.headlineSmall,
             color = if (status.canStart) {
                 MaterialTheme.colorScheme.primary
             } else {
@@ -240,6 +262,12 @@ private fun StatusCard(
             is ChallengeReadyStatus.Error -> RETRY_LABEL to onRetry
             else -> null
         }
+        CarButton(
+            text = START_LABEL,
+            onClick = onStart,
+            enabled = status.canStart,
+            modifier = Modifier.fillMaxWidth().height(START_BUTTON_HEIGHT)
+        )
         if (action != null) {
             CarButton(
                 text = action.first,
