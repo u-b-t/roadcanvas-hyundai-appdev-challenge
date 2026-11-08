@@ -38,6 +38,11 @@ class FakeRouteMapComponent : RouteMapComponent {
                 }
                 "대체 경로 지도 · 지점 ${state.points.size}개 · $camera"
             }
+            is RouteMapState.CurrentLocation -> if (state.point == null) {
+                "대체 경로 지도 · 현재 위치 없음"
+            } else {
+                "대체 경로 지도 · 현재 위치 표시"
+            }
             else -> state.notice.orEmpty()
         }
     }

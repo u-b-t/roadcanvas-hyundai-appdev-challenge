@@ -25,6 +25,7 @@ import com.naver.maps.geometry.LatLngBounds
 import com.naver.maps.map.CameraUpdate
 import com.naver.maps.map.MapView
 import com.naver.maps.map.NaverMap
+import com.naver.maps.map.overlay.LocationOverlay
 import com.naver.maps.map.overlay.Marker
 import com.naver.maps.map.overlay.PathOverlay
 import kr.roadcanvas.app.map.MapAuth
@@ -42,7 +43,7 @@ class NaverRouteMapComponent(private val auth: MapAuth) : RouteMapComponent {
         val authState by auth.state.collectAsState()
         val state = RouteMapState.of(points, options, authState)
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            if (state is RouteMapState.Route || state is RouteMapState.NotEnoughPoints) {
+            if (state.showsMap) {
                 NaverRouteMapView(state, options.contentPadding, Modifier.fillMaxSize())
             }
             state.notice?.let {
@@ -51,6 +52,11 @@ class NaverRouteMapComponent(private val auth: MapAuth) : RouteMapComponent {
         }
     }
 }
+
+private val RouteMapState.showsMap: Boolean
+    get() = this is RouteMapState.Route ||
+        this is RouteMapState.NotEnoughPoints ||
+        this is RouteMapState.CurrentLocation
 
 @Composable
 private fun NaverRouteMapView(
@@ -99,7 +105,7 @@ private fun NaverRouteMapView(
     AndroidView(factory = { mapView }, modifier = modifier)
 }
 
-/** 경로선과 출발·도착 마커. 좌표가 바뀌면 같은 오버레이에 좌표열을 다시 지정한다. */
+/** 경로선과 출발·도착 마커, 현재 위치. 좌표가 바뀌면 같은 오버레이에 좌표열을 다시 지정한다. */
 private class RouteOverlays {
     private val path = PathOverlay().apply {
         width = 12
@@ -108,10 +114,22 @@ private class RouteOverlays {
     }
     private val startMarker = Marker().apply { captionText = "출발" }
     private val endMarker = Marker().apply { captionText = "도착" }
+    private var locationOverlay: LocationOverlay? = null
+
+    /**
+     * 현재 위치나 진행 중 경로를 따라가며 이 지도에서 한 번 확대했는지. 두 방식이 같은 값을 써서
+     * 처음 한 번만 확대하고, 이후에는 사용자가 바꾼 확대 수준을 유지한다.
+     */
+    private var followZoomed = false
 
     fun show(map: NaverMap, state: RouteMapState, fitBoundsPadding: Int) {
         when (state) {
+            is RouteMapState.CurrentLocation -> {
+                detachRoute()
+                showLocation(map, state.point)
+            }
             is RouteMapState.Route -> {
+                hideLocation()
                 val coords = state.points.map { it.toLatLng() }
                 path.coords = coords
                 path.map = map
@@ -120,7 +138,7 @@ private class RouteOverlays {
                 val update = when (state.camera) {
                     RouteCamera.FIT_BOUNDS ->
                         CameraUpdate.fitBounds(LatLngBounds.from(coords), fitBoundsPadding)
-                    RouteCamera.FOLLOW_LATEST -> CameraUpdate.scrollTo(coords.last())
+                    RouteCamera.FOLLOW_LATEST -> followCamera(coords.last())
                 }
                 map.moveCamera(update)
             }
@@ -134,9 +152,39 @@ private class RouteOverlays {
     }
 
     fun detach() {
+        detachRoute()
+        hideLocation()
+    }
+
+    private fun detachRoute() {
         path.map = null
         startMarker.map = null
         endMarker.map = null
+    }
+
+    private fun followCamera(position: LatLng): CameraUpdate = if (followZoomed) {
+        CameraUpdate.scrollTo(position)
+    } else {
+        followZoomed = true
+        CameraUpdate.scrollAndZoomTo(position, FOLLOW_ZOOM)
+    }
+
+    private fun showLocation(map: NaverMap, point: RoutePoint?) {
+        val overlay = map.locationOverlay
+        if (point == null) {
+            overlay.isVisible = false
+            return
+        }
+        val position = point.toLatLng()
+        overlay.position = position
+        overlay.isVisible = true
+        locationOverlay = overlay
+        map.moveCamera(followCamera(position))
+    }
+
+    private fun hideLocation() {
+        locationOverlay?.isVisible = false
+        locationOverlay = null
     }
 
     private fun Marker.place(map: NaverMap, point: RoutePoint?) {
@@ -150,3 +198,6 @@ private class RouteOverlays {
 
     private fun RoutePoint.toLatLng() = LatLng(latitude, longitude)
 }
+
+/** 현재 위치나 진행 중 경로를 처음 표시할 때의 확대 수준. 반지름 수십 m의 원과 주변 도로가 보이는 정도다. */
+private const val FOLLOW_ZOOM = 17.0

@@ -10,11 +10,13 @@ data class RoutePoint(val latitude: Double, val longitude: Double)
  * 경로 지도 표시 옵션.
  * [showEndpointMarkers]가 true이면 출발점과 도착점에 마커를 둔다. 진행 중 경로에는 도착점이 없으므로 출발점만 표시한다.
  * [inProgress]가 true이면 최신 위치를 따라가고, false이면 전체 경로가 보이게 맞춘다.
+ * [showCurrentLocation]이 true이면 경로선 대신 마지막 좌표를 현재 위치로 표시한다.
  * [contentPadding]은 지도 위에 올린 오버레이가 가리는 영역이다. 경로·안내와 지도 로고는 이 영역을 피해 둔다.
  */
 data class RouteMapOptions(
     val showEndpointMarkers: Boolean = true,
     val inProgress: Boolean = false,
+    val showCurrentLocation: Boolean = false,
     val contentPadding: PaddingValues = PaddingValues(0.dp)
 )
 
@@ -42,6 +44,11 @@ sealed interface RouteMapState {
         override val notice = "경로를 그리려면 위치가 2개 이상 필요합니다."
     }
 
+    /** 경로 대신 현재 위치를 표시한다. 아직 위치를 받지 못했으면 [point]가 null이다. */
+    data class CurrentLocation(val point: RoutePoint?) : RouteMapState {
+        override val notice: String? = null
+    }
+
     data class Route(
         val points: List<RoutePoint>,
         val camera: RouteCamera,
@@ -62,6 +69,7 @@ sealed interface RouteMapState {
         ): RouteMapState = when {
             authState is MapAuthState.KeyMissing -> KeyMissing
             authState is MapAuthState.Failed -> AuthFailed(authState.errorCode)
+            options.showCurrentLocation -> CurrentLocation(points.lastOrNull())
             points.size < MIN_ROUTE_POINTS -> NotEnoughPoints(points.lastOrNull())
             options.inProgress -> Route(
                 points = points,
