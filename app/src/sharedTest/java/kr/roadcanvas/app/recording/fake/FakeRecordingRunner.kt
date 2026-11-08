@@ -4,11 +4,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingRequest
 import kr.roadcanvas.app.recording.RecordingRunner
@@ -39,8 +41,10 @@ class FakeRecordingRunner(
         job = null
     }
 
+    /** 실행 중인 기록이 끝날 때까지 기다린 뒤 초기화해 다음 테스트에 위치 구독이나 저장이 이어지지 않게 한다. */
     fun reset() {
-        stop()
+        val running = synchronized(this) { job.also { job = null } }
+        runBlocking { running?.cancelAndJoin() }
         mutableRequests.value = emptyList()
     }
 }

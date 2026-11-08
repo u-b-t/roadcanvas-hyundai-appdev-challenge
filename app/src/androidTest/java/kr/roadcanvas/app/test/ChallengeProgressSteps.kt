@@ -1,18 +1,14 @@
 package kr.roadcanvas.app.test
 
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.rememberNavController
-import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
-import io.cucumber.java.After
 import io.cucumber.java.Before
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
@@ -43,7 +39,7 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
     private val application = ApplicationProvider.getApplicationContext<RoadCanvasApplication>()
     private val fakeContainer get() = application.container as FakeAppContainer
     private val recorder get() = fakeContainer.challengeRecorder
-    private var scenario: ActivityScenario<ComponentActivity>? = null
+    private var scenario: TestScreen<ComponentActivity>? = null
 
     /** 시작 버튼이 권한 요청 창을 띄우지 않도록 기록에 필요한 권한을 미리 허용한다. */
     @Before
@@ -52,11 +48,6 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
         RecordingPermissions.runtime().forEach {
             instrumentation.uiAutomation.grantRuntimePermission(application.packageName, it)
         }
-    }
-
-    @After
-    fun closeScreen() {
-        scenario?.close()
     }
 
     @Given("동그라미 챌린지 진행 화면에서 시작을 누른다")
@@ -116,6 +107,8 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
 
     @When("앱을 다시 실행한다")
     fun relaunch() {
+        // 열려 있던 화면을 닫고 새 화면을 연다. 화면 상태는 버리고 저장소와 기록 세션만 이어진다.
+        TestScreens.closeAll()
         openApp()
     }
 
@@ -178,20 +171,9 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
 
     private fun openApp() {
         composeRule.mainClock.autoAdvance = true
-        // 다시 실행할 때 이전 화면이 남아 같은 문구가 두 번 보이지 않도록 먼저 닫는다.
-        scenario?.close()
-        val launched = ActivityScenario.launch(ComponentActivity::class.java)
-        launched.onActivity { activity ->
-            activity.setContent {
-                MaterialTheme {
-                    RoadCanvasNavHost(
-                        navController = rememberNavController(),
-                        splashDurationMillis = 0L
-                    )
-                }
-            }
+        scenario = TestScreens.launchContent {
+            RoadCanvasNavHost(navController = rememberNavController(), splashDurationMillis = 0L)
         }
-        scenario = launched
     }
 
     private fun savedInProgress() = runBlocking {

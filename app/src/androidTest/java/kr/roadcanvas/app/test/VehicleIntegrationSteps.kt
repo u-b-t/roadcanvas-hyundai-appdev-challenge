@@ -2,7 +2,6 @@ package kr.roadcanvas.app.test
 
 import androidx.test.core.app.ApplicationProvider
 import io.cucumber.java.After
-import io.cucumber.java.Before
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
@@ -47,11 +46,6 @@ class VehicleIntegrationSteps {
     private var drivingKey = IntegrationSource.SIMULATED.key
     private var routeType = SimulatedRouteType.CIRCLE
     private var simulatedSamples = emptyList<LocationSample>()
-
-    @Before
-    fun resetFakes() {
-        fakeContainer.reset()
-    }
 
     @After
     fun stopCollecting() {

@@ -41,6 +41,7 @@
 - `aaos` 주행 규제는 `kr.roadcanvas.app.vehicle.aaos`에서 `CarUxRestrictionsManager`를 구독한다. 수집자가 있을 때만 Car 서비스에 연결하고, Car API가 없거나 연결 실패·첫 값 미수신·예외면 확인 불가로 처리한다. 확인 불가는 조작 가능으로 보지 않는다.
 - `pleos` 위치는 `kr.roadcanvas.app.vehicle.pleos`에서 FusedLocation SDK를 쓴다. 수집할 때마다 새 인스턴스로 지원 확인·초기화·리스너 등록을 하고 수집을 멈추면 해제한다. 에뮬레이터에서 앱은 사용자 10으로 실행되므로 권한은 `adb shell pm grant --user 10 kr.roadcanvas.app pleos.car.permission.FUSED_LOCATION`으로 준다. 확인 결과와 미검증 항목은 [FusedLocation 검증 결과](docs/pleos-fused-location-verification.md)에 있다.
 - androidTest는 `RoadCanvasTestRunner`가 `TestRoadCanvasApplication`을 사용해 `FakeAppContainer`를 주입한다. 대체 구현은 `app/src/sharedTest/`에 있어 단위 테스트와 androidTest에서 함께 쓴다. 테스트에서 위치 상태·좌표와 주행 규제 상태를 원하는 시점에 바꿀 수 있다.
+- androidTest 화면은 `ActivityScenario.launch`를 직접 쓰지 않고 `TestScreens`(`launch`, `launchContent`)로 연다. 화면을 닫거나 시나리오가 끝나 태스크가 지워지면 Pleos 런처가 잠시 뒤(에뮬레이터에서 22~145ms) 지도 태스크를 앞으로 가져온다. 그 사이에 연 화면은 가려져 일시정지되고 `No compose hierarchies found`로 실패하므로, `TestScreens`는 태스크가 지워진 뒤 처음 화면을 열기 전에 창 순서가 400ms 동안 바뀌지 않을 때까지 기다린다. 시나리오 전후 정리(화면 닫기, 대체 구현 초기화, 남은 구독 확인)는 `ScenarioHooks`가 하므로 단계 클래스에서 화면을 따로 닫지 않는다.
 
 ## 기기 저장
 

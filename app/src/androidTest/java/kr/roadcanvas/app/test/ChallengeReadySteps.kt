@@ -1,8 +1,6 @@
 package kr.roadcanvas.app.test
 
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
@@ -12,9 +10,7 @@ import androidx.compose.ui.test.isNotEnabled
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.rememberNavController
-import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
-import io.cucumber.java.After
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
@@ -35,23 +31,14 @@ class ChallengeReadySteps(private val ruleHolder: ComposeRuleHolder) {
     private val fakeContainer
         get() = ApplicationProvider.getApplicationContext<RoadCanvasApplication>()
             .container as FakeAppContainer
-    private var scenario: ActivityScenario<ComponentActivity>? = null
+    private var scenario: TestScreen<ComponentActivity>? = null
 
     @Given("동그라미 챌린지 준비 화면을 연다")
     fun openChallengeReady() {
         composeRule.mainClock.autoAdvance = true
-        val launched = ActivityScenario.launch(ComponentActivity::class.java)
-        launched.onActivity { activity ->
-            activity.setContent {
-                MaterialTheme {
-                    RoadCanvasNavHost(
-                        navController = rememberNavController(),
-                        splashDurationMillis = 0L
-                    )
-                }
-            }
+        scenario = TestScreens.launchContent {
+            RoadCanvasNavHost(navController = rememberNavController(), splashDurationMillis = 0L)
         }
-        scenario = launched
         // 실제 앱과 같은 뒤로 가기 흐름을 위해 모드 선택에서 들어간다.
         waitForText(MODE_SELECT_TITLE)
         composeRule.onNode(hasText(CIRCLE_CHALLENGE_NAME) and hasClickAction()).performClick()
@@ -65,25 +52,19 @@ class ChallengeReadySteps(private val ruleHolder: ComposeRuleHolder) {
     @Given("위치 권한을 다시 묻지 않도록 거절한 준비 화면을 연다")
     fun openPermanentlyDeniedReady() {
         composeRule.mainClock.autoAdvance = true
-        val launched = ActivityScenario.launch(ComponentActivity::class.java)
-        launched.onActivity { activity ->
-            activity.setContent {
-                MaterialTheme {
-                    ChallengeReadyScreen(
-                        status = ChallengeReadyStatus.PermissionRequired(
-                            permissions = listOf(VehiclePermissions.FUSED_LOCATION),
-                            permanentlyDenied = true
-                        ),
-                        onStart = {},
-                        onBack = {},
-                        onRequestPermission = {},
-                        onOpenSettings = {},
-                        onRetry = {}
-                    )
-                }
-            }
+        scenario = TestScreens.launchContent {
+            ChallengeReadyScreen(
+                status = ChallengeReadyStatus.PermissionRequired(
+                    permissions = listOf(VehiclePermissions.FUSED_LOCATION),
+                    permanentlyDenied = true
+                ),
+                onStart = {},
+                onBack = {},
+                onRequestPermission = {},
+                onOpenSettings = {},
+                onRetry = {}
+            )
         }
-        scenario = launched
         waitForText(CIRCLE_READY_TITLE)
     }
 
@@ -125,11 +106,6 @@ class ChallengeReadySteps(private val ruleHolder: ComposeRuleHolder) {
             fakeContainer.locationProvider.subscriberCount.value == 0 &&
                 fakeContainer.drivingRestrictionProvider.subscriberCount.value == 0
         }
-    }
-
-    @After
-    fun closeScreen() {
-        scenario?.close()
     }
 
     private fun waitForButton(label: String, state: SemanticsMatcher) {

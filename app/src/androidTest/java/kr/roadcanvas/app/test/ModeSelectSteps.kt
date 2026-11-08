@@ -1,8 +1,5 @@
 package kr.roadcanvas.app.test
 
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
@@ -14,9 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
-import io.cucumber.java.After
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
@@ -31,23 +26,16 @@ private const val WAIT_TIMEOUT_MILLIS = 5_000L
 
 class ModeSelectSteps(private val ruleHolder: ComposeRuleHolder) {
     private val composeRule get() = ruleHolder.composeRule
-    private var scenario: ActivityScenario<ComponentActivity>? = null
     private var navController: NavHostController? = null
 
     @Given("모드 선택 화면을 연다")
     fun openModeSelect() {
         composeRule.mainClock.autoAdvance = true
-        val launched = ActivityScenario.launch(ComponentActivity::class.java)
-        launched.onActivity { activity ->
-            activity.setContent {
-                val controller = rememberNavController()
-                navController = controller
-                MaterialTheme {
-                    RoadCanvasNavHost(navController = controller, splashDurationMillis = 0L)
-                }
-            }
+        TestScreens.launchContent {
+            val controller = rememberNavController()
+            navController = controller
+            RoadCanvasNavHost(navController = controller, splashDurationMillis = 0L)
         }
-        scenario = launched
         waitForText(MODE_SELECT_TITLE)
     }
 
@@ -86,11 +74,6 @@ class ModeSelectSteps(private val ruleHolder: ComposeRuleHolder) {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             assertEquals(Routes.MODE_SELECT, controller.currentDestination?.route)
         }
-    }
-
-    @After
-    fun closeScreen() {
-        scenario?.close()
     }
 
     private fun clickable(label: String): SemanticsNodeInteraction =
