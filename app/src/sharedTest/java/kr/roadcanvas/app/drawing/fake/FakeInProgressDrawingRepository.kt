@@ -21,6 +21,11 @@ class FakeInProgressDrawingRepository : InProgressDrawingRepository {
         drawing = current.copy(path = current.path + points)
     }
 
+    override suspend fun finish(endedAtMillis: Long) = result {
+        val current = checkNotNull(drawing) { "진행 중인 도전이 없습니다." }
+        drawing = current.copy(endedAtMillis = endedAtMillis)
+    }
+
     override suspend fun load() = result { drawing }
 
     override suspend fun clear() = result { drawing = null }

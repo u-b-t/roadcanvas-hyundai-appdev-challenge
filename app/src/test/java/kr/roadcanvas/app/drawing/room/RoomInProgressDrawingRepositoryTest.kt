@@ -89,6 +89,35 @@ class RoomInProgressDrawingRepositoryTest {
     }
 
     @Test
+    fun `종료하면 경로와 함께 종료 시각을 불러온다`() = runTest {
+        repository.start(DrawingMode.CIRCLE, startedAtMillis = 500).value()
+        repository.appendPoints(points).value()
+
+        repository.finish(endedAtMillis = 65_500).value()
+
+        assertEquals(
+            InProgressDrawing(DrawingMode.CIRCLE, 500, points, endedAtMillis = 65_500),
+            repository.load().value()
+        )
+    }
+
+    @Test
+    fun `새로 시작하면 이전 도전의 종료 시각이 남지 않는다`() = runTest {
+        repository.start(DrawingMode.CIRCLE, startedAtMillis = 500).value()
+        repository.finish(endedAtMillis = 65_500).value()
+
+        repository.start(DrawingMode.CIRCLE, startedAtMillis = 9_000).value()
+
+        assertNull(repository.load().value()?.endedAtMillis)
+    }
+
+    @Test
+    fun `시작하지 않은 도전은 종료할 수 없다`() = runTest {
+        assertTrue(repository.finish(endedAtMillis = 65_500) is StorageResult.Failure)
+        assertNull(repository.load().value())
+    }
+
+    @Test
     fun `빈 저장소에는 진행 중 기록이 없다`() = runTest {
         assertNull(repository.load().value())
         assertEquals(StorageResult.Success(Unit), repository.clear())

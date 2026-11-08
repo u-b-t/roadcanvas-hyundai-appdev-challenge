@@ -31,9 +31,13 @@ data class CompletedDrawingSummary(
     val durationMillis: Long
 )
 
-/** 앱이 종료돼도 이어서 기록할 수 있도록 보관하는 진행 중인 도전 */
+/**
+ * 앱이 종료돼도 이어서 기록할 수 있도록 보관하는 진행 중인 도전.
+ * [endedAtMillis]가 있으면 사용자가 종료했지만 아직 완료 기록으로 저장하지 않은 도전이다.
+ */
 data class InProgressDrawing(
     val mode: DrawingMode,
     val startedAtMillis: Long,
-    val path: List<RoutePoint>
+    val path: List<RoutePoint>,
+    val endedAtMillis: Long? = null
 )
