@@ -111,6 +111,9 @@ fun ChallengeReadyRoute(onStart: () -> Unit, onBack: () -> Unit, modifier: Modif
             permissionLauncher.launch(permissions.toTypedArray())
         },
         onOpenSettings = { context.openAppSettings() },
+        onShowBlockedNotice = {
+            context.findActivity()?.let(viewModel::showAccessBlockedNotice) == true
+        },
         onRetry = viewModel::retry,
         modifier = modifier
     )
@@ -124,8 +127,10 @@ fun ChallengeReadyScreen(
     onRequestPermission: (List<String>) -> Unit,
     onOpenSettings: () -> Unit,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onShowBlockedNotice: () -> Boolean = { false }
 ) {
+    // 차량의 차단 안내를 띄우지 못하면 앱 안에서 같은 내용을 안내한다.
     var showBlockedNotice by rememberSaveable { mutableStateOf(false) }
 
     Row(
@@ -158,7 +163,7 @@ fun ChallengeReadyScreen(
                 status = status,
                 onRequestPermission = onRequestPermission,
                 onOpenSettings = onOpenSettings,
-                onShowBlockedNotice = { showBlockedNotice = true },
+                onShowBlockedNotice = { showBlockedNotice = !onShowBlockedNotice() },
                 onRetry = onRetry,
                 modifier = Modifier.fillMaxWidth().weight(1f)
             )

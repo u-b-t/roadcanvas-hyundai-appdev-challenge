@@ -1,5 +1,6 @@
 package kr.roadcanvas.app.challenge
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,7 +24,7 @@ import kr.roadcanvas.app.vehicle.LocationProvider
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChallengeReadyViewModel(
-    locationProvider: LocationProvider,
+    private val locationProvider: LocationProvider,
     drivingRestrictionProvider: DrivingRestrictionProvider
 ) : ViewModel() {
     private val locationRequest = MutableStateFlow(0)
@@ -58,6 +59,10 @@ class ChallengeReadyViewModel(
     fun retry() {
         locationRequest.update { it + 1 }
     }
+
+    /** 차량의 위치 접근 차단 안내를 띄운다. 띄우지 못했으면 false를 돌려준다. */
+    fun showAccessBlockedNotice(activityContext: Context): Boolean =
+        locationProvider.showAccessBlockedNotice(activityContext)
 
     /** 권한 요청 결과를 반영하고 허용 여부를 다시 확인한다. */
     fun onPermissionResult(granted: Boolean, shouldShowRationale: Boolean) {
