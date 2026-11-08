@@ -5,6 +5,7 @@ Feature: 차량 연동
   Issues:
   - [#9 차량 연동 추상화 계층과 모의 구현 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/9)
   - [#13 CarUxRestrictions 주행 규제 구현 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/13)
+  - [#12 FusedLocation SDK 위치 구현 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/12)
 
   Scenario: 디버그 화면에 사용 중인 차량 연동 구현을 표시한다
     Given 앱을 실행한다
@@ -56,8 +57,8 @@ Feature: 차량 연동
     When 차량 연동을 구성한다
     Then 앱이 받는 주행 규제 상태는 "조작 가능"이다
 
-  Scenario: 아직 구현되지 않은 실제 구현을 고르면 모의 구현을 사용한다
+  Scenario: 실제 구현을 고르면 모의 구현으로 대체하지 않는다
     Given 위치 구현으로 "pleos"를 고른다
     And 주행 규제 구현으로 "aaos"를 고른다
     When 차량 연동을 구성한다
-    Then 사용 중인 구현 표시는 "위치: 모의 · 주행 규제: AAOS (Pleos 미구현)"이다
+    Then 사용 중인 구현 표시는 "위치: Pleos · 주행 규제: AAOS"이다

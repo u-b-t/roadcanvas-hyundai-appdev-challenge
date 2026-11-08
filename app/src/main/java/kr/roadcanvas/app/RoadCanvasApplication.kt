@@ -10,6 +10,7 @@ import kr.roadcanvas.app.map.MapAuth
 import kr.roadcanvas.app.map.naver.NaverMapSetup
 import kr.roadcanvas.app.vehicle.VehicleIntegrationSelection
 import kr.roadcanvas.app.vehicle.aaos.AndroidCarUxRestrictionsClient
+import kr.roadcanvas.app.vehicle.pleos.PleosLocationProvider
 
 open class RoadCanvasApplication : Application() {
     lateinit var container: AppContainer
@@ -32,6 +33,7 @@ open class RoadCanvasApplication : Application() {
             simulatedRoute = BuildConfig.VEHICLE_SIM_ROUTE
         ),
         drawingStorage = DrawingDatabase.create(this).toStorage(),
+        pleosLocationProvider = { PleosLocationProvider.create(this) },
         carUxRestrictionsClient = { AndroidCarUxRestrictionsClient(this) },
         mapAuth = mapAuth
     )
