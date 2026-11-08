@@ -40,6 +40,13 @@
 - 모의 주행 규제는 항상 조작 가능 상태를 준다.
 - androidTest는 `RoadCanvasTestRunner`가 `TestRoadCanvasApplication`을 사용해 `FakeAppContainer`를 주입한다. 대체 구현은 `app/src/sharedTest/`에 있어 단위 테스트와 androidTest에서 함께 쓴다. 테스트에서 위치 상태·좌표와 주행 규제 상태를 원하는 시점에 바꿀 수 있다.
 
+## 기기 저장
+
+- 완료 기록과 진행 중 기록은 Room(KSP) DB `drawings.db`에 앱 전용 내부 저장소로 보관한다. 화면은 `kr.roadcanvas.app.drawing`의 `CompletedDrawingRepository`와 `InProgressDrawingRepository`만 `AppContainer`에서 받아 쓰고, 실패는 예외 대신 `StorageResult.Failure`로 받는다.
+- 점수 세부 지표는 점수 계산 모델에 의존하지 않도록 이름과 값(`Map<String, Double>`)으로 저장한다.
+- 스키마를 바꾸면 `DrawingDatabase.VERSION`을 올리고 `MIGRATIONS`에 마이그레이션을 추가한다. 빌드가 `app/schemas/`에 버전별 스키마를 기록하므로 함께 커밋한다. androidTest는 이 스키마로 마이그레이션을 검증한다.
+- 저장소 단위 테스트는 Robolectric과 in-memory DB로 실행한다. 테스트용 대체 구현은 `app/src/sharedTest/`의 `kr.roadcanvas.app.drawing.fake`에 있고 `failure`를 지정해 실패를 주입한다.
+
 ## 빌드와 실행
 
 - JDK 17 이상과 Android SDK 플랫폼 35가 필요하다. 앱의 `minSdk`는 28, `targetSdk`는 34다.

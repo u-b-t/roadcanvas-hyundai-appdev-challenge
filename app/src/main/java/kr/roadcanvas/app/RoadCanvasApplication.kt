@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.di.DefaultAppContainer
+import kr.roadcanvas.app.drawing.room.DrawingDatabase
+import kr.roadcanvas.app.drawing.room.toStorage
 import kr.roadcanvas.app.vehicle.VehicleIntegrationSelection
 
 open class RoadCanvasApplication : Application() {
@@ -21,7 +23,8 @@ open class RoadCanvasApplication : Application() {
             location = BuildConfig.VEHICLE_LOCATION,
             driving = BuildConfig.VEHICLE_DRIVING,
             simulatedRoute = BuildConfig.VEHICLE_SIM_ROUTE
-        )
+        ),
+        drawingStorage = DrawingDatabase.create(this).toStorage()
     )
 }
 
