@@ -28,12 +28,6 @@ class ModeSelectColorsTest {
     }
 
     @Test
-    fun `준비 중 배지 글자는 본문 대비 이상이고 배지는 항목 배경에서 드러난다`() {
-        assertContrastAtLeast(4.5f, ON_COMING_SOON_BADGE_COLOR, COMING_SOON_BADGE_COLOR)
-        assertContrastAtLeast(3f, COMING_SOON_BADGE_COLOR, itemBackground)
-    }
-
-    @Test
     fun `동그라미 챌린지 항목은 강조색으로 채우고 큰 흰 글자를 읽을 수 있다`() {
         val primary = RoadCanvasColorScheme.primary
         assertTrue(primary.luminance() > itemBackground.luminance())
@@ -43,11 +37,8 @@ class ModeSelectColorsTest {
     }
 
     @Test
-    fun `준비 중 항목 글자는 일반 설명보다 흐리지만 항목 배경에서 읽힌다`() {
-        assertTrue(
-            DISABLED_ON_COVER_TEXT_COLOR.luminance() < ON_COVER_SECONDARY_TEXT_COLOR.luminance()
-        )
-        assertContrastAtLeast(3f, DISABLED_ON_COVER_TEXT_COLOR, itemBackground)
+    fun `자유그림 항목의 화살표는 항목 배경에서 보인다`() {
+        assertContrastAtLeast(3f, ON_COVER_SECONDARY_TEXT_COLOR, itemBackground)
     }
 
     @Test
