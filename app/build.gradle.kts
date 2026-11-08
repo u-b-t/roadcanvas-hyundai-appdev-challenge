@@ -120,6 +120,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.naver.maps:map-sdk:3.24.0")
+    implementation("ai.pleos.playground:FusedLocation:1.1.3")
 
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
