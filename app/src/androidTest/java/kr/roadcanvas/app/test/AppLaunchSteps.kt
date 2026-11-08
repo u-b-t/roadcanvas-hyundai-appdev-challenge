@@ -2,11 +2,16 @@ package kr.roadcanvas.app.test
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.graphics.drawable.ColorDrawable
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import androidx.test.platform.app.InstrumentationRegistry
@@ -14,13 +19,18 @@ import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
 import kr.roadcanvas.app.MainActivity
+import kr.roadcanvas.app.modeselect.MODE_SELECT_TITLE
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
 import kr.roadcanvas.app.navigation.Routes
 import kr.roadcanvas.app.splash.APP_NAME
+import kr.roadcanvas.app.splash.SPLASH_COVER_TAG
+import kr.roadcanvas.app.ui.components.COVER_BACKGROUND_COLOR
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 
 private const val WAIT_TIMEOUT_MILLIS = 5_000L
+private const val FRAME_MILLIS = 16L
 
 class AppLaunchSteps(private val ruleHolder: ComposeRuleHolder) {
     private val composeRule get() = ruleHolder.composeRule
@@ -61,6 +71,35 @@ class AppLaunchSteps(private val ruleHolder: ComposeRuleHolder) {
             composeRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithText(text).assertIsDisplayed()
+    }
+
+    @Then("앱 창 배경이 커버의 어두운 색이다")
+    fun assertWindowBackground() {
+        requireNotNull(scenario).onActivity { activity ->
+            val background = activity.window.decorView.background
+            assertTrue("창 배경 $background", background is ColorDrawable)
+            assertEquals(
+                COVER_BACKGROUND_COLOR.toArgb(),
+                (background as ColorDrawable).color
+            )
+        }
+    }
+
+    @Then("모드 선택 화면이 나타나는 동안 시작 화면의 커버 이미지가 화면 전체에 남아 있다")
+    fun assertSplashCoverStaysDuringTransition() {
+        // 가상 시계를 조금씩 진행해 모드 선택 화면이 처음 구성된 때를 잡는다. 이때는 나타나는 효과가 막 시작된 상태다.
+        var waited = 0L
+        while (composeRule.onAllNodesWithText(MODE_SELECT_TITLE).fetchSemanticsNodes().isEmpty()) {
+            assertTrue("모드 선택 화면이 나타나지 않았다", waited < WAIT_TIMEOUT_MILLIS)
+            composeRule.mainClock.advanceTimeByFrame()
+            waited += FRAME_MILLIS
+        }
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val cover = composeRule.onNodeWithTag(SPLASH_COVER_TAG, useUnmergedTree = true)
+            .assertIsDisplayed()
+            .getUnclippedBoundsInRoot()
+        assertEquals(root, cover)
+        composeRule.mainClock.autoAdvance = true
     }
 
     @Then("화면 방향이 가로로 고정되어 있다")

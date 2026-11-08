@@ -6,7 +6,12 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.width
 import io.cucumber.java.en.Then
+import kr.roadcanvas.app.navigation.STOP_NOTICE_COVER_TAG
+import kr.roadcanvas.app.navigation.STOP_NOTICE_ICON_SIZE
+import kr.roadcanvas.app.navigation.STOP_NOTICE_ICON_TAG
+import kr.roadcanvas.app.navigation.STOP_NOTICE_TITLE
 import kr.roadcanvas.app.splash.SPLASH_COVER_TAG
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -40,11 +45,29 @@ class ScreenLayoutSteps(private val ruleHolder: ComposeRuleHolder) {
         assertEquals(root, cover)
     }
 
-    private fun boundsOf(matcher: SemanticsMatcher) = run {
+    @Then("정차 안내의 커버 배경이 화면 전체에 표시된다")
+    fun assertStopNoticeCoverFillsScreen() {
+        val cover = boundsOf(hasTestTag(STOP_NOTICE_COVER_TAG))
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        assertEquals(root, cover)
+    }
+
+    @Then("정차 안내 경고 아이콘이 문장 위 화면 왼쪽 절반에 크게 표시된다")
+    fun assertStopNoticeIcon() {
+        // 설명 없는 아이콘은 병합된 트리에서 상위 노드에 합쳐질 수 있어 병합 전 트리에서 찾는다.
+        val icon = boundsOf(hasTestTag(STOP_NOTICE_ICON_TAG), useUnmergedTree = true)
+        val title = boundsOf(hasText(STOP_NOTICE_TITLE))
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        assertTrue("아이콘 $icon, 제목 $title", icon.bottom <= title.top)
+        assertTrue("아이콘 $icon, 화면 $root", icon.right <= (root.left + root.right) / 2)
+        assertTrue("아이콘 $icon", icon.width >= STOP_NOTICE_ICON_SIZE)
+    }
+
+    private fun boundsOf(matcher: SemanticsMatcher, useUnmergedTree: Boolean = false) = run {
         composeRule.mainClock.autoAdvance = true
         composeRule.waitUntil(WAIT_TIMEOUT_MILLIS) {
-            composeRule.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodes(matcher, useUnmergedTree).fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNode(matcher).getUnclippedBoundsInRoot()
+        composeRule.onNode(matcher, useUnmergedTree).getUnclippedBoundsInRoot()
     }
 }
