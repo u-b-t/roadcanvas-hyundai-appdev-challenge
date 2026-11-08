@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 import kr.roadcanvas.app.vehicle.LocationAvailability
 import kr.roadcanvas.app.vehicle.LocationProvider
 import kr.roadcanvas.app.vehicle.LocationSample
@@ -19,10 +21,16 @@ class FakeLocationProvider(
 
     override val availability: StateFlow<LocationAvailability> = mutableAvailability.asStateFlow()
 
+    private val mutableRequestCount = MutableStateFlow(0)
+
     /** 지금 위치를 받고 있는 수집자 수 */
     val subscriberCount: StateFlow<Int> = samples.subscriptionCount
 
-    override fun locations(): Flow<LocationSample> = samples.asSharedFlow()
+    /** 위치 수신을 시작한 횟수 */
+    val requestCount: StateFlow<Int> = mutableRequestCount.asStateFlow()
+
+    override fun locations(): Flow<LocationSample> =
+        samples.asSharedFlow().onStart { mutableRequestCount.update { it + 1 } }
 
     fun setAvailability(availability: LocationAvailability) {
         mutableAvailability.value = availability
@@ -35,5 +43,6 @@ class FakeLocationProvider(
 
     fun reset() {
         mutableAvailability.value = LocationAvailability.Available
+        mutableRequestCount.value = 0
     }
 }

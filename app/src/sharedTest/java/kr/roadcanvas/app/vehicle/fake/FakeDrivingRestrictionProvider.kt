@@ -14,6 +14,9 @@ class FakeDrivingRestrictionProvider(
 
     override val restriction: StateFlow<DrivingRestriction> = mutableRestriction.asStateFlow()
 
+    /** 지금 주행 규제를 구독하고 있는 수집자 수 */
+    val subscriberCount: StateFlow<Int> = mutableRestriction.subscriptionCount
+
     fun setRestriction(restriction: DrivingRestriction) {
         mutableRestriction.value = restriction
     }
