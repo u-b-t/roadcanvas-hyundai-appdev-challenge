@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jlleitschuh.gradle.ktlint")
+    jacoco
 }
 
 android {
@@ -39,10 +40,35 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
 
+    testImplementation("junit:junit:4.13.2")
+
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation("io.cucumber:cucumber-android:7.18.1")
     androidTestImplementation("io.cucumber:cucumber-picocontainer:7.18.1")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+tasks.register<JacocoReport>("unitTestCoverageReport") {
+    dependsOn("testDebugUnitTest")
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+    val excludedClasses =
+        listOf("**/R.class", "**/R\$*.class", "**/BuildConfig.*", "**/Manifest*.*")
+    classDirectories.setFrom(
+        fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
+            exclude(excludedClasses)
+        },
+        fileTree(
+            layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")
+        ) {
+            exclude(excludedClasses)
+        }
+    )
+    sourceDirectories.setFrom(files("src/main/java", "src/main/kotlin"))
+    executionData.setFrom(layout.buildDirectory.file("jacoco/testDebugUnitTest.exec"))
+    onlyIf { executionData.files.any { it.exists() } }
 }
