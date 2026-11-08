@@ -2,29 +2,35 @@ package kr.roadcanvas.app.test
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
-import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.lifecycle.Lifecycle
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ActivityScenario
+import androidx.test.platform.app.InstrumentationRegistry
 import io.cucumber.java.After
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
 import kr.roadcanvas.app.MainActivity
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
+import kr.roadcanvas.app.navigation.Routes
+import kr.roadcanvas.app.splash.APP_NAME
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 
 private const val WAIT_TIMEOUT_MILLIS = 5_000L
 
 class AppLaunchSteps(private val ruleHolder: ComposeRuleHolder) {
     private val composeRule get() = ruleHolder.composeRule
     private var scenario: ActivityScenario<out Activity>? = null
+    private var navController: NavHostController? = null
 
     @Given("앱을 실행한다")
     fun launchApp() {
@@ -38,8 +44,13 @@ class AppLaunchSteps(private val ruleHolder: ComposeRuleHolder) {
         val launched = ActivityScenario.launch(ComponentActivity::class.java)
         launched.onActivity { activity ->
             activity.setContent {
+                val controller = rememberNavController()
+                navController = controller
                 MaterialTheme {
-                    RoadCanvasNavHost(splashDurationMillis = (seconds * 1_000).toLong())
+                    RoadCanvasNavHost(
+                        navController = controller,
+                        splashDurationMillis = (seconds * 1_000).toLong()
+                    )
                 }
             }
         }
@@ -81,20 +92,18 @@ class AppLaunchSteps(private val ruleHolder: ComposeRuleHolder) {
         }
     }
 
-    @Then("시작 화면으로 돌아가지 않고 앱 화면이 닫힌다")
-    fun assertClosedWithoutSplash() {
-        // API 31 이상에서 태스크 루트의 뒤로 가기는 시스템이 비동기로 처리한다.
-        val launched = requireNotNull(scenario)
-        val deadline = SystemClock.uptimeMillis() + WAIT_TIMEOUT_MILLIS
-        while (launched.state.isAtLeast(Lifecycle.State.STARTED) &&
-            SystemClock.uptimeMillis() < deadline
-        ) {
-            SystemClock.sleep(50)
+    @Then("시작 화면이 다시 표시되지 않는다")
+    fun assertSplashNotShownAgain() {
+        // 기기에 따라 뒤로 가기 후 화면이 닫히거나 남아 있을 수 있어 두 경우 모두 확인한다.
+        if (requireNotNull(scenario).state.isAtLeast(Lifecycle.State.STARTED)) {
+            composeRule.onAllNodesWithText(APP_NAME).assertCountEquals(0)
         }
-        assertFalse(
-            "뒤로 가기 후 앱 화면이 닫혀야 합니다. 현재 상태: ${launched.state}",
-            launched.state.isAtLeast(Lifecycle.State.STARTED)
-        )
+        val controller = requireNotNull(navController)
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            assertThrows(IllegalArgumentException::class.java) {
+                controller.getBackStackEntry(Routes.SPLASH)
+            }
+        }
     }
 
     @After
