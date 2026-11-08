@@ -13,7 +13,8 @@ permissions:
 jobs:
   ui-test:
     runs-on: [self-hosted, macOS, ARM64, mac-mini]
-    timeout-minutes: 20
+    # 콜드 부팅(최대 약 12분)과 UI 테스트가 함께 실행될 수 있다.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -23,79 +24,8 @@ jobs:
       - name: Remove previous build outputs
         run: ./gradlew :app:clean --no-daemon
       - name: Prepare Pleos emulator
-        shell: bash
-        run: |
-          set -euo pipefail
-          sdk=''
-          for candidate in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" "$HOME/Library/Android/sdk" /opt/homebrew/share/android-commandlinetools; do
-            if [ -x "$candidate/platform-tools/adb" ] && [ -x "$candidate/emulator/emulator" ]; then
-              sdk="$candidate"
-              break
-            fi
-          done
-          if [ -z "$sdk" ]; then
-            echo 'Android SDK와 에뮬레이터 도구를 찾을 수 없습니다.' >&2
-            exit 1
-          fi
-          export ANDROID_HOME="$sdk" ANDROID_SDK_ROOT="$sdk"
-          echo "ANDROID_HOME=$sdk" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$sdk" >> "$GITHUB_ENV"
-          adb="$sdk/platform-tools/adb"
-          emulator="$sdk/emulator/emulator"
-          "$emulator" -list-avds
-          "$adb" devices -l
-          mapfile_output=$("$adb" devices | awk '$1 ~ /^emulator-/ && $2 == "device" {print $1}')
-          if [ -n "$mapfile_output" ]; then
-            if [ "$(printf '%s\n' "$mapfile_output" | wc -l | tr -d ' ')" != 1 ]; then
-              echo '에뮬레이터가 여러 개 실행 중입니다. Pleos 대상을 지정해야 합니다.' >&2
-              exit 1
-            fi
-            serial="$mapfile_output"
-            avd=$("$adb" -s "$serial" emu avd name | head -1 | tr -d '\r')
-          else
-            avd=''
-            while IFS= read -r candidate; do
-              config="$HOME/.android/avd/$candidate.avd/config.ini"
-              if [ -f "$config" ] && grep -qi 'pleos' "$config"; then
-                if [ -n "$avd" ]; then
-                  echo 'Pleos AVD가 여러 개입니다. 대상을 지정해야 합니다.' >&2
-                  exit 1
-                fi
-                avd="$candidate"
-              fi
-            done < <("$emulator" -list-avds)
-            if [ -z "$avd" ]; then
-              echo '설치된 시스템 이미지:'
-              for images in "$sdk/system-images" "$HOME/android-sdk/system-images"; do
-                if [ -d "$images" ]; then find "$images" -maxdepth 4 -name source.properties -print; fi
-              done
-              echo 'Pleos AVD를 찾을 수 없습니다.' >&2
-              exit 1
-            fi
-            "$emulator" -avd "$avd" -no-snapshot > "$RUNNER_TEMP/pleos-emulator.log" 2>&1 &
-            emulator_pid=$!
-            serial=emulator-5554
-          fi
-          config="$HOME/.android/avd/$avd.avd/config.ini"
-          if [ ! -f "$config" ] || ! grep -qi 'pleos' "$config"; then
-            echo "대상 AVD가 Pleos 이미지인지 확인할 수 없습니다: $avd" >&2
-            exit 1
-          fi
-          echo "ANDROID_SERIAL=$serial" >> "$GITHUB_ENV"
-          for attempt in {1..60}; do
-            if [ -n "${emulator_pid:-}" ] && ! kill -0 "$emulator_pid" 2>/dev/null; then
-              echo '에뮬레이터 프로세스가 종료됐습니다.' >&2
-              tail -100 "$RUNNER_TEMP/pleos-emulator.log"
-              exit 1
-            fi
-            if [ "$("$adb" -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; then
-              exit 0
-            fi
-            sleep 5
-          done
-          echo '에뮬레이터 부팅 시간 초과' >&2
-          if [ -f "$RUNNER_TEMP/pleos-emulator.log" ]; then tail -100 "$RUNNER_TEMP/pleos-emulator.log"; fi
-          exit 1
+        # 기존 에뮬레이터가 비정상(user 0 잠김, car_service 없음 등)이면 종료하고 콜드 부팅한다.
+        run: scripts/ci-emulator.sh prepare
       - name: Check emulator display
         run: |
           "$ANDROID_HOME/platform-tools/adb" -s "$ANDROID_SERIAL" shell wm size
@@ -110,7 +40,14 @@ jobs:
             echo "$package: $result"
           done
       - name: Run Cucumber UI tests
-        run: python3 scripts/run-device-tests.py
+        id: tests
+        shell: bash
+        run: python3 scripts/run-device-tests.py 2>&1 | tee "$RUNNER_TEMP/ui-test.log"
+      - name: Restart emulator after system crash
+        # 시스템 크래시로 중단됐으면 다음 작업이 망가진 에뮬레이터를 받지 않게 재시작한다.
+        # 작업 결과는 테스트 단계의 실패로 남는다.
+        if: ${{ failure() && steps.tests.outcome == 'failure' }}
+        run: scripts/ci-emulator.sh recover "$RUNNER_TEMP/ui-test.log" app/build/outputs/androidTest-results
       - name: Find UI test results
         id: results
         if: ${{ !cancelled() }}
