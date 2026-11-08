@@ -10,7 +10,7 @@ data class CircleScoreResult(
     val zeroReason: ZeroScoreReason?
 )
 
-/** 점수를 구성하는 세부 지표. 비율 지표는 0~1 범위다. */
+/** 점수를 구성하는 세부 지표. 비율 지표는 0~1 범위다. [center]와 [radiusMeters]는 점수 계산에 쓴 맞춤 원이다. */
 data class CircleScoreMetrics(
     val circularity: Double,
     val closure: Double,
@@ -19,7 +19,8 @@ data class CircleScoreMetrics(
     val radialRmsRatio: Double,
     val closureDistanceMeters: Double,
     val rotationRadians: Double,
-    val pathLengthMeters: Double
+    val pathLengthMeters: Double,
+    val center: GeoPoint
 )
 
 enum class ZeroScoreReason {
