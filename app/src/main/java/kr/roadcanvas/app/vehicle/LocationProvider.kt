@@ -8,7 +8,10 @@ import kotlinx.coroutines.flow.StateFlow
 interface LocationProvider {
     val availability: StateFlow<LocationAvailability>
 
-    /** 수집하는 동안 위치를 받는다. 수집을 멈추면 위치 수신도 멈춘다. */
+    /**
+     * 수집하는 동안 위치를 받는다. 수집을 멈추면 위치 수신도 멈춘다.
+     * 수집을 시작하기 전에 받은 위치(마지막으로 알려진 위치 등)는 다시 내보내지 않는다.
+     */
     fun locations(): Flow<LocationSample>
 
     /**
