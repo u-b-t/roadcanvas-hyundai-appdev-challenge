@@ -62,6 +62,75 @@ class ChallengeRecorderTest {
     }
 
     @Test
+    fun `시작 전에 이미 있던 위치는 기록하지 않는다`() = runTest(dispatcher) {
+        // 준비 화면처럼 시작 전에 위치를 받고 있던 다른 수집자
+        val received = mutableListOf<LocationSample>()
+        backgroundScope.launch(dispatcher) {
+            locationProvider.locations().collect { received += it }
+        }
+        locationProvider.subscriberCount.first { it > 0 }
+        send(37.5000)
+
+        runRecorder(RecordingRequest.New(DrawingMode.CIRCLE))
+        locationProvider.subscriberCount.first { it > 1 }
+        send(37.5665)
+
+        assertEquals(2, received.size)
+        val path = (recorder.state.value as RecordingState.Recording).path
+        assertEquals(listOf(37.5665), path.map { it.latitude })
+        assertEquals(path, savedPath())
+    }
+
+    @Test
+    fun `위치 시각이 시작 전이거나 미래이거나 없어도 받은 시각으로 기록한다`() = runTest(dispatcher) {
+        runRecorder(RecordingRequest.New(DrawingMode.CIRCLE))
+        val sampleTimes = listOf(START - DAY, START + 365 * DAY, 0L, -1L)
+
+        val receivedTimes = sampleTimes.mapIndexed { i, sampleTime ->
+            now += 1_000
+            locationProvider.sendLocation(
+                LocationSample(37.5665 + i * 0.0009, LONGITUDE, sampleTime)
+            )
+            now
+        }
+
+        val path = (recorder.state.value as RecordingState.Recording).path
+        assertEquals(receivedTimes, path.map { it.timeMillis })
+        assertEquals(path, savedPath())
+        assertEquals(300.2, pathDistanceMeters(path), 0.1)
+    }
+
+    @Test
+    fun `시스템 시계가 위치 시각보다 앞서도 기록은 멈추지 않는다`() = runTest(dispatcher) {
+        runRecorder(RecordingRequest.New(DrawingMode.CIRCLE))
+
+        // 위치 시각이 계속 시작 시각보다 10분 이른 상황
+        repeat(3) { i ->
+            now += 1_000
+            locationProvider.sendLocation(
+                LocationSample(37.5665 + i * 0.0009, LONGITUDE, START - 600_000 + i * 1_000)
+            )
+        }
+
+        assertEquals(3, (recorder.state.value as RecordingState.Recording).path.size)
+    }
+
+    @Test
+    fun `이어서 기록할 때 위치 시각이 원래 시작 시각보다 일러도 기록한다`() = runTest(dispatcher) {
+        repository.start(DrawingMode.CIRCLE, START)
+        repository.appendPoints(listOf(RoutePoint(37.5665, LONGITUDE, START + 1_000)))
+        now = START + 120_000
+
+        runRecorder(RecordingRequest.Resume)
+        locationProvider.sendLocation(LocationSample(37.5683, LONGITUDE, START - DAY))
+
+        val state = recorder.state.value as RecordingState.Recording
+        assertEquals(listOf(37.5665, 37.5683), state.path.map { it.latitude })
+        assertEquals(START + 120_000, state.path.last().timeMillis)
+        assertEquals(200.14, state.distanceMeters, 0.02)
+    }
+
+    @Test
     fun `같은 좌표가 연달아 오면 하나만 남긴다`() = runTest(dispatcher) {
         runRecorder(RecordingRequest.New(DrawingMode.CIRCLE))
 
@@ -304,5 +373,6 @@ class ChallengeRecorderTest {
     private companion object {
         const val START = 1_700_000_000_000L
         const val LONGITUDE = 126.978
+        const val DAY = 86_400_000L
     }
 }

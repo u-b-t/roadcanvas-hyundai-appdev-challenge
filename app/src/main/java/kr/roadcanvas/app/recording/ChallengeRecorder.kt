@@ -9,12 +9,13 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.InProgressDrawingRepository
+import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
-import kr.roadcanvas.app.drawing.toRoutePoint
 import kr.roadcanvas.app.vehicle.LocationProvider
 
 /**
  * 도전 하나의 경로 기록 세션. 받은 위치를 순서대로 경로에 더하고 진행 중 기록 저장소에 이어서 저장한다.
+ * 도전을 시작한 뒤 새로 구독해 도착한 위치만 기록하므로 시작 전에 이미 있던 위치(준비 화면이 받은 위치 등)는 쓰지 않는다.
  * 앱 전체에서 하나를 공유하며, 위치 구독은 [RecordingRunner]가 [run]을 실행하는 동안에만 한다.
  *
  * 종료하면 위치 구독을 멈추고 진행 중 기록에 종료 시각만 남긴다. 결과 화면(#19)이 그 기록으로
@@ -138,13 +139,18 @@ class ChallengeRecorder(
         }
     }
 
-    /** 종료·포기로 기록 중 상태가 끝나면 위치 구독을 멈춘다. 끊긴 구간은 다음 점과 직선으로 이어진다. */
+    /**
+     * 종료·포기로 기록 중 상태가 끝나면 위치 구독을 멈춘다. 끊긴 구간은 다음 점과 직선으로 이어진다.
+     *
+     * 경로 점의 시각은 위치를 받은 시각이다. SDK가 준 위치 시각은 시스템 시계와 어긋날 수 있으므로
+     * 기록 여부 판정이나 점 시각에 쓰지 않는다. 위치 시각이 없거나 과거·미래로 어긋나도 기록은 멈추지 않는다.
+     */
     private suspend fun record() {
         locationProvider.locations().takeWhile { sample ->
             mutex.withLock {
                 val current = mutableState.value as? RecordingState.Recording
                     ?: return@withLock false
-                val point = sample.toRoutePoint()
+                val point = RoutePoint(sample.latitude, sample.longitude, clock())
                 val last = current.path.lastOrNull()
                 if (last != null && last.isSameLocationAs(point)) return@withLock true
                 // 저장에 실패해도 기록은 이어간다. 그 점은 메모리의 경로에만 남는다.

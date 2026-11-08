@@ -30,8 +30,10 @@ import kr.roadcanvas.app.recording.RecordingPermissions
 import kr.roadcanvas.app.recording.RecordingState
 import kr.roadcanvas.app.vehicle.LocationSample
 import kr.roadcanvas.app.vehicle.fake.FakeAppContainer
+import org.junit.Assert.assertTrue
 
 private const val WAIT_TIMEOUT_MILLIS = 5_000L
+private const val DAY_MILLIS = 86_400_000L
 
 /** 진행 화면 시나리오. 기록은 포그라운드 서비스 대신 테스트용 실행기가 코루틴에서 실행한다. */
 class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
@@ -147,12 +149,27 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
         }
     }
 
+    @When("^테스트에서 위치 시각이 \"(시작 하루 전|시작 1년 뒤|없음)\"인 위도 ([-\\d.]+), 경도 ([-\\d.]+) 위치를 기록한다$")
+    fun recordLocationWithSampleTime(sampleTime: String, latitude: String, longitude: String) {
+        val startedAtMillis = (recorder.state.value as RecordingState.Recording).startedAtMillis
+        val timeMillis = when (sampleTime) {
+            "시작 하루 전" -> startedAtMillis - DAY_MILLIS
+            "시작 1년 뒤" -> startedAtMillis + 365 * DAY_MILLIS
+            else -> 0L
+        }
+        recordLocation(latitude, longitude, timeMillis)
+    }
+
     @When("^테스트에서 위도 ([-\\d.]+), 경도 ([-\\d.]+) 위치를 기록한다$")
     fun recordLocation(latitude: String, longitude: String) {
+        recordLocation(latitude, longitude, System.currentTimeMillis())
+    }
+
+    private fun recordLocation(latitude: String, longitude: String, timeMillis: Long) {
         val point = RoutePoint(latitude.toDouble(), longitude.toDouble(), 0L)
         runBlocking {
             fakeContainer.locationProvider.sendLocation(
-                LocationSample(point.latitude, point.longitude, System.currentTimeMillis())
+                LocationSample(point.latitude, point.longitude, timeMillis)
             )
         }
         // 위치는 보낸 순서대로 처리되므로 마지막 점이 이 좌표가 되면 앞의 위치도 모두 처리된 것이다.
@@ -160,6 +177,12 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
             val last = (recorder.state.value as? RecordingState.Recording)?.path?.lastOrNull()
             last?.latitude == point.latitude && last.longitude == point.longitude
         }
+    }
+
+    @Then("경로 점의 시각은 모두 도전 시작 시각 이후다")
+    fun assertPointTimesAfterStart() {
+        val state = recorder.state.value as RecordingState.Recording
+        assertTrue(state.path.all { it.timeMillis >= state.startedAtMillis })
     }
 
     @Then("기록한 경로 점은 {int}개다")

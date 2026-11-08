@@ -9,6 +9,7 @@ Feature: 동그라미 챌린지 진행
   - [#38 종료 후 저장 전 프로세스 종료 시 결과 화면으로 복원](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/38)
   - [#43 주행 중 진행 화면 표시를 위한 Distraction Optimization 선언](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/43)
   - [#49 준비·진행·결과 화면을 전체 지도와 왼쪽 오버레이로 개편](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/49)
+  - [#58 도전 시작 시 오래된 위치를 첫 경로 점으로 쓰지 않기](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/58)
 
   Scenario: 시작하면 받은 위치를 경로에 기록하고 경과 시간과 이동 거리를 표시한다
     Given 동그라미 챌린지 진행 화면에서 기록을 시작했다
@@ -29,6 +30,26 @@ Feature: 동그라미 챌린지 진행
     And "100 m"가 화면 왼쪽 조작 영역에 표시된다
     And "종료" 버튼이 화면 왼쪽 조작 영역에 있다
     And "포기" 버튼이 화면 왼쪽 조작 영역에 있다
+
+  Scenario: 준비 화면에서 받은 위치는 경로에 기록하지 않는다
+    Given 동그라미 챌린지 진행 화면에서 기록을 시작했다
+    When 테스트에서 위도 37.5665, 경도 126.978 위치를 기록한다
+    Then 기록한 경로 점은 1개다
+    And 진행 중 기록에 경로 점 1개가 저장되어 있다
+
+  Scenario Outline: 위치 시각이 어긋나거나 없어도 받은 시각으로 기록한다
+    Given 동그라미 챌린지 진행 화면에서 기록을 시작했다
+    When 테스트에서 위치 시각이 "<위치 시각>"인 위도 37.5665, 경도 126.978 위치를 기록한다
+    And 테스트에서 위치 시각이 "<위치 시각>"인 위도 37.5674, 경도 126.978 위치를 기록한다
+    Then 기록한 경로 점은 2개다
+    And 경로 점의 시각은 모두 도전 시작 시각 이후다
+    And 화면에 "100 m"가 표시된다
+
+    Examples:
+      | 위치 시각    |
+      | 시작 하루 전 |
+      | 시작 1년 뒤  |
+      | 없음       |
 
   Scenario: 같은 좌표가 연달아 오면 하나만 기록한다
     Given 동그라미 챌린지 진행 화면에서 기록을 시작했다
