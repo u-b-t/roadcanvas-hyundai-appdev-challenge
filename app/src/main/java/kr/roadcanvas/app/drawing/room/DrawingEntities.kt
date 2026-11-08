@@ -61,6 +61,36 @@ data class CompletedMetricEntity(
     val value: Double
 )
 
+/**
+ * 목록 썸네일용 축약 경로. 목록을 불러올 때 전체 경로를 읽지 않도록 저장할 때 함께 저장한다. 버전 3에서 추가했다.
+ * [seq]는 정렬 순서로만 쓴다.
+ */
+@Entity(
+    tableName = "completed_thumbnail_point",
+    primaryKeys = ["drawing_id", "seq"],
+    foreignKeys = [
+        ForeignKey(
+            entity = CompletedDrawingEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["drawing_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
+data class CompletedThumbnailPointEntity(
+    @ColumnInfo(name = "drawing_id") val drawingId: Long,
+    val seq: Int,
+    val latitude: Double,
+    val longitude: Double,
+    @ColumnInfo(name = "time_millis") val timeMillis: Long
+)
+
+data class CompletedDrawingWithThumbnail(
+    @Embedded val drawing: CompletedDrawingEntity,
+    @Relation(parentColumn = "id", entityColumn = "drawing_id")
+    val thumbnail: List<CompletedThumbnailPointEntity>
+)
+
 data class CompletedDrawingWithDetails(
     @Embedded val drawing: CompletedDrawingEntity,
     @Relation(parentColumn = "id", entityColumn = "drawing_id")

@@ -23,7 +23,10 @@ data class CompletedDrawing(
     }
 }
 
-/** 목록에 보여줄 완료 기록 요약. 경로와 세부 지표는 포함하지 않는다. */
+/**
+ * 목록에 보여줄 완료 기록 요약. 전체 경로와 세부 지표 대신 썸네일용 축약 경로([routeThumbnail])를 담는다.
+ * 경로 점이 없는 기록은 [thumbnail]이 비어 있다.
+ */
 data class CompletedDrawingSummary(
     val id: Long,
     val mode: DrawingMode,
@@ -31,7 +34,8 @@ data class CompletedDrawingSummary(
     val score: Int,
     val distanceMeters: Double,
     val durationMillis: Long,
-    val name: String? = null
+    val name: String? = null,
+    val thumbnail: List<RoutePoint> = emptyList()
 )
 
 /**

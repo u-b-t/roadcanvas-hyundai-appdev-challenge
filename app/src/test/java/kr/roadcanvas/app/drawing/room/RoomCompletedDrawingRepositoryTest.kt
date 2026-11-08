@@ -6,6 +6,7 @@ import kr.roadcanvas.app.drawing.CompletedDrawing
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
+import kr.roadcanvas.app.drawing.routeThumbnail
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -83,6 +84,18 @@ class RoomCompletedDrawingRepositoryTest {
     @Test
     fun `없는 기록의 이름은 바꿀 수 없다`() = runTest {
         assertTrue(repository.rename(42, "이름") is StorageResult.Failure)
+    }
+
+    @Test
+    fun `목록 요약에는 저장할 때 줄인 축약 경로가 들어 있다`() = runTest {
+        val path = List(200) { RoutePoint(37.5 + it * 0.0001, 127.0, it * 1_000L) }
+        repository.save(drawing(completedAtMillis = 1_000, score = 70).copy(path = path))
+        repository.save(drawing(completedAtMillis = 2_000, score = 80).copy(path = emptyList()))
+
+        val summaries = repository.summaries().value()
+
+        assertEquals(emptyList<RoutePoint>(), summaries[0].thumbnail)
+        assertEquals(routeThumbnail(path), summaries[1].thumbnail)
     }
 
     @Test
