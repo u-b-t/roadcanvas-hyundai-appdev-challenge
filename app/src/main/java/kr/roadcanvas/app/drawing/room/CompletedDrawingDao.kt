@@ -36,6 +36,12 @@ abstract class CompletedDrawingDao {
     @Query("SELECT * FROM completed_drawing WHERE id = :id")
     abstract suspend fun find(id: Long): CompletedDrawingWithDetails?
 
+    @Query(
+        "SELECT id FROM completed_drawing " +
+            "WHERE mode = :mode AND completed_at = :completedAtMillis ORDER BY id LIMIT 1"
+    )
+    abstract suspend fun findId(mode: String, completedAtMillis: Long): Long?
+
     @Query("DELETE FROM completed_drawing WHERE id = :id")
     abstract suspend fun delete(id: Long)
 

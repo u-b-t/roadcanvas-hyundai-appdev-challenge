@@ -219,6 +219,22 @@ class ChallengeResultViewModelTest {
     }
 
     @Test
+    fun `완료 기록을 저장한 뒤 진행 중 기록을 지우기 전에 종료됐으면 다시 저장하지 않고 진행 중 기록을 지운다`() = runTest(dispatcher) {
+        saveInProgress(circlePath())
+        inProgress.finish(END)
+        val result = challengeResultOf(DrawingMode.CIRCLE, circlePath(), START, END)
+        val savedId = (completed.save(result.toCompletedDrawing()) as StorageResult.Success).value
+        val handle = SavedStateHandle()
+
+        val state = viewModel(handle).uiState.value as ChallengeResultUiState.Calculated
+
+        assertEquals(ResultSaveStatus.SAVED, state.saveStatus)
+        assertEquals(1, savedSummaries().size)
+        assertEquals(savedId, handle.get<Long>(ChallengeResultViewModel.KEY_SAVED_ID))
+        assertNull(inProgressDrawing())
+    }
+
+    @Test
     fun `다른 도전의 진행 중 기록은 결과로 쓰지 않고 지우지 않는다`() = runTest(dispatcher) {
         saveInProgress(circlePath(), startedAtMillis = START + 1)
 

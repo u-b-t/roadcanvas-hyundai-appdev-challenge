@@ -56,6 +56,9 @@ class RoomCompletedDrawingRepository(private val dao: CompletedDrawingDao) :
         }
     }
 
+    override suspend fun findId(mode: DrawingMode, completedAtMillis: Long): StorageResult<Long?> =
+        storageResultOf { dao.findId(mode.key, completedAtMillis) }
+
     override suspend fun delete(id: Long): StorageResult<Unit> = storageResultOf { dao.delete(id) }
 
     override suspend fun bestScore(mode: DrawingMode): StorageResult<Int?> =

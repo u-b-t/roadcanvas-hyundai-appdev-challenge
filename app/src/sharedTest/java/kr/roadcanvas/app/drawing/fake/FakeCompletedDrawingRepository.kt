@@ -40,6 +40,11 @@ class FakeCompletedDrawingRepository : CompletedDrawingRepository {
 
     override suspend fun find(id: Long) = result { drawings[id] }
 
+    override suspend fun findId(mode: DrawingMode, completedAtMillis: Long) = result {
+        drawings.values.filter { it.mode == mode && it.completedAtMillis == completedAtMillis }
+            .minOfOrNull { it.id }
+    }
+
     override suspend fun delete(id: Long) = result<Unit> { drawings.remove(id) }
 
     override suspend fun bestScore(mode: DrawingMode) =

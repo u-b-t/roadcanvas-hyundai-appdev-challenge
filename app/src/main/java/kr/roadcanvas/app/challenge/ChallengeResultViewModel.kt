@@ -23,6 +23,8 @@ import kr.roadcanvas.app.score.CircleScoreCalculator
  * 저장에 성공하면 부여된 ID를 [SavedStateHandle]에 남기고 진행 중 기록을 지운다.
  * 화면이 다시 만들어지거나 프로세스가 다시 만들어져도 ID가 있으면 저장하지 않고 그 기록을 보여준다.
  * 저장에 실패하면 진행 중 기록을 남겨 두어 다시 저장하거나 앱을 다시 실행해 저장할 수 있다.
+ * 완료 기록을 저장한 뒤 진행 중 기록을 지우기 전에 프로세스가 종료됐다면, 같은 완료 시각의 기록을 찾아
+ * 다시 저장하지 않고 그 기록을 보여준다.
  */
 class ChallengeResultViewModel(
     private val startedAtMillis: Long,
@@ -60,6 +62,13 @@ class ChallengeResultViewModel(
         val result = finishedResult()
         if (result == null) {
             mutableState.value = ChallengeResultUiState.Unavailable
+            return
+        }
+        val existing = completedRepository.findId(result.mode, result.completedAtMillis)
+        val existingId = (existing as? StorageResult.Success)?.value
+        if (existingId != null) {
+            savedStateHandle[KEY_SAVED_ID] = existingId
+            showSaved(existingId)
             return
         }
         mutableState.value = ChallengeResultUiState.Calculated(result, ResultSaveStatus.SAVING)

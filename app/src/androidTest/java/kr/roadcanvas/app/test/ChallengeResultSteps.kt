@@ -6,7 +6,9 @@ import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
 import kotlinx.coroutines.runBlocking
 import kr.roadcanvas.app.RoadCanvasApplication
+import kr.roadcanvas.app.challenge.challengeResultOf
 import kr.roadcanvas.app.drawing.CompletedDrawingSummary
+import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
 import kr.roadcanvas.app.score.GeoPoint
@@ -39,6 +41,22 @@ class ChallengeResultSteps(
     @Given("한 자리에서 위치 {int}개를 기록하고 종료했다")
     fun finishStationary(count: Int) {
         progressSteps.finishSavedChallenge(TestPaths.stationary(count).toRoutePoints())
+    }
+
+    @Given("반지름 {int}m 원을 기록하고 종료해 완료 기록까지 저장했지만 진행 중 기록이 남아 있다")
+    fun finishAndSaveWithoutClearing(radius: Int) {
+        val path = TestPaths.circle(radius.toDouble()).toRoutePoints()
+        val startedAtMillis = path.first().timeMillis
+        val endedAtMillis = path.last().timeMillis + 1_000L
+        runBlocking {
+            val inProgress = fakeContainer.inProgressDrawingRepository
+            inProgress.start(DrawingMode.CIRCLE, startedAtMillis)
+            inProgress.appendPoints(path)
+            inProgress.finish(endedAtMillis)
+            val result =
+                challengeResultOf(DrawingMode.CIRCLE, path, startedAtMillis, endedAtMillis)
+            fakeContainer.completedDrawingRepository.save(result.toCompletedDrawing())
+        }
     }
 
     @Given("완료 기록 저장이 실패하도록 설정되어 있다")

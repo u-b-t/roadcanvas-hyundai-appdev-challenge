@@ -73,6 +73,15 @@ class RoomCompletedDrawingRepositoryTest {
     }
 
     @Test
+    fun `완료 시각과 모드가 같은 기록의 ID를 찾는다`() = runTest {
+        repository.save(drawing(completedAtMillis = 1_000, score = 10)).value()
+        val id = repository.save(drawing(completedAtMillis = 2_000, score = 20)).value()
+
+        assertEquals(id, repository.findId(DrawingMode.CIRCLE, 2_000).value())
+        assertNull(repository.findId(DrawingMode.CIRCLE, 3_000).value())
+    }
+
+    @Test
     fun `없는 기록을 삭제해도 성공한다`() = runTest {
         assertEquals(StorageResult.Success(Unit), repository.delete(42))
     }
