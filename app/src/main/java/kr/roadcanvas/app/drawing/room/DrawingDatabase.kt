@@ -22,7 +22,8 @@ import kr.roadcanvas.app.drawing.ROUTE_THUMBNAIL_MAX_POINTS
         CompletedMetricEntity::class,
         CompletedThumbnailPointEntity::class,
         InProgressDrawingEntity::class,
-        InProgressRoutePointEntity::class
+        InProgressRoutePointEntity::class,
+        ArtworkPublicationEntity::class
     ],
     version = DrawingDatabase.VERSION,
     exportSchema = true
@@ -32,8 +33,10 @@ abstract class DrawingDatabase : RoomDatabase() {
 
     abstract fun inProgressDrawingDao(): InProgressDrawingDao
 
+    abstract fun artworkPublicationDao(): ArtworkPublicationDao
+
     companion object {
-        const val VERSION = 4
+        const val VERSION = 5
         const val NAME = "drawings.db"
 
         /** 진행 중 기록에 종료 시각을 추가한다. 기존 진행 중 기록은 종료하지 않은 도전으로 남는다. */
@@ -77,7 +80,21 @@ abstract class DrawingDatabase : RoomDatabase() {
             }
         }
 
-        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        /** 작품 공개 기록을 추가한다. 기존 완료 기록은 공개한 적이 없는 기록으로 남는다. */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `artwork_publication` (" +
+                        "`drawing_id` INTEGER NOT NULL, `artwork_id` TEXT NOT NULL, " +
+                        "`status` TEXT NOT NULL, PRIMARY KEY(`drawing_id`), " +
+                        "FOREIGN KEY(`drawing_id`) REFERENCES `completed_drawing`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                )
+            }
+        }
+
+        val MIGRATIONS: Array<Migration> =
+            arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
 
         fun create(context: Context, name: String = NAME): DrawingDatabase =
             Room.databaseBuilder(context, DrawingDatabase::class.java, name)
@@ -91,5 +108,6 @@ abstract class DrawingDatabase : RoomDatabase() {
 
 fun DrawingDatabase.toStorage() = DrawingStorage(
     completed = RoomCompletedDrawingRepository(completedDrawingDao()),
-    inProgress = RoomInProgressDrawingRepository(inProgressDrawingDao())
+    inProgress = RoomInProgressDrawingRepository(inProgressDrawingDao()),
+    publications = RoomArtworkPublicationRepository(artworkPublicationDao())
 )

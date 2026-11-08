@@ -90,7 +90,8 @@ open class RoadCanvasApplication : Application() {
         carUxRestrictionsClient = { AndroidCarUxRestrictionsClient(this) },
         mapAuth = mapAuth,
         recordingRunner = { ServiceRecordingRunner(this) },
-        onRecordingStorageFailure = { Log.w(TAG, "경로 점을 저장하지 못했습니다.", it) }
+        onRecordingStorageFailure = { Log.w(TAG, "경로 점을 저장하지 못했습니다.", it) },
+        onArtworkFailure = { Log.w(TAG, "작품 공개 요청이 실패했습니다.", it) }
     )
 }
 
