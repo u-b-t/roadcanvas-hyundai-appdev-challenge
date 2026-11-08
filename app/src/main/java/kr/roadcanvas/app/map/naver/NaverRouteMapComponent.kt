@@ -1,5 +1,6 @@
 package kr.roadcanvas.app.map.naver
 
+import android.graphics.PointF
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,7 +31,9 @@ import com.naver.maps.map.overlay.Marker
 import com.naver.maps.map.overlay.PathOverlay
 import kr.roadcanvas.app.map.CurrentPosition
 import kr.roadcanvas.app.map.MapAuth
+import kr.roadcanvas.app.map.MapInsets
 import kr.roadcanvas.app.map.RouteCamera
+import kr.roadcanvas.app.map.RouteCameraPadding
 import kr.roadcanvas.app.map.RouteMapComponent
 import kr.roadcanvas.app.map.RouteMapNotice
 import kr.roadcanvas.app.map.RouteMapOptions
@@ -94,20 +97,15 @@ private fun NaverRouteMapView(
     // 오버레이가 가린 영역을 지도 콘텐츠 패딩으로 주면 카메라 중심과 로고·법적 고지가 그 밖으로 옮겨진다.
     LaunchedEffect(naverMap, contentPadding, density, layoutDirection) {
         naverMap?.let { map ->
-            with(density) {
-                map.setContentPadding(
-                    contentPadding.calculateLeftPadding(layoutDirection).roundToPx(),
-                    contentPadding.calculateTopPadding().roundToPx(),
-                    contentPadding.calculateRightPadding(layoutDirection).roundToPx(),
-                    contentPadding.calculateBottomPadding().roundToPx()
-                )
-            }
+            val padding = MapInsets.of(contentPadding, density, layoutDirection)
+            map.setContentPadding(padding.left, padding.top, padding.right, padding.bottom)
         }
     }
 
-    val fitBoundsPadding = with(density) { 48.dp.roundToPx() }
-    LaunchedEffect(naverMap, state, contentPadding) {
-        naverMap?.let { overlays.show(it, state, fitBoundsPadding) }
+    // 콘텐츠 여백 안쪽에서 가장자리·지도 컨트롤·마커를 피한다. 전체 맞춤과 따라가기가 같은 여백을 쓴다.
+    val cameraInsets = RouteCameraPadding.insets(density, layoutDirection)
+    LaunchedEffect(naverMap, state, contentPadding, cameraInsets) {
+        naverMap?.let { overlays.show(it, state, cameraInsets) }
     }
     // 카메라는 경로 표시 상태로만 맞추고, 현재 위치 표시는 경로를 다시 그린 뒤 그 위에 덧붙인다.
     val positionIconSize = with(density) { CURRENT_POSITION_ICON_SIZE.roundToPx() }
@@ -137,11 +135,11 @@ private class RouteOverlays {
      */
     private var followZoomed = false
 
-    fun show(map: NaverMap, state: RouteMapState, fitBoundsPadding: Int) {
+    fun show(map: NaverMap, state: RouteMapState, cameraInsets: MapInsets) {
         when (state) {
             is RouteMapState.CurrentLocation -> {
                 detachRoute()
-                showLocation(map, state.point)
+                showLocation(map, state.point, cameraInsets)
             }
             is RouteMapState.Route -> {
                 hideLocation()
@@ -150,12 +148,20 @@ private class RouteOverlays {
                 path.map = map
                 startMarker.place(map, state.startMarker)
                 endMarker.place(map, state.endMarker)
-                val update = when (state.camera) {
-                    RouteCamera.FIT_BOUNDS ->
-                        CameraUpdate.fitBounds(LatLngBounds.from(coords), fitBoundsPadding)
-                    RouteCamera.FOLLOW_LATEST -> followCamera(coords.last())
+                when (state.camera) {
+                    RouteCamera.FIT_BOUNDS -> with(cameraInsets) {
+                        map.moveCamera(
+                            CameraUpdate.fitBounds(
+                                LatLngBounds.from(coords),
+                                left,
+                                top,
+                                right,
+                                bottom
+                            )
+                        )
+                    }
+                    RouteCamera.FOLLOW_LATEST -> follow(map, coords.last(), cameraInsets)
                 }
-                map.moveCamera(update)
             }
             is RouteMapState.NotEnoughPoints -> {
                 // PathOverlay는 좌표가 2개 미만이면 예외가 나므로 지도에서 뗀다.
@@ -202,14 +208,23 @@ private class RouteOverlays {
         endMarker.map = null
     }
 
-    private fun followCamera(position: LatLng): CameraUpdate = if (followZoomed) {
-        CameraUpdate.scrollTo(position)
-    } else {
-        followZoomed = true
-        CameraUpdate.scrollAndZoomTo(position, FOLLOW_ZOOM)
+    /**
+     * [position]을 [cameraInsets]를 뺀 영역 가운데에 둔다. 위치로 옮긴 뒤 화면 기준으로 밀어 회전·기울기에서도 같은 자리에 둔다.
+     * 지도 SDK의 한 번의 카메라 갱신은 좌표 이동과 화면 기준 이동을 함께 적용하지 않는다.
+     */
+    private fun follow(map: NaverMap, position: LatLng, cameraInsets: MapInsets) {
+        val scroll = if (followZoomed) {
+            CameraUpdate.scrollTo(position)
+        } else {
+            followZoomed = true
+            CameraUpdate.scrollAndZoomTo(position, FOLLOW_ZOOM)
+        }
+        map.moveCamera(scroll)
+        val offset = RouteCameraPadding.followOffset(cameraInsets)
+        map.moveCamera(CameraUpdate.scrollBy(PointF(offset.x, offset.y)))
     }
 
-    private fun showLocation(map: NaverMap, point: RoutePoint?) {
+    private fun showLocation(map: NaverMap, point: RoutePoint?, cameraInsets: MapInsets) {
         val overlay = map.locationOverlay
         if (point == null) {
             overlay.isVisible = false
@@ -222,7 +237,7 @@ private class RouteOverlays {
         overlay.subIcon = null
         overlay.isVisible = true
         locationOverlay = overlay
-        map.moveCamera(followCamera(position))
+        follow(map, position, cameraInsets)
     }
 
     private fun hideLocation() {
