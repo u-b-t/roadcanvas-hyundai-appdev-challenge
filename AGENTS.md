@@ -31,6 +31,16 @@
 - GitHub Actions는 PR과 `main` push에서 GitHub 호스팅 러너로 ktlint·Android Lint·앱과 Android 테스트 APK 빌드를 실행하고, `mac-mini` self-hosted 러너에서 단위 테스트와 Pleos UI 테스트를 실행한다. 러너가 오프라인이면 해당 작업은 대기한다. CI 결과가 실제로 실행되기 전에는 통과했다고 주장하지 않는다.
 - 단위 테스트 커버리지는 `./gradlew :app:unitTestCoverageReport`로 JaCoCo XML과 HTML을 생성한다. CI는 단위 테스트 커버리지와 JUnit 결과를 `unit` 플래그로, UI 테스트 JUnit 결과를 `ui` 플래그로 Codecov에 업로드한다. 테스트가 실패해도 생성된 결과를 업로드하며, CI 실패는 유지한다. 단위 테스트가 없으면 단위 테스트 커버리지 보고서는 생성되지 않는다. 커버리지 수집은 테스트 성공이나 Gherkin 시나리오 검증을 대신하지 않는다. UI 테스트 커버리지 수집은 아직 설정되지 않았다.
 
+## 디자인 시스템
+
+- 화면은 Shopl SDG(`com.shoplworks:SDG-Android`, [원본 소스](https://github.com/shopl/shopl-design-guide-android))의 색상(`SDGColor`), 글꼴(`SDGTypography`, Pretendard), 간격(`SDGSpacing`), 모서리(`SDGCornerRadius`)와 컴포넌트를 쓴다. SDG 코드가 쓰지 않는 전이 의존성 `hilt-android`는 제외했다. SDG 1.26.3에 맞춰 Kotlin·Compose 컴파일러 플러그인은 2.1.20, KSP는 2.1.20-1.0.32, Compose BOM은 2025.05.01이다. SDG가 끌어오는 lifecycle 2.9의 LiveData Lint 검사(`NullSafeMutableLiveData`)는 AGP 8.7 Lint에서 중단되어 꺼 두었다.
+- 앱 전체를 `kr.roadcanvas.app.ui.theme`의 `RoadCanvasTheme`으로 감싼다. SDG 색으로 만든 `RoadCanvasColorScheme`과 `RoadCanvasTypography`를 `MaterialTheme`으로 제공하고 화면 전체를 SDG 배경색으로 채운다. 새 Activity와 androidTest의 `TestScreens.launchContent`도 이 테마를 쓴다. 화면 코드는 색과 글꼴을 `MaterialTheme.colorScheme`·`MaterialTheme.typography`로 읽고, 역할에 없는 색만 `SDGColor`를 직접 쓴다.
+- 라이트 테마만 쓴다. SDG는 다크 모드를 제공하지 않으므로 기기가 다크 모드여도 같은 색을 쓰고 다크 색 구성을 추가하지 않는다.
+- SDG 글자 크기는 휴대폰 기준이라 차량용으로 `CAR_TEXT_SCALE`(1.25배) 키워 Material 글자 역할에 대응시킨다. SDG 스타일을 직접 쓸 때도 `SDGTypography.X.forCar()`로 키운다. 글자 역할의 크기 하한(12sp)과 색 대비(본문 4.5:1, 흰 글자를 올리는 강조색 3:1)는 단위 테스트가 확인한다.
+- 조작 요소의 높이와 너비는 `MIN_TOUCH_TARGET`(76dp) 이상이다. SDG 버튼(`SDGBoxButton` 등)은 높이가 42dp 이하로 고정되어 있어 그대로 쓰지 않고, SDG 색·모서리·글꼴로 그린 `kr.roadcanvas.app.ui.components.CarButton`(`Primary`, `Neutral`, `Line`)을 쓴다. 카드처럼 직접 만든 조작 요소는 `Modifier.heightIn(min = MIN_TOUCH_TARGET)`을 준다.
+- 조작 버튼과 핵심 정보는 운전석에 가까운 화면 왼쪽에 모은다. 나란히 배치하는 화면은 `DriverSideLayout`(왼쪽 조작 영역 `CONTROL_PANEL_WIDTH`, 오른쪽 내용), 지도처럼 배경을 채우는 화면은 `DriverSideOverlay`(배경 위 왼쪽 위에 조작 영역)를 쓴다. 둘 다 오른쪽에서 왼쪽으로 쓰는 언어 설정이어도 조작 영역을 왼쪽에 둔다. 화면 여백은 `SCREEN_PADDING`, 조작 요소 간격은 `CONTROL_SPACING`을 쓴다.
+- 지도 위에 올리는 정보와 조작 요소는 `OverlayCard`(반투명 흰 배경 `OVERLAY_CARD_COLOR`, SDG 20dp 모서리, 그림자)로 감싼다.
+
 ## 차량 연동 구현 선택
 
 - 화면과 기록 로직은 `kr.roadcanvas.app.vehicle`의 `LocationProvider`와 `DrivingRestrictionProvider`에만 의존한다. 의존성은 `RoadCanvasApplication`이 만든 `AppContainer`(`kr.roadcanvas.app.di`)에서 받는다.
