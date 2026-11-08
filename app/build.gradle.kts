@@ -28,7 +28,7 @@ android {
 
     buildTypes {
         debug {
-            vehicleIntegrationFields(defaultLocation = "simulated", defaultDriving = "aaos")
+            vehicleIntegrationFields(defaultLocation = "pleos", defaultDriving = "aaos")
         }
         release {
             vehicleIntegrationFields(defaultLocation = "pleos", defaultDriving = "aaos")
@@ -64,8 +64,8 @@ android {
 
 /**
  * 차량 연동 구현을 빌드 속성으로 고른다.
- * 예: -Proadcanvas.location=simulated -Proadcanvas.driving=simulated -Proadcanvas.simRoute=circle
- * 실제 구현(pleos, aaos)이 들어오기 전에는 앱이 모의 구현으로 대체하고 화면에 미구현으로 표시한다.
+ * 기본값은 debug와 release 모두 실제 SDK(위치 pleos, 주행 규제 aaos)다.
+ * 모의 구현은 명시했을 때만 쓴다. 예: -Proadcanvas.location=simulated -Proadcanvas.driving=simulated -Proadcanvas.simRoute=circle
  */
 fun VariantDimension.vehicleIntegrationFields(defaultLocation: String, defaultDriving: String) {
     fun option(property: String, field: String, default: String, allowed: List<String>) {

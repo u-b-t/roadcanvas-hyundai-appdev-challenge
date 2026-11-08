@@ -35,7 +35,7 @@
 
 - 화면과 기록 로직은 `kr.roadcanvas.app.vehicle`의 `LocationProvider`와 `DrivingRestrictionProvider`에만 의존한다. 의존성은 `RoadCanvasApplication`이 만든 `AppContainer`(`kr.roadcanvas.app.di`)에서 받는다.
 - 구현은 빌드 속성으로 고른다. `-Proadcanvas.location=simulated|pleos`, `-Proadcanvas.driving=simulated|aaos`, `-Proadcanvas.simRoute=circle|squished|line|stationary`. 예: `./gradlew assembleDebug -Proadcanvas.simRoute=line`. 허용하지 않는 값은 빌드 설정 단계에서 실패한다.
-- 기본값은 debug가 위치 `simulated`, 주행 규제 `aaos`이고 release가 `pleos`, `aaos`다. 아직 구현되지 않은 구현을 고르면 모의 구현으로 대체하는 구조는 남아 있지만 현재 선택할 수 있는 값은 모두 구현되어 있다. debug 화면 오른쪽 아래에 사용 중인 구현과 현재 주행 규제 상태를 작게 표시하며, 대체한 경우 `(Pleos 미구현)`처럼 표시한다.
+- 기본값은 debug와 release 모두 위치 `pleos`(FusedLocation SDK), 주행 규제 `aaos`(CarUxRestrictions)다. 모의 위치는 `-Proadcanvas.location=simulated`로 명시했을 때만 쓴다. 아직 구현되지 않은 구현을 고르면 모의 구현으로 대체하는 구조는 남아 있지만 현재 선택할 수 있는 값은 모두 구현되어 있다. debug 화면 오른쪽 아래에 사용 중인 구현과 현재 주행 규제 상태를 작게 표시하며, 대체한 경우 `(Pleos 미구현)`처럼 표시한다.
 - 모의 위치는 위치 수신을 시작하면 경로를 처음부터 반복 재생한다. 기본값은 중심 서울시청(37.5665, 126.9780), 반지름 50m, 초속 5m(시속 18km), 재생 간격 1초다. 원은 63개 지점으로 약 63초에 한 바퀴, 직선 왕복은 동서 100m를 5m 간격으로 왕복(40개 지점)하고, 찌그러진 원은 중심 거리가 약 33~64m로 달라지며, 정지는 중심 한 지점을 반복한다. 값은 `SimulatedRouteConfig`에서 바꾼다.
 - 모의 주행 규제는 항상 조작 가능 상태를 준다.
 - `aaos` 주행 규제는 `kr.roadcanvas.app.vehicle.aaos`에서 `CarUxRestrictionsManager`를 구독한다. 수집자가 있을 때만 Car 서비스에 연결하고, Car API가 없거나 연결 실패·첫 값 미수신·예외면 확인 불가로 처리한다. 확인 불가는 조작 가능으로 보지 않는다.
