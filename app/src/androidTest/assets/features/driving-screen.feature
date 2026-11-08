@@ -2,11 +2,12 @@ Feature: 주행 중 화면
   앱은 Distraction Optimization을 선언해 주행 중에도 플랫폼이 화면을 가리지 않는다.
   주행 규제가 조작 제한이거나 확인 불가이면 진행 화면만 그대로 보여주고,
   나머지 화면은 정차 후 이용할 수 있다고 안내하며 조작을 막는다. 정차하면 원래 화면으로 돌아온다.
-  정차 안내는 운전석에 가까운 화면 왼쪽에 표시한다.
+  정차 안내는 어둡게 처리한 커버 배경 위에 큰 경고 아이콘과 짧은 문장으로 운전석에 가까운 화면 왼쪽에 표시한다.
 
   Issues:
   - [#43 주행 중 진행 화면 표시를 위한 Distraction Optimization 선언](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/43)
   - [#50 내 그림·스플래시·정차 안내 화면에 SDG 적용](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/50)
+  - [#62 정차 안내와 스플래시를 커버 스타일로 통일하고 시작 깜빡임 제거](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/62)
 
   Scenario: 앱 화면이 Distraction Optimization을 선언한다
     Then 앱 실행 화면은 Distraction Optimization을 선언한다
@@ -26,11 +27,13 @@ Feature: 주행 중 화면
       | 조작 제한 | 주행 중에는 화면을 조작할 수 없어요            |
       | 확인 불가 | 주행 상태를 확인할 수 없어 화면을 조작할 수 없어요 |
 
-  Scenario: 정차 안내는 운전석에 가까운 화면 왼쪽에 표시한다
+  Scenario: 정차 안내는 어둡게 처리한 커버 배경 위 운전석에 가까운 화면 왼쪽에 표시한다
     Given 모드 선택 화면을 연다
     When 테스트에서 주행 규제 상태를 "조작 제한"로 바꾼다
-    Then "정차 후 이용할 수 있어요"가 화면 왼쪽 절반에 표시된다
+    Then 정차 안내의 커버 배경이 화면 전체에 표시된다
+    And "정차 후 이용할 수 있어요"가 화면 왼쪽 절반에 표시된다
     And "주행 중에는 화면을 조작할 수 없어요"가 화면 왼쪽 절반에 표시된다
+    And 정차 안내 경고 아이콘이 문장 위 화면 왼쪽 절반에 크게 표시된다
 
   Scenario: 주행 중에는 준비 화면을 가려 도전을 시작할 수 없다
     Given 동그라미 챌린지 준비 화면을 연다

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -52,14 +53,16 @@ fun DriverSideLayout(
 
 /**
  * 지도처럼 화면 전체를 채우는 [background] 위 왼쪽에 [controls]를 띄운다. 조작 영역은 [OverlayCard]로 감싸는 것을 기본으로 한다.
- * 오른쪽에서 왼쪽으로 쓰는 언어 설정이어도 조작 영역은 왼쪽에 둔다.
+ * 오른쪽에서 왼쪽으로 쓰는 언어 설정이어도 조작 영역은 왼쪽에 둔다. 조작 영역은 기본으로 위에 붙이고,
+ * 안내처럼 화면 높이 가운데에 둘 내용은 [verticalAlignment]로 정한다.
  */
 @Composable
 fun DriverSideOverlay(
     background: @Composable () -> Unit,
     controls: @Composable ColumnScope.() -> Unit,
     modifier: Modifier = Modifier,
-    controlsWidth: Dp = CONTROL_PANEL_WIDTH
+    controlsWidth: Dp = CONTROL_PANEL_WIDTH,
+    verticalAlignment: Alignment.Vertical = Alignment.Top
 ) {
     val layoutDirection = LocalLayoutDirection.current
     Box(modifier = modifier.fillMaxSize()) {
@@ -68,7 +71,11 @@ fun DriverSideOverlay(
             Box(modifier = Modifier.fillMaxSize().padding(SCREEN_PADDING)) {
                 CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
                     Column(
-                        modifier = Modifier.align(Alignment.TopStart).width(controlsWidth),
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .width(controlsWidth)
+                            .fillMaxHeight()
+                            .wrapContentHeight(verticalAlignment),
                         verticalArrangement = Arrangement.spacedBy(CONTROL_SPACING),
                         content = controls
                     )
