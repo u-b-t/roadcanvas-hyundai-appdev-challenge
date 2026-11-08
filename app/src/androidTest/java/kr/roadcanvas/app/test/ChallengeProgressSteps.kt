@@ -1,17 +1,14 @@
 package kr.roadcanvas.app.test
 
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.rememberNavController
-import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
-import io.cucumber.java.After
 import io.cucumber.java.Before
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
@@ -20,6 +17,8 @@ import kotlinx.coroutines.runBlocking
 import kr.roadcanvas.app.RoadCanvasApplication
 import kr.roadcanvas.app.challenge.CIRCLE_PROGRESS_TITLE
 import kr.roadcanvas.app.challenge.CIRCLE_READY_TITLE
+import kr.roadcanvas.app.challenge.CIRCLE_RESULT_TITLE
+import kr.roadcanvas.app.challenge.FINISH_LABEL
 import kr.roadcanvas.app.challenge.START_LABEL
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
@@ -40,7 +39,7 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
     private val application = ApplicationProvider.getApplicationContext<RoadCanvasApplication>()
     private val fakeContainer get() = application.container as FakeAppContainer
     private val recorder get() = fakeContainer.challengeRecorder
-    private var scenario: ActivityScenario<ComponentActivity>? = null
+    private var scenario: TestScreen<ComponentActivity>? = null
 
     /** 시작 버튼이 권한 요청 창을 띄우지 않도록 기록에 필요한 권한을 미리 허용한다. */
     @Before
@@ -49,11 +48,6 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
         RecordingPermissions.runtime().forEach {
             instrumentation.uiAutomation.grantRuntimePermission(application.packageName, it)
         }
-    }
-
-    @After
-    fun closeScreen() {
-        scenario?.close()
     }
 
     @Given("동그라미 챌린지 진행 화면에서 시작을 누른다")
@@ -90,6 +84,22 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
         }
     }
 
+    /** [path]를 기록한 진행 중인 도전을 저장해 두고, 앱을 다시 실행해 이어간 뒤 종료해 결과 화면을 연다. */
+    fun finishSavedChallenge(path: List<RoutePoint>) {
+        runBlocking {
+            val repository = fakeContainer.inProgressDrawingRepository
+            repository.start(DrawingMode.CIRCLE, System.currentTimeMillis() - path.size * 1_000L)
+            repository.appendPoints(path)
+        }
+        openApp()
+        waitForText(CIRCLE_PROGRESS_TITLE)
+        waitForResume()
+        val finish = hasText(FINISH_LABEL) and hasClickAction() and isEnabled()
+        waitUntil { composeRule.onAllNodes(finish).fetchSemanticsNodes().isNotEmpty() }
+        composeRule.onNode(finish).performClick()
+        waitForText(CIRCLE_RESULT_TITLE)
+    }
+
     @Given("진행 중 기록 저장이 실패하도록 설정되어 있다")
     fun failInProgressStorage() {
         fakeContainer.inProgressDrawingRepository.failure = IllegalStateException("테스트 저장소 오류")
@@ -97,7 +107,17 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
 
     @When("앱을 다시 실행한다")
     fun relaunch() {
+        // 열려 있던 화면을 닫고 새 화면을 연다. 화면 상태는 버리고 저장소와 기록 세션만 이어진다.
+        TestScreens.closeAll()
         openApp()
+    }
+
+    @When("결과 화면에서 뒤로 가기를 누른다")
+    fun pressBack() {
+        composeRule.waitForIdle()
+        requireNotNull(scenario).onActivity { activity ->
+            activity.onBackPressedDispatcher.onBackPressed()
+        }
     }
 
     @When("이어서 기록이 시작될 때까지 기다린다")
@@ -151,18 +171,9 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
 
     private fun openApp() {
         composeRule.mainClock.autoAdvance = true
-        val launched = ActivityScenario.launch(ComponentActivity::class.java)
-        launched.onActivity { activity ->
-            activity.setContent {
-                MaterialTheme {
-                    RoadCanvasNavHost(
-                        navController = rememberNavController(),
-                        splashDurationMillis = 0L
-                    )
-                }
-            }
+        scenario = TestScreens.launchContent {
+            RoadCanvasNavHost(navController = rememberNavController(), splashDurationMillis = 0L)
         }
-        scenario = launched
     }
 
     private fun savedInProgress() = runBlocking {

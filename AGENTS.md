@@ -41,6 +41,7 @@
 - `aaos` 주행 규제는 `kr.roadcanvas.app.vehicle.aaos`에서 `CarUxRestrictionsManager`를 구독한다. 수집자가 있을 때만 Car 서비스에 연결하고, Car API가 없거나 연결 실패·첫 값 미수신·예외면 확인 불가로 처리한다. 확인 불가는 조작 가능으로 보지 않는다.
 - `pleos` 위치는 `kr.roadcanvas.app.vehicle.pleos`에서 FusedLocation SDK를 쓴다. 수집할 때마다 새 인스턴스로 지원 확인·초기화·리스너 등록을 하고 수집을 멈추면 해제한다. 에뮬레이터에서 앱은 사용자 10으로 실행되므로 권한은 `adb shell pm grant --user 10 kr.roadcanvas.app pleos.car.permission.FUSED_LOCATION`으로 준다. 확인 결과와 미검증 항목은 [FusedLocation 검증 결과](docs/pleos-fused-location-verification.md)에 있다.
 - androidTest는 `RoadCanvasTestRunner`가 `TestRoadCanvasApplication`을 사용해 `FakeAppContainer`를 주입한다. 대체 구현은 `app/src/sharedTest/`에 있어 단위 테스트와 androidTest에서 함께 쓴다. 테스트에서 위치 상태·좌표와 주행 규제 상태를 원하는 시점에 바꿀 수 있다.
+- androidTest 화면은 `ActivityScenario.launch`를 직접 쓰지 않고 `TestScreens`(`launch`, `launchContent`)로 연다. 화면을 닫거나 시나리오가 끝나 태스크가 지워지면 Pleos 런처가 잠시 뒤(에뮬레이터에서 22~145ms) 지도 태스크를 앞으로 가져온다. 그 사이에 연 화면은 가려져 일시정지되고 `No compose hierarchies found`로 실패하므로, `TestScreens`는 태스크가 지워진 뒤 처음 화면을 열기 전에 창 순서가 400ms 동안 바뀌지 않을 때까지 기다린다. 시나리오 전후 정리(화면 닫기, 대체 구현 초기화, 남은 구독 확인)는 `ScenarioHooks`가 하므로 단계 클래스에서 화면을 따로 닫지 않는다.
 
 ## 기기 저장
 
@@ -56,6 +57,7 @@
 - Android 14(targetSdk 34)에서 위치 타입 포그라운드 서비스는 `ACCESS_COARSE_LOCATION` 또는 `ACCESS_FINE_LOCATION`이 없으면 `SecurityException`으로 시작하지 못한다. Pleos 위치 권한만으로는 안 되는 것을 에뮬레이터에서 확인했으므로 시작 버튼을 누를 때 대략적인 위치 권한과 알림 권한을 요청한다. 에뮬레이터에서 직접 허용하려면 `adb shell pm grant --user 10 kr.roadcanvas.app android.permission.ACCESS_COARSE_LOCATION`을 쓴다.
 - 서비스는 기록한 점 수를 logcat `ChallengeRecording` 태그로 남긴다. 주행 중 화면이 차단된 동안의 기록 여부는 `adb logcat -s ChallengeRecording`으로 확인한다.
 - 진행 중 기록이 저장되어 있으면 앱을 다시 실행할 때 진행 화면으로 가서 이어서 기록한다. 종료하면 위치 구독만 멈추고 진행 중 기록은 남긴 채 시작·종료 시각을 결과 화면 경로 인자로 넘긴다. 결과 화면은 완료 기록 저장에 성공한 뒤 진행 중 기록을 지운다.
+- 결과 화면(`ChallengeResultViewModel`)은 저장한 완료 기록 ID를 `SavedStateHandle`에 남겨 화면이나 프로세스가 다시 만들어져도 한 번만 저장한다. 저장에 실패하면 진행 중 기록을 남기고 다시 저장 버튼을 보인다. 같은 프로세스에서 앱을 다시 열면 `ChallengeRecorder.unsavedFinish()`로 저장하지 못한 결과를 찾아 결과 화면으로 간다. 종료 상태는 메모리에만 있으므로 프로세스가 종료된 뒤에는 진행 화면이 그 기록을 이어서 기록한다.
 
 ## 빌드와 실행
 

@@ -26,7 +26,8 @@ if [ "${STRICT_COMMIT_TITLE:-0}" != 1 ]; then
   esac
 fi
 
-if [ "${#subject}" -gt 72 ] || ! printf '%s\n' "$subject" | LC_ALL=C grep -Eq '^(feat|fix|refactor|perf|test|docs|build|ci|chore|style|revert): [^[:space:]].*$'; then
+length=$(printf '%s' "$subject" | python3 -c 'import sys; print(len(sys.stdin.buffer.read().decode("utf-8")))')
+if [ "$length" -gt 72 ] || ! printf '%s\n' "$subject" | LC_ALL=C grep -Eq '^(feat|fix|refactor|perf|test|docs|build|ci|chore|style|revert): [^[:space:]].*$'; then
   printf '%s\n' '커밋 제목은 72자 이내의 type: 설명 형식이어야 합니다.' >&2
   printf '%s\n' '허용 타입: feat, fix, refactor, perf, test, docs, build, ci, chore, style, revert' >&2
   exit 1

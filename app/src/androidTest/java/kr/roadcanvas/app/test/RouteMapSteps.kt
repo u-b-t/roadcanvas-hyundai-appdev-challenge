@@ -1,17 +1,12 @@
 package kr.roadcanvas.app.test
 
-import android.app.Activity
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
-import io.cucumber.java.After
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.When
 import kr.roadcanvas.app.RoadCanvasApplication
@@ -28,12 +23,6 @@ import org.junit.Assert.assertTrue
 
 class RouteMapSteps {
     private val application = ApplicationProvider.getApplicationContext<RoadCanvasApplication>()
-    private var activity: ActivityScenario<out Activity>? = null
-
-    @After
-    fun closeActivity() {
-        activity?.close()
-    }
 
     @Given("테스트용 지도 컴포넌트가 주입되어 있다")
     fun assertFakeMapInjected() {
@@ -70,19 +59,15 @@ class RouteMapSteps {
 
     @When("경로 지도 미리보기를 연다")
     fun openPreview() {
-        activity = ActivityScenario.launch(RouteMapPreviewActivity::class.java)
+        TestScreens.launch(RouteMapPreviewActivity::class.java)
     }
 
     /** 지도 아래에 다른 정보가 함께 있는 화면을 띄워 지도 영역의 안내가 나머지를 가리지 않는지 확인한다. */
     private fun showWithDrivingInfo(map: @Composable (Modifier) -> Unit) {
-        val scenario = ActivityScenario.launch(ComponentActivity::class.java)
-        activity = scenario
-        scenario.onActivity {
-            it.setContent {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Text("주행 정보")
-                    map(Modifier.fillMaxWidth().weight(1f))
-                }
+        TestScreens.launchContent {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Text("주행 정보")
+                map(Modifier.fillMaxWidth().weight(1f))
             }
         }
     }

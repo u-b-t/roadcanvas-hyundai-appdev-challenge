@@ -4,6 +4,7 @@ Feature: 동그라미 챌린지 진행
 
   Issues:
   - [#18 동그라미 챌린지 진행 및 경로 기록 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/18)
+  - [#19 동그라미 챌린지 결과 화면 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/19)
 
   Scenario: 시작하면 받은 위치를 경로에 기록하고 경과 시간과 이동 거리를 표시한다
     Given 동그라미 챌린지 진행 화면에서 기록을 시작했다
@@ -51,7 +52,6 @@ Feature: 동그라미 챌린지 진행
     When "종료" 버튼을 누른다
     Then 화면에 "동그라미 챌린지 결과"가 표시된다
     And 위치 구독이 해제된다
-    And 진행 중 기록에 경로 점 2개가 저장되어 있다
 
   Scenario: 정차 중 포기하면 확인한 뒤 진행 중 기록을 지우고 준비 화면으로 돌아간다
     Given 동그라미 챌린지 진행 화면에서 기록을 시작했다

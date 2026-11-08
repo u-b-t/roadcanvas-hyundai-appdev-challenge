@@ -1,8 +1,5 @@
 package kr.roadcanvas.app.test
 
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -16,10 +13,8 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.rememberNavController
-import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import io.cucumber.datatable.DataTable
-import io.cucumber.java.After
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
@@ -51,7 +46,6 @@ class MyDrawingsSteps(private val ruleHolder: ComposeRuleHolder) {
     private val fakeContainer
         get() = ApplicationProvider.getApplicationContext<RoadCanvasApplication>()
             .container as FakeAppContainer
-    private var scenario: ActivityScenario<ComponentActivity>? = null
 
     @Given("저장된 동그라미 기록이 있다")
     fun saveDrawings(table: DataTable) {
@@ -80,18 +74,9 @@ class MyDrawingsSteps(private val ruleHolder: ComposeRuleHolder) {
     @Given("내 그림 화면을 연다")
     fun openMyDrawings() {
         composeRule.mainClock.autoAdvance = true
-        val launched = ActivityScenario.launch(ComponentActivity::class.java)
-        launched.onActivity { activity ->
-            activity.setContent {
-                MaterialTheme {
-                    RoadCanvasNavHost(
-                        navController = rememberNavController(),
-                        splashDurationMillis = 0L
-                    )
-                }
-            }
+        TestScreens.launchContent {
+            RoadCanvasNavHost(navController = rememberNavController(), splashDurationMillis = 0L)
         }
-        scenario = launched
         // 실제 앱과 같은 흐름으로 모드 선택에서 들어간다.
         waitFor(hasText(MY_DRAWINGS_LABEL) and hasClickAction())
         composeRule.onNode(hasText(MY_DRAWINGS_LABEL) and hasClickAction()).performClick()
@@ -140,11 +125,6 @@ class MyDrawingsSteps(private val ruleHolder: ComposeRuleHolder) {
         val list = composeRule.onNodeWithTag(MY_DRAWINGS_LIST_TAG).getUnclippedBoundsInRoot()
         val detail = composeRule.onNodeWithTag(DRAWING_DETAIL_TAG).getUnclippedBoundsInRoot()
         assertTrue("목록이 상세 왼쪽에 있어야 한다", list.right <= detail.left)
-    }
-
-    @After
-    fun closeScreen() {
-        scenario?.close()
     }
 
     private val inList = hasAnyAncestor(hasTestTag(MY_DRAWINGS_LIST_TAG))

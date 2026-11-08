@@ -23,7 +23,7 @@ data class CircleScoreConfig(
 )
 
 /** 위도·경도 경로가 얼마나 동그란지 0~100점으로 계산한다. */
-class CircleScoreCalculator(private val config: CircleScoreConfig = CircleScoreConfig()) {
+class CircleScoreCalculator(val config: CircleScoreConfig = CircleScoreConfig()) {
 
     fun calculate(points: List<GeoPoint>): CircleScoreResult {
         val valid = points.filter { it.isValid() }

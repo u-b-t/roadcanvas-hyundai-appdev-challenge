@@ -47,6 +47,17 @@ class ChallengeRecorder(
         return loaded is StorageResult.Success && loaded.value != null
     }
 
+    /**
+     * 종료했지만 결과 화면이 아직 완료 기록으로 저장하지 못한 도전. 없으면 null이다.
+     * 종료 상태는 메모리에만 있으므로 같은 프로세스에서 앱을 다시 열 때 결과 화면으로 돌아가는 데 쓴다.
+     */
+    suspend fun unsavedFinish(): RecordingState.Finished? {
+        val finished = mutableState.value as? RecordingState.Finished ?: return null
+        val loaded = repository.load()
+        val saved = (loaded as? StorageResult.Success)?.value ?: return null
+        return finished.takeIf { saved.startedAtMillis == it.startedAtMillis }
+    }
+
     /** 포그라운드 서비스를 시작하지 못하는 등 기록을 실행할 수 없을 때 실패로 알린다. */
     fun fail(cause: Throwable) {
         mutableState.value = RecordingState.Failed(cause)
