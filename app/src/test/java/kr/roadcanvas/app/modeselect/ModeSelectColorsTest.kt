@@ -3,6 +3,7 @@ package kr.roadcanvas.app.modeselect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
+import kr.roadcanvas.app.ui.theme.RoadCanvasColorScheme
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -30,6 +31,33 @@ class ModeSelectColorsTest {
     fun `준비 중 배지 글자는 본문 대비 이상이고 배지는 항목 배경에서 드러난다`() {
         assertContrastAtLeast(4.5f, ON_COMING_SOON_BADGE_COLOR, COMING_SOON_BADGE_COLOR)
         assertContrastAtLeast(3f, COMING_SOON_BADGE_COLOR, itemBackground)
+    }
+
+    @Test
+    fun `동그라미 챌린지 항목은 강조색으로 채우고 큰 흰 글자를 읽을 수 있다`() {
+        val primary = RoadCanvasColorScheme.primary
+        assertTrue(primary.luminance() > itemBackground.luminance())
+        // 이름과 설명은 굵은 큰 글자이므로 큰 글자 기준(3:1)을 적용한다.
+        assertContrastAtLeast(3f, RoadCanvasColorScheme.onPrimary, primary)
+        assertContrastAtLeast(3f, primary, COVER_DARK_COLOR)
+    }
+
+    @Test
+    fun `준비 중 항목 글자는 일반 설명보다 흐리지만 항목 배경에서 읽힌다`() {
+        assertTrue(
+            DISABLED_ON_COVER_TEXT_COLOR.luminance() < ON_COVER_SECONDARY_TEXT_COLOR.luminance()
+        )
+        assertContrastAtLeast(3f, DISABLED_ON_COVER_TEXT_COLOR, itemBackground)
+    }
+
+    @Test
+    fun `내 그림 버튼 테두리는 커버 위에서 보이고 흰 글자는 본문 대비 이상이다`() {
+        assertContrastAtLeast(
+            3f,
+            SECONDARY_ON_COVER_BORDER_COLOR.compositeOver(COVER_DARK_COLOR),
+            COVER_DARK_COLOR
+        )
+        assertContrastAtLeast(4.5f, ON_COVER_TEXT_COLOR, COVER_DARK_COLOR)
     }
 
     private fun assertContrastAtLeast(minimum: Float, foreground: Color, background: Color) {
