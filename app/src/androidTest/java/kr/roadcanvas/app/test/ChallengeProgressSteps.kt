@@ -5,6 +5,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.rememberNavController
@@ -20,6 +21,8 @@ import kotlinx.coroutines.runBlocking
 import kr.roadcanvas.app.RoadCanvasApplication
 import kr.roadcanvas.app.challenge.CIRCLE_PROGRESS_TITLE
 import kr.roadcanvas.app.challenge.CIRCLE_READY_TITLE
+import kr.roadcanvas.app.challenge.CIRCLE_RESULT_TITLE
+import kr.roadcanvas.app.challenge.FINISH_LABEL
 import kr.roadcanvas.app.challenge.START_LABEL
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
@@ -90,6 +93,22 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
         }
     }
 
+    /** [path]를 기록한 진행 중인 도전을 저장해 두고, 앱을 다시 실행해 이어간 뒤 종료해 결과 화면을 연다. */
+    fun finishSavedChallenge(path: List<RoutePoint>) {
+        runBlocking {
+            val repository = fakeContainer.inProgressDrawingRepository
+            repository.start(DrawingMode.CIRCLE, System.currentTimeMillis() - path.size * 1_000L)
+            repository.appendPoints(path)
+        }
+        openApp()
+        waitForText(CIRCLE_PROGRESS_TITLE)
+        waitForResume()
+        val finish = hasText(FINISH_LABEL) and hasClickAction() and isEnabled()
+        waitUntil { composeRule.onAllNodes(finish).fetchSemanticsNodes().isNotEmpty() }
+        composeRule.onNode(finish).performClick()
+        waitForText(CIRCLE_RESULT_TITLE)
+    }
+
     @Given("진행 중 기록 저장이 실패하도록 설정되어 있다")
     fun failInProgressStorage() {
         fakeContainer.inProgressDrawingRepository.failure = IllegalStateException("테스트 저장소 오류")
@@ -98,6 +117,14 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
     @When("앱을 다시 실행한다")
     fun relaunch() {
         openApp()
+    }
+
+    @When("결과 화면에서 뒤로 가기를 누른다")
+    fun pressBack() {
+        composeRule.waitForIdle()
+        requireNotNull(scenario).onActivity { activity ->
+            activity.onBackPressedDispatcher.onBackPressed()
+        }
     }
 
     @When("이어서 기록이 시작될 때까지 기다린다")
@@ -151,6 +178,8 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
 
     private fun openApp() {
         composeRule.mainClock.autoAdvance = true
+        // 다시 실행할 때 이전 화면이 남아 같은 문구가 두 번 보이지 않도록 먼저 닫는다.
+        scenario?.close()
         val launched = ActivityScenario.launch(ComponentActivity::class.java)
         launched.onActivity { activity ->
             activity.setContent {
