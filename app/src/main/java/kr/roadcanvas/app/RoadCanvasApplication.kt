@@ -7,6 +7,7 @@ import kr.roadcanvas.app.di.DefaultAppContainer
 import kr.roadcanvas.app.drawing.room.DrawingDatabase
 import kr.roadcanvas.app.drawing.room.toStorage
 import kr.roadcanvas.app.vehicle.VehicleIntegrationSelection
+import kr.roadcanvas.app.vehicle.aaos.AndroidCarUxRestrictionsClient
 
 open class RoadCanvasApplication : Application() {
     lateinit var container: AppContainer
@@ -24,7 +25,8 @@ open class RoadCanvasApplication : Application() {
             driving = BuildConfig.VEHICLE_DRIVING,
             simulatedRoute = BuildConfig.VEHICLE_SIM_ROUTE
         ),
-        drawingStorage = DrawingDatabase.create(this).toStorage()
+        drawingStorage = DrawingDatabase.create(this).toStorage(),
+        carUxRestrictionsClient = { AndroidCarUxRestrictionsClient(this) }
     )
 }
 
