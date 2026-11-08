@@ -47,6 +47,7 @@
 - 완료 기록과 진행 중 기록은 Room(KSP) DB `drawings.db`에 앱 전용 내부 저장소로 보관한다. 화면은 `kr.roadcanvas.app.drawing`의 `CompletedDrawingRepository`와 `InProgressDrawingRepository`만 `AppContainer`에서 받아 쓰고, 실패는 예외 대신 `StorageResult.Failure`로 받는다.
 - 점수 세부 지표는 점수 계산 모델에 의존하지 않도록 이름과 값(`Map<String, Double>`)으로 저장한다.
 - 스키마를 바꾸면 `DrawingDatabase.VERSION`을 올리고 `MIGRATIONS`에 마이그레이션을 추가한다. 빌드가 `app/schemas/`에 버전별 스키마를 기록하므로 함께 커밋한다. androidTest는 이 스키마로 마이그레이션을 검증한다.
+- debug 빌드에서 `adb shell am start -n kr.roadcanvas.app/.debug.SeedDrawingsActivity`로 모의 원·찌그러진 원 경로의 완료 기록 두 건을 저장해 내 그림 화면을 확인한다. 실행할 때마다 추가되며 지우려면 앱 데이터를 삭제한다.
 - 저장소 단위 테스트는 Robolectric과 in-memory DB로 실행한다. 테스트용 대체 구현은 `app/src/sharedTest/`의 `kr.roadcanvas.app.drawing.fake`에 있고 `failure`를 지정해 실패를 주입한다.
 
 ## 도전 기록
