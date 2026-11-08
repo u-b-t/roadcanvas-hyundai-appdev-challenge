@@ -3,6 +3,12 @@ package kr.roadcanvas.app
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kr.roadcanvas.app.account.AccountState
 import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.di.DefaultAppContainer
 import kr.roadcanvas.app.drawing.room.DrawingDatabase
@@ -20,6 +26,8 @@ open class RoadCanvasApplication : Application() {
     lateinit var container: AppContainer
         private set
 
+    private val accountScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     /** 빌드에 넣은 네이버 지도 키 ID와 SDK가 알린 인증 실패 상태 */
     val mapAuth = MapAuth(BuildConfig.NAVER_MAP_CLIENT_ID)
 
@@ -27,6 +35,18 @@ open class RoadCanvasApplication : Application() {
         super.onCreate()
         NaverMapSetup.configure(this, mapAuth)
         container = createContainer()
+        if (container is DefaultAppContainer) {
+            accountScope.launch {
+                do {
+                    container.accountRegistration.register()
+                    if (container.accountRegistration.state.value is AccountState.Failed) {
+                        delay(
+                            30_000
+                        )
+                    }
+                } while (container.accountRegistration.state.value is AccountState.Failed)
+            }
+        }
     }
 
     /** 테스트용 Application은 이 함수를 바꿔 대체 구현을 주입한다. */
