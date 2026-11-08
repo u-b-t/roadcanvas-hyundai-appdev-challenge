@@ -161,7 +161,9 @@ class ChallengeResultViewModelTest {
         assertEquals(ResultSaveStatus.FAILED, state.saveStatus)
         assertTrue(state.result.score.score >= 90)
         assertEquals(circlePath().size, inProgressDrawing()?.path?.size)
-        assertEquals(1, storageFailures.size)
+        // 최고 기록 조회와 저장이 각각 실패한다.
+        assertEquals(2, storageFailures.size)
+        assertNull(state.bestComparison)
     }
 
     @Test
@@ -178,6 +180,7 @@ class ChallengeResultViewModelTest {
         assertEquals(ResultSaveStatus.SAVED, state.saveStatus)
         assertEquals(1, savedSummaries().size)
         assertNull(inProgressDrawing())
+        assertEquals(BestRecordComparison.FirstRecord, state.bestComparison)
     }
 
     @Test
@@ -336,6 +339,60 @@ class ChallengeResultViewModelTest {
 
         assertEquals("한강 한 바퀴", restored.name)
         assertEquals(1, savedSummaries().size)
+    }
+
+    private suspend fun saveCompleted(score: Int) {
+        completed.save(
+            CompletedDrawing(
+                mode = DrawingMode.CIRCLE,
+                completedAtMillis = START - 1_000_000L - score,
+                path = emptyList(),
+                score = score,
+                metrics = emptyMap(),
+                distanceMeters = 0.0,
+                durationMillis = 0L
+            )
+        )
+    }
+
+    @Test
+    fun `다른 기록이 없으면 첫 기록으로 표시한다`() = runTest(dispatcher) {
+        saveInProgress(circlePath())
+
+        val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
+
+        assertEquals(BestRecordComparison.FirstRecord, state.bestComparison)
+    }
+
+    @Test
+    fun `이전 최고 점수보다 높으면 신기록과 차이를 표시한다`() = runTest(dispatcher) {
+        saveCompleted(40)
+        saveCompleted(70)
+        saveInProgress(circlePath())
+
+        val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
+
+        val score = state.result.score.score
+        assertEquals(BestRecordComparison.NewRecord(70, score - 70), state.bestComparison)
+    }
+
+    @Test
+    fun `이전 최고 점수보다 낮으면 차이를 표시하고 다시 만들어져도 같은 비교를 보여준다`() = runTest(dispatcher) {
+        saveCompleted(100)
+        // 반원은 출발점으로 돌아오지 않아 만점보다 낮다.
+        saveInProgress(
+            TestPaths.semicircle(50.0).mapIndexed { i, it ->
+                RoutePoint(it.latitude, it.longitude, START + i * 1_000L)
+            }
+        )
+        val handle = SavedStateHandle()
+        val first = viewModel(handle).uiState.value as ChallengeResultUiState.Calculated
+        val gap = 100 - first.result.score.score
+
+        val recreated = viewModel(handle).uiState.value as ChallengeResultUiState.Calculated
+
+        assertEquals(BestRecordComparison.BelowBest(100, gap), first.bestComparison)
+        assertEquals(first.bestComparison, recreated.bestComparison)
     }
 
     private companion object {

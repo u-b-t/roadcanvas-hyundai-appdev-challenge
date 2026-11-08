@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,6 +56,7 @@ const val RESULT_SAVED = "결과를 저장했어요"
 const val RESULT_SAVE_FAILED = "결과를 저장하지 못했어요"
 const val RETRY_SAVE_LABEL = "다시 저장"
 const val TRY_AGAIN_LABEL = "다시 도전"
+const val FIT_CIRCLE_LEGEND = "지도의 주황 원은 점수를 계산한 맞춤 원이에요"
 private const val TAG = "ChallengeResult"
 
 /** 결과 화면에 점수 계산과 완료 기록 저장을 연결한다. */
@@ -121,7 +123,8 @@ fun ChallengeResultScreen(
                 options = RouteMapOptions(
                     showEndpointMarkers = true,
                     inProgress = false,
-                    contentPadding = driverSideOverlayContentPadding()
+                    contentPadding = driverSideOverlayContentPadding(),
+                    referenceCircle = result?.fitCircle
                 ),
                 modifier = Modifier.fillMaxSize()
             )
@@ -138,7 +141,7 @@ fun ChallengeResultScreen(
                         ChallengeResultUiState.Calculating -> StatusText(RESULT_CALCULATING)
                         ChallengeResultUiState.Unavailable -> StatusText(RESULT_UNAVAILABLE)
                         is ChallengeResultUiState.Calculated -> {
-                            ResultSummary(state.result)
+                            ResultSummary(state.result, state.bestComparison)
                             SaveStatus(state.saveStatus, onRetrySave)
                             if (state.saveStatus == ResultSaveStatus.SAVED) {
                                 ResultNameEditor(state, onSaveName)
@@ -172,8 +175,19 @@ fun ChallengeResultScreen(
 }
 
 @Composable
-private fun ResultSummary(result: ChallengeResult) {
+private fun ResultSummary(result: ChallengeResult, bestComparison: BestRecordComparison?) {
     Text(text = "${result.score.score}점", style = MaterialTheme.typography.displayMedium)
+    bestComparison?.let {
+        Text(
+            text = it.text,
+            style = MaterialTheme.typography.titleMedium,
+            color = if (it is BestRecordComparison.NewRecord) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
+        )
+    }
     result.zeroReasonText?.let {
         Text(
             text = it,
@@ -184,6 +198,48 @@ private fun ResultSummary(result: ChallengeResult) {
     Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
         Measurement(DISTANCE_LABEL, formatDistance(result.distanceMeters))
         Measurement(DURATION_LABEL, formatElapsed(result.durationMillis))
+    }
+    ScoreBreakdown(result)
+}
+
+/** 점수 구성 항목별 비율과 가장 낮은 항목의 고칠 점. 0점이면 항목이 없어 그리지 않는다. */
+@Composable
+private fun ScoreBreakdown(result: ChallengeResult) {
+    val components = result.scoreComponents
+    if (components.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        components.forEach { ScoreComponentRow(it) }
+        result.improvementTip?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        Text(
+            text = FIT_CIRCLE_LEGEND,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun ScoreComponentRow(component: ScoreComponent) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = component.label,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Text(text = "${component.percent}%", style = MaterialTheme.typography.titleMedium)
+        }
+        LinearProgressIndicator(
+            progress = { component.ratio.toFloat() },
+            modifier = Modifier.fillMaxWidth(),
+            drawStopIndicator = {}
+        )
     }
 }
 

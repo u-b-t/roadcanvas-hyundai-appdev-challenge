@@ -159,4 +159,21 @@ class CircleScoreCalculatorTest {
         assertNotNull(result.metrics)
         return result.metrics!!
     }
+
+    @Test
+    fun `맞춤 원 중심은 경로가 도는 원의 중심 위경도다`() {
+        // 반지름 50m 원은 출발점에서 서쪽으로 50m 떨어진 점을 중심으로 돈다.
+        val metrics = calculator.calculate(TestPaths.circle(radius = 50.0)).metrics!!
+        val start = TestPaths.circle(radius = 50.0).first()
+        val metersPerDegreeLatitude = 6_371_000.0 * Math.PI / 180
+        val metersPerDegreeLongitude =
+            metersPerDegreeLatitude * kotlin.math.cos(Math.toRadians(start.latitude))
+
+        assertEquals(0.0, (metrics.center.latitude - start.latitude) * metersPerDegreeLatitude, 0.5)
+        assertEquals(
+            -50.0,
+            (metrics.center.longitude - start.longitude) * metersPerDegreeLongitude,
+            0.5
+        )
+    }
 }

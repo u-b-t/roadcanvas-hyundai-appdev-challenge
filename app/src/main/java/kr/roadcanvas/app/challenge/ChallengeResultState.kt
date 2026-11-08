@@ -1,8 +1,11 @@
 package kr.roadcanvas.app.challenge
 
+import kotlin.math.roundToInt
 import kr.roadcanvas.app.drawing.CompletedDrawing
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
+import kr.roadcanvas.app.map.RouteCircle
+import kr.roadcanvas.app.map.RoutePoint as MapPoint
 import kr.roadcanvas.app.recording.pathDistanceMeters
 import kr.roadcanvas.app.score.CircleScoreCalculator
 import kr.roadcanvas.app.score.CircleScoreConfig
@@ -104,6 +107,68 @@ fun zeroScoreReasonText(reason: ZeroScoreReason, config: CircleScoreConfig): Str
         ZeroScoreReason.TOO_SMALL -> "원의 지름이 ${config.minDiameterMeters.toInt()}m보다 작아요"
     }
 
+/** 점수 구성 항목. [ratio]는 0~1이고 [tip]은 이 항목이 가장 낮을 때 다음 도전에서 고칠 점이다. */
+data class ScoreComponent(val label: String, val ratio: Double, val tip: String) {
+    /** 화면에 보이는 0~100% 값 */
+    val percent: Int get() = (ratio * 100).roundToInt().coerceIn(0, 100)
+}
+
+const val CIRCULARITY_LABEL = "원형도"
+const val CLOSURE_LABEL = "출발·도착 근접도"
+const val ROTATION_LABEL = "회전 완성도"
+
+/** 이 비율 이상이면 고칠 점으로 안내하지 않는다. */
+private const val TIP_THRESHOLD = 0.9
+
+/** 점수를 이루는 세 항목. 0점이라 세부 지표가 없으면 빈 목록이다. */
+val ChallengeResult.scoreComponents: List<ScoreComponent>
+    get() = score.metrics?.let {
+        listOf(
+            ScoreComponent(CIRCULARITY_LABEL, it.circularity, "반지름을 일정하게 유지해 보세요"),
+            ScoreComponent(CLOSURE_LABEL, it.closure, "출발점으로 돌아와 끝내 보세요"),
+            ScoreComponent(ROTATION_LABEL, it.rotationCompleteness, "한 바퀴를 끝까지 돌아 보세요")
+        )
+    }.orEmpty()
+
+/** 가장 낮은 항목의 고칠 점. 모든 항목이 충분히 높거나 0점이면 null이다. */
+val ChallengeResult.improvementTip: String?
+    get() = scoreComponents.minByOrNull { it.ratio }?.takeIf { it.ratio < TIP_THRESHOLD }?.tip
+
+/** 지도에 경로와 함께 그릴 맞춤 원. 0점이라 원을 맞추지 않았으면 null이다. */
+val ChallengeResult.fitCircle: RouteCircle?
+    get() = score.metrics?.let {
+        RouteCircle(MapPoint(it.center.latitude, it.center.longitude), it.radiusMeters)
+    }
+
+/** 같은 모드의 이전 최고 점수와 비교한 결과 */
+sealed interface BestRecordComparison {
+    val text: String
+
+    data object FirstRecord : BestRecordComparison {
+        override val text = "첫 기록이에요"
+    }
+
+    data class NewRecord(val previousBest: Int, val gain: Int) : BestRecordComparison {
+        override val text = "신기록! 이전 최고 ${previousBest}점보다 ${gain}점 높아요"
+    }
+
+    data class TiedBest(val best: Int) : BestRecordComparison {
+        override val text = "최고 기록 ${best}점과 같아요"
+    }
+
+    data class BelowBest(val best: Int, val gap: Int) : BestRecordComparison {
+        override val text = "최고 기록 ${best}점까지 ${gap}점 남았어요"
+    }
+}
+
+/** 이 도전의 [score]를 다른 기록의 최고 점수 [previousBest]와 비교한다. 다른 기록이 없으면 첫 기록이다. */
+fun bestRecordComparisonOf(score: Int, previousBest: Int?): BestRecordComparison = when {
+    previousBest == null -> BestRecordComparison.FirstRecord
+    score > previousBest -> BestRecordComparison.NewRecord(previousBest, score - previousBest)
+    score == previousBest -> BestRecordComparison.TiedBest(previousBest)
+    else -> BestRecordComparison.BelowBest(previousBest, previousBest - score)
+}
+
 /** 완료 기록 저장 단계 */
 enum class ResultSaveStatus {
     SAVING,
@@ -128,11 +193,15 @@ sealed interface ChallengeResultUiState {
     /** 종료한 기록을 찾거나 불러오지 못했다. */
     data object Unavailable : ChallengeResultUiState
 
-    /** [name]은 저장한 완료 기록의 이름이며 붙이지 않았으면 null이다. */
+    /**
+     * [name]은 저장한 완료 기록의 이름이며 붙이지 않았으면 null이다.
+     * [bestComparison]은 다른 기록을 불러오지 못하면 null이다.
+     */
     data class Calculated(
         val result: ChallengeResult,
         val saveStatus: ResultSaveStatus,
         val name: String? = null,
-        val nameSaveStatus: NameSaveStatus = NameSaveStatus.IDLE
+        val nameSaveStatus: NameSaveStatus = NameSaveStatus.IDLE,
+        val bestComparison: BestRecordComparison? = null
     ) : ChallengeResultUiState
 }

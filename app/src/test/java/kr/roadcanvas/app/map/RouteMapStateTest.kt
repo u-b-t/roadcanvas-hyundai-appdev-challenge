@@ -105,4 +105,37 @@ class RouteMapStateTest {
 
         assertEquals(RouteMapState.KeyMissing, state)
     }
+
+    @Test
+    fun `기준 원을 주면 경로와 함께 그리고 원 전체가 보이게 맞춘다`() {
+        val circle = RouteCircle(RoutePoint(37.5665, 126.9780), radiusMeters = 100.0)
+
+        val state = RouteMapState.of(
+            route,
+            RouteMapOptions(referenceCircle = circle),
+            MapAuthState.Configured
+        ) as RouteMapState.Route
+
+        assertEquals(circle, state.circle)
+        val (southWest, northEast) = circle.boundsCorners()
+        // 위도 1도는 약 111.2km라 반지름 100m는 위도 약 0.0009도다.
+        assertEquals(37.5665 - 0.000899, southWest.latitude, 0.000001)
+        assertEquals(37.5665 + 0.000899, northEast.latitude, 0.000001)
+        // 경도 간격은 위도가 높을수록 좁아 같은 거리의 경도 차가 더 크다.
+        assertEquals(
+            0.000899 / kotlin.math.cos(Math.toRadians(37.5665)),
+            northEast.longitude - 126.9780,
+            0.000001
+        )
+        assertEquals(route + listOf(southWest, northEast), state.boundsPoints)
+    }
+
+    @Test
+    fun `기준 원이 없으면 경로 좌표만으로 맞춘다`() {
+        val state = RouteMapState.of(route, RouteMapOptions(), MapAuthState.Configured)
+            as RouteMapState.Route
+
+        assertNull(state.circle)
+        assertEquals(route, state.boundsPoints)
+    }
 }

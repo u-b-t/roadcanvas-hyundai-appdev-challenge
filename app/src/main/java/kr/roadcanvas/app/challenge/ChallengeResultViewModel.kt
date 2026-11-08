@@ -102,7 +102,11 @@ class ChallengeResultViewModel(
             showSaved(existingId)
             return
         }
-        mutableState.value = ChallengeResultUiState.Calculated(result, ResultSaveStatus.SAVING)
+        mutableState.value = ChallengeResultUiState.Calculated(
+            result,
+            ResultSaveStatus.SAVING,
+            bestComparison = bestComparison(result)
+        )
         save(result)
     }
 
@@ -111,14 +115,30 @@ class ChallengeResultViewModel(
         mutableState.value = if (drawing == null) {
             ChallengeResultUiState.Unavailable
         } else {
+            val result = challengeResultOf(drawing, calculator)
             ChallengeResultUiState.Calculated(
-                challengeResultOf(drawing, calculator),
+                result,
                 ResultSaveStatus.SAVED,
-                name = drawing.name
+                name = drawing.name,
+                bestComparison = bestComparison(result)
             )
         }
         // 저장한 뒤 진행 중 기록을 지우지 못했다면 다시 지운다.
         clearInProgress()
+    }
+
+    /**
+     * 이 도전을 뺀 같은 모드 기록의 최고 점수와 비교한다. 저장 전후 모두 같은 값이 되도록
+     * 같은 완료 시각의 기록(이 도전)은 뺀다. 기록을 불러오지 못하면 null이다.
+     */
+    private suspend fun bestComparison(result: ChallengeResult): BestRecordComparison? {
+        val loaded = completedRepository.summaries()
+        if (loaded is StorageResult.Failure) onStorageFailure(loaded.cause)
+        val summaries = (loaded as? StorageResult.Success)?.value ?: return null
+        val previousBest = summaries
+            .filter { it.mode == result.mode && it.completedAtMillis != result.completedAtMillis }
+            .maxOfOrNull { it.score }
+        return bestRecordComparisonOf(result.score.score, previousBest)
     }
 
     /** 메모리의 종료 상태가 이 도전이면 그 경로를, 아니면 저장된 진행 중 기록의 경로를 쓴다. */
@@ -160,8 +180,13 @@ class ChallengeResultViewModel(
                 ResultSaveStatus.FAILED
             }
         }
+        // 저장소 오류로 비교하지 못했다면 저장에 성공한 뒤 다시 비교한다.
+        val current = mutableState.value as? ChallengeResultUiState.Calculated
+        val comparison = current?.bestComparison
+            ?: if (status == ResultSaveStatus.SAVED) bestComparison(result) else null
         mutableState.update {
-            (it as? ChallengeResultUiState.Calculated)?.copy(saveStatus = status) ?: it
+            (it as? ChallengeResultUiState.Calculated)
+                ?.copy(saveStatus = status, bestComparison = comparison) ?: it
         }
     }
 

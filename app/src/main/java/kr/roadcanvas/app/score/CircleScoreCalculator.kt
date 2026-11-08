@@ -66,7 +66,8 @@ class CircleScoreCalculator(val config: CircleScoreConfig = CircleScoreConfig())
                 radialRmsRatio = radialRmsRatio,
                 closureDistanceMeters = closureDistance,
                 rotationRadians = rotation,
-                pathLengthMeters = pathLength
+                pathLengthMeters = pathLength,
+                center = toGeoPoint(circle.center, valid.first())
             ),
             zeroReason = null
         )
@@ -95,6 +96,15 @@ class CircleScoreCalculator(val config: CircleScoreConfig = CircleScoreConfig())
                 y = EARTH_RADIUS_METERS * Math.toRadians(it.latitude - origin.latitude)
             )
         }
+    }
+
+    /** [toLocalMeters]의 역변환. [origin]은 같은 출발점이다. */
+    private fun toGeoPoint(point: Point, origin: GeoPoint): GeoPoint {
+        val cosLat = cos(Math.toRadians(origin.latitude))
+        return GeoPoint(
+            latitude = origin.latitude + Math.toDegrees(point.y / EARTH_RADIUS_METERS),
+            longitude = origin.longitude + Math.toDegrees(point.x / (EARTH_RADIUS_METERS * cosLat))
+        )
     }
 
     /**
