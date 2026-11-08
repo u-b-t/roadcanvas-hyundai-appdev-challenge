@@ -101,6 +101,14 @@ jobs:
           "$ANDROID_HOME/platform-tools/adb" -s "$ANDROID_SERIAL" shell wm size
           "$ANDROID_HOME/platform-tools/adb" -s "$ANDROID_SERIAL" shell wm density
           "$ANDROID_HOME/platform-tools/adb" -s "$ANDROID_SERIAL" shell dumpsys display | grep -E 'DisplayDeviceInfo|mBaseDisplayInfo' | head -10 || true
+      - name: Remove previous app installs
+        run: |
+          # 다른 기기에서 빌드한 설치본이 남아 있으면 서명 불일치로 테스트 APK 설치가 실패한다.
+          # 설치돼 있지 않으면 uninstall이 실패하므로 결과만 기록하고 계속한다.
+          for package in kr.roadcanvas.app.test kr.roadcanvas.app; do
+            result=$("$ANDROID_HOME/platform-tools/adb" -s "$ANDROID_SERIAL" uninstall "$package" 2>&1 | tr -d '\r' || true)
+            echo "$package: $result"
+          done
       - name: Run Cucumber UI tests
         run: python3 scripts/run-device-tests.py
       - name: Find UI test results
