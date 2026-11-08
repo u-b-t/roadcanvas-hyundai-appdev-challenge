@@ -13,10 +13,12 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kr.roadcanvas.app.vehicle.DrivingRestrictionProvider
 import kr.roadcanvas.app.vehicle.LocationProvider
+import kr.roadcanvas.app.vehicle.LocationSample
 
 /**
  * 준비 화면의 시작 조건을 구독한다. 화면이 보이는 동안에만 위치와 주행 규제를 구독하고,
@@ -31,12 +33,26 @@ class ChallengeReadyViewModel(
     private val permissionPermanentlyDenied = MutableStateFlow(false)
 
     // 위치 수신을 다시 시작하면 구현이 지원 여부와 권한을 다시 확인한다.
-    private val hasCurrentLocation = locationRequest.flatMapLatest {
+    // 시작 조건과 지도가 같은 위치 구독을 나눠 쓰고, 구독을 다시 시작하면 이전 위치를 버린다.
+    private val latestLocation = locationRequest.flatMapLatest {
         locationProvider.locations()
-            .map { true }
-            .onStart { emit(false) }
-            .catch { emit(false) }
-    }.distinctUntilChanged()
+            .map<LocationSample, LocationSample?> { it }
+            .onStart { emit(null) }
+            .catch { emit(null) }
+    }.shareIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(replayExpirationMillis = 0),
+        replay = 1
+    )
+
+    private val hasCurrentLocation = latestLocation.map { it != null }.distinctUntilChanged()
+
+    /** 지도에 표시할 마지막으로 받은 현재 위치. 아직 받지 못했거나 위치 수신이 중단되면 null이다. */
+    val currentLocation: StateFlow<LocationSample?> = latestLocation.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(),
+        initialValue = null
+    )
 
     val status: StateFlow<ChallengeReadyStatus> = combine(
         locationProvider.availability,

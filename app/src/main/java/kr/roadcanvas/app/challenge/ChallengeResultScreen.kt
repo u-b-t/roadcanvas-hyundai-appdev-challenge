@@ -5,19 +5,14 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -31,7 +26,11 @@ import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RoutePoint
 import kr.roadcanvas.app.modeselect.MY_DRAWINGS_LABEL
-import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
+import kr.roadcanvas.app.ui.components.CarButton
+import kr.roadcanvas.app.ui.components.CarButtonStyle
+import kr.roadcanvas.app.ui.components.DriverSideOverlay
+import kr.roadcanvas.app.ui.components.OverlayCard
+import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 
 const val CIRCLE_RESULT_TITLE = "동그라미 챌린지 결과"
 const val DURATION_LABEL = "소요 시간"
@@ -96,54 +95,57 @@ fun ChallengeResultScreen(
     modifier: Modifier = Modifier
 ) {
     val result = (state as? ChallengeResultUiState.Calculated)?.result
-    Row(
-        modifier = modifier.fillMaxSize().padding(24.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        RouteMap(
-            points = result?.path.orEmpty().map { RoutePoint(it.latitude, it.longitude) },
-            options = RouteMapOptions(showEndpointMarkers = true, inProgress = false),
-            modifier = Modifier.weight(1.4f).fillMaxHeight()
-        )
-        Column(
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(text = CIRCLE_RESULT_TITLE, style = MaterialTheme.typography.headlineMedium)
-            when (state) {
-                ChallengeResultUiState.Calculating -> StatusText(RESULT_CALCULATING)
-                ChallengeResultUiState.Unavailable -> StatusText(RESULT_UNAVAILABLE)
-                is ChallengeResultUiState.Calculated -> {
-                    ResultSummary(state.result)
-                    SaveStatus(state.saveStatus, onRetrySave)
+    DriverSideOverlay(
+        background = {
+            // 콘텐츠 여백 안쪽에 전체 경로를 맞춰 오버레이가 경로를 가리지 않게 한다.
+            RouteMap(
+                points = result?.path.orEmpty().map { RoutePoint(it.latitude, it.longitude) },
+                options = RouteMapOptions(
+                    showEndpointMarkers = true,
+                    inProgress = false,
+                    contentPadding = driverSideOverlayContentPadding()
+                ),
+                modifier = Modifier.fillMaxSize()
+            )
+        },
+        controls = {
+            // 내용이 화면 높이를 넘으면 결과 카드만 스크롤하고 버튼은 항상 보이게 둔다.
+            OverlayCard(modifier = Modifier.fillMaxWidth().weight(1f, fill = false)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(text = CIRCLE_RESULT_TITLE, style = MaterialTheme.typography.headlineSmall)
+                    when (state) {
+                        ChallengeResultUiState.Calculating -> StatusText(RESULT_CALCULATING)
+                        ChallengeResultUiState.Unavailable -> StatusText(RESULT_UNAVAILABLE)
+                        is ChallengeResultUiState.Calculated -> {
+                            ResultSummary(state.result)
+                            SaveStatus(state.saveStatus, onRetrySave)
+                        }
+                    }
                 }
             }
-            Spacer(modifier = Modifier.weight(1f))
-            Button(
+            CarButton(
+                text = TRY_AGAIN_LABEL,
                 onClick = onTryAgain,
-                modifier = Modifier.fillMaxWidth().heightIn(min = MIN_TOUCH_TARGET)
-            ) {
-                Text(text = TRY_AGAIN_LABEL, style = MaterialTheme.typography.titleLarge)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = onModeSelect,
-                    modifier = Modifier.weight(1f).heightIn(min = MIN_TOUCH_TARGET)
-                ) {
-                    Text(
-                        text = BACK_TO_MODE_SELECT_LABEL,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-                OutlinedButton(
-                    onClick = onMyDrawings,
-                    modifier = Modifier.weight(1f).heightIn(min = MIN_TOUCH_TARGET)
-                ) {
-                    Text(text = MY_DRAWINGS_LABEL, style = MaterialTheme.typography.titleMedium)
-                }
-            }
-        }
-    }
+                modifier = Modifier.fillMaxWidth()
+            )
+            CarButton(
+                text = BACK_TO_MODE_SELECT_LABEL,
+                onClick = onModeSelect,
+                style = CarButtonStyle.Neutral,
+                modifier = Modifier.fillMaxWidth()
+            )
+            CarButton(
+                text = MY_DRAWINGS_LABEL,
+                onClick = onMyDrawings,
+                style = CarButtonStyle.Neutral,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -156,7 +158,7 @@ private fun ResultSummary(result: ChallengeResult) {
             color = MaterialTheme.colorScheme.error
         )
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
         Measurement(DISTANCE_LABEL, formatDistance(result.distanceMeters))
         Measurement(DURATION_LABEL, formatElapsed(result.durationMillis))
     }
@@ -167,22 +169,18 @@ private fun SaveStatus(status: ResultSaveStatus, onRetrySave: () -> Unit) {
     when (status) {
         ResultSaveStatus.SAVING -> StatusText(RESULT_SAVING)
         ResultSaveStatus.SAVED -> StatusText(RESULT_SAVED)
-        ResultSaveStatus.FAILED -> Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        ResultSaveStatus.FAILED -> {
             Text(
                 text = RESULT_SAVE_FAILED,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.weight(1f)
+                color = MaterialTheme.colorScheme.error
             )
-            OutlinedButton(
+            CarButton(
+                text = RETRY_SAVE_LABEL,
                 onClick = onRetrySave,
-                modifier = Modifier.heightIn(min = MIN_TOUCH_TARGET)
-            ) {
-                Text(text = RETRY_SAVE_LABEL, style = MaterialTheme.typography.titleMedium)
-            }
+                style = CarButtonStyle.Line,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
