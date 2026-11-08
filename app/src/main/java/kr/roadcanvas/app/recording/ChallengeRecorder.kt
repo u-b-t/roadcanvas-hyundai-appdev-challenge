@@ -17,7 +17,7 @@ import kr.roadcanvas.app.vehicle.LocationProvider
  * 도전 하나의 경로 기록 세션. 받은 위치를 순서대로 경로에 더하고 진행 중 기록 저장소에 이어서 저장한다.
  * 앱 전체에서 하나를 공유하며, 위치 구독은 [RecordingRunner]가 [run]을 실행하는 동안에만 한다.
  *
- * 종료하면 위치 구독만 멈추고 진행 중 기록은 지우지 않는다. 결과 화면(#19)이 그 기록으로
+ * 종료하면 위치 구독을 멈추고 진행 중 기록에 종료 시각만 남긴다. 결과 화면(#19)이 그 기록으로
  * 완료 기록을 저장하는 데 성공한 뒤 [InProgressDrawingRepository.clear]로 지운다.
  */
 class ChallengeRecorder(
@@ -40,22 +40,36 @@ class ChallengeRecorder(
         if (ready) record()
     }
 
-    /** 진행 중 기록이 메모리나 저장소에 있는지. 앱을 다시 실행할 때 진행 화면으로 갈지 정한다. */
+    /**
+     * 종료하지 않은 진행 중 기록이 메모리나 저장소에 있는지.
+     * 앱을 다시 실행할 때 진행 화면으로 갈지 정한다.
+     */
     suspend fun hasInProgress(): Boolean {
         if (mutableState.value is RecordingState.Recording) return true
-        val loaded = repository.load()
-        return loaded is StorageResult.Success && loaded.value != null
+        val saved = (repository.load() as? StorageResult.Success)?.value ?: return false
+        return saved.endedAtMillis == null
     }
 
     /**
      * 종료했지만 결과 화면이 아직 완료 기록으로 저장하지 못한 도전. 없으면 null이다.
-     * 종료 상태는 메모리에만 있으므로 같은 프로세스에서 앱을 다시 열 때 결과 화면으로 돌아가는 데 쓴다.
+     * 앱을 다시 열 때 결과 화면으로 돌아가는 데 쓴다. 같은 프로세스면 메모리의 종료 상태를,
+     * 프로세스가 다시 만들어졌으면 저장소에 남긴 종료 시각으로 종료 상태를 다시 만든다.
      */
     suspend fun unsavedFinish(): RecordingState.Finished? {
-        val finished = mutableState.value as? RecordingState.Finished ?: return null
-        val loaded = repository.load()
-        val saved = (loaded as? StorageResult.Success)?.value ?: return null
-        return finished.takeIf { saved.startedAtMillis == it.startedAtMillis }
+        val current = mutableState.value
+        if (current is RecordingState.Recording) return null
+        val saved = (repository.load() as? StorageResult.Success)?.value ?: return null
+        if (current is RecordingState.Finished) {
+            return current.takeIf { it.startedAtMillis == saved.startedAtMillis }
+        }
+        val endedAtMillis = saved.endedAtMillis ?: return null
+        return RecordingState.Finished(
+            mode = saved.mode,
+            startedAtMillis = saved.startedAtMillis,
+            endedAtMillis = endedAtMillis,
+            path = saved.path,
+            distanceMeters = pathDistanceMeters(saved.path)
+        )
     }
 
     /** 포그라운드 서비스를 시작하지 못하는 등 기록을 실행할 수 없을 때 실패로 알린다. */
@@ -63,16 +77,22 @@ class ChallengeRecorder(
         mutableState.value = RecordingState.Failed(cause)
     }
 
-    /** 위치 구독을 멈출 수 있도록 종료 상태로 바꾼다. 기록 중이 아니면 null이다. */
+    /**
+     * 위치 구독을 멈출 수 있도록 종료 상태로 바꾸고 진행 중 기록에 종료 시각을 남긴다. 기록 중이 아니면 null이다.
+     * 종료 시각을 저장하지 못해도 종료한다. 같은 프로세스에서는 메모리의 종료 상태로 결과 화면에 돌아갈 수 있다.
+     */
     suspend fun finish(): RecordingState.Finished? = mutex.withLock {
         val current = mutableState.value as? RecordingState.Recording ?: return null
-        RecordingState.Finished(
+        val finished = RecordingState.Finished(
             mode = current.mode,
             startedAtMillis = current.startedAtMillis,
             endedAtMillis = clock(),
             path = current.path,
             distanceMeters = current.distanceMeters
-        ).also { mutableState.value = it }
+        )
+        val saved = repository.finish(finished.endedAtMillis)
+        if (saved is StorageResult.Failure) onStorageFailure(saved.cause)
+        finished.also { mutableState.value = it }
     }
 
     /** 진행 중 기록을 지운다. 지우지 못하면 기록을 계속한다. */
@@ -101,7 +121,8 @@ class ChallengeRecorder(
         if (mutableState.value is RecordingState.Recording) return true
         when (val result = repository.load()) {
             is StorageResult.Success -> {
-                val drawing = result.value ?: return false
+                // 이미 종료한 도전은 이어서 기록하지 않는다. 결과 화면이 완료 기록으로 저장한다.
+                val drawing = result.value?.takeIf { it.endedAtMillis == null } ?: return false
                 mutableState.value = RecordingState.Recording(
                     mode = drawing.mode,
                     startedAtMillis = drawing.startedAtMillis,

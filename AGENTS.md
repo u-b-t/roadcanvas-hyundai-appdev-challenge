@@ -56,8 +56,8 @@
 - 기록 세션은 `kr.roadcanvas.app.recording`의 `ChallengeRecorder` 하나를 앱 전체에서 공유하고, `AppContainer.recordingRunner`가 실행한다. 앱은 `foregroundServiceType="location"`인 `ChallengeRecordingService`에서, androidTest와 단위 테스트는 `app/src/sharedTest/`의 `FakeRecordingRunner`로 코루틴에서 실행한다.
 - Android 14(targetSdk 34)에서 위치 타입 포그라운드 서비스는 `ACCESS_COARSE_LOCATION` 또는 `ACCESS_FINE_LOCATION`이 없으면 `SecurityException`으로 시작하지 못한다. Pleos 위치 권한만으로는 안 되는 것을 에뮬레이터에서 확인했으므로 시작 버튼을 누를 때 대략적인 위치 권한과 알림 권한을 요청한다. 에뮬레이터에서 직접 허용하려면 `adb shell pm grant --user 10 kr.roadcanvas.app android.permission.ACCESS_COARSE_LOCATION`을 쓴다.
 - 서비스는 기록한 점 수를 logcat `ChallengeRecording` 태그로 남긴다. 주행 중 화면이 차단된 동안의 기록 여부는 `adb logcat -s ChallengeRecording`으로 확인한다.
-- 진행 중 기록이 저장되어 있으면 앱을 다시 실행할 때 진행 화면으로 가서 이어서 기록한다. 종료하면 위치 구독만 멈추고 진행 중 기록은 남긴 채 시작·종료 시각을 결과 화면 경로 인자로 넘긴다. 결과 화면은 완료 기록 저장에 성공한 뒤 진행 중 기록을 지운다.
-- 결과 화면(`ChallengeResultViewModel`)은 저장한 완료 기록 ID를 `SavedStateHandle`에 남겨 화면이나 프로세스가 다시 만들어져도 한 번만 저장한다. 저장에 실패하면 진행 중 기록을 남기고 다시 저장 버튼을 보인다. 같은 프로세스에서 앱을 다시 열면 `ChallengeRecorder.unsavedFinish()`로 저장하지 못한 결과를 찾아 결과 화면으로 간다. 종료 상태는 메모리에만 있으므로 프로세스가 종료된 뒤에는 진행 화면이 그 기록을 이어서 기록한다.
+- 종료하지 않은 진행 중 기록이 저장되어 있으면 앱을 다시 실행할 때 진행 화면으로 가서 이어서 기록한다. 종료하면 위치 구독을 멈추고 진행 중 기록에 종료 시각(`ended_at`, DB 버전 2)만 남긴 채 시작·종료 시각을 결과 화면 경로 인자로 넘긴다. 결과 화면은 완료 기록 저장에 성공한 뒤 진행 중 기록을 지운다.
+- 결과 화면(`ChallengeResultViewModel`)은 저장한 완료 기록 ID를 `SavedStateHandle`에 남겨 화면이나 프로세스가 다시 만들어져도 한 번만 저장한다. 저장에 실패하면 진행 중 기록을 남기고 다시 저장 버튼을 보인다. 앱을 다시 열면 `ChallengeRecorder.unsavedFinish()`로 저장하지 못한 결과를 찾아 결과 화면으로 간다. 같은 프로세스면 메모리의 종료 상태를, 프로세스가 종료된 뒤면 저장된 종료 시각을 쓴다. 종료한 기록은 진행 화면이나 기록 서비스가 이어서 기록하지 않는다. androidTest에서는 `FakeAppContainer.restartProcess()`로 저장소만 남기고 기록 세션을 새로 만들어 프로세스 재생성을 흉내 낸다.
 
 ## 빌드와 실행
 
