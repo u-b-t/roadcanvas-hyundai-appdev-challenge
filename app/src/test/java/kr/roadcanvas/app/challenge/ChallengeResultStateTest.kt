@@ -8,6 +8,7 @@ import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.TestPaths
 import kr.roadcanvas.app.score.ZeroScoreReason
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -120,6 +121,79 @@ class ChallengeResultStateTest {
             "경로가 직선에 가까워 원으로 볼 수 없어요",
             zeroScoreReasonText(ZeroScoreReason.NOT_CIRCULAR, config)
         )
+    }
+
+    @Test
+    fun `점수 구성은 원형도, 출발·도착 근접도, 회전 완성도 순서다`() {
+        val result = challengeResultOf(
+            DrawingMode.CIRCLE,
+            path(TestPaths.circle(50.0)),
+            START,
+            START + 90_000
+        )
+
+        assertEquals(
+            listOf("원형도", "출발·도착 근접도", "회전 완성도"),
+            result.scoreComponents.map { it.label }
+        )
+        assertTrue(result.scoreComponents.all { it.percent in 90..100 })
+        assertNull(result.improvementTip)
+    }
+
+    @Test
+    fun `반원은 출발점으로 돌아오지 않아 가장 낮은 항목의 고칠 점을 안내한다`() {
+        val result = challengeResultOf(
+            DrawingMode.CIRCLE,
+            path(TestPaths.semicircle(50.0)),
+            START,
+            START + 90_000
+        )
+
+        val lowest = result.scoreComponents.minBy { it.ratio }
+        assertEquals("출발·도착 근접도", lowest.label)
+        assertEquals("출발점으로 돌아와 끝내 보세요", result.improvementTip)
+    }
+
+    @Test
+    fun `맞춤 원은 점수 계산에 쓴 중심과 반지름이다`() {
+        val result = challengeResultOf(
+            DrawingMode.CIRCLE,
+            path(TestPaths.circle(50.0)),
+            START,
+            START + 90_000
+        )
+
+        val circle = result.fitCircle!!
+        val metrics = result.score.metrics!!
+        assertEquals(metrics.radiusMeters, circle.radiusMeters, 0.0)
+        assertEquals(metrics.center.latitude, circle.center.latitude, 0.0)
+        assertEquals(metrics.center.longitude, circle.center.longitude, 0.0)
+    }
+
+    @Test
+    fun `0점이면 점수 구성, 고칠 점, 맞춤 원이 없다`() {
+        val result = challengeResultOf(
+            DrawingMode.CIRCLE,
+            path(TestPaths.stationary(30)),
+            START,
+            START + 30_000
+        )
+
+        assertTrue(result.scoreComponents.isEmpty())
+        assertNull(result.improvementTip)
+        assertNull(result.fitCircle)
+    }
+
+    @Test
+    fun `최고 기록과 비교한 결과와 안내`() {
+        assertEquals(BestRecordComparison.FirstRecord, bestRecordComparisonOf(50, null))
+        assertEquals(BestRecordComparison.NewRecord(80, 8), bestRecordComparisonOf(88, 80))
+        assertEquals(BestRecordComparison.TiedBest(80), bestRecordComparisonOf(80, 80))
+        assertEquals(BestRecordComparison.BelowBest(90, 15), bestRecordComparisonOf(75, 90))
+        assertEquals("첫 기록이에요", BestRecordComparison.FirstRecord.text)
+        assertEquals("신기록! 이전 최고 80점보다 8점 높아요", bestRecordComparisonOf(88, 80).text)
+        assertEquals("최고 기록 80점과 같아요", bestRecordComparisonOf(80, 80).text)
+        assertEquals("최고 기록 90점까지 15점 남았어요", bestRecordComparisonOf(75, 90).text)
     }
 
     private companion object {
