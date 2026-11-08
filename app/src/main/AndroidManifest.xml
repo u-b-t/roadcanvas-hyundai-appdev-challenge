@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-feature android:name="android.hardware.type.automotive" android:required="false" />
-    <application android:label="RoadCanvas" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+    <application android:name=".RoadCanvasApplication" android:label="RoadCanvas" android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

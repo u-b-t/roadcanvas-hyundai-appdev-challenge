@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.VariantDimension
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -16,8 +18,22 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
-        testInstrumentationRunner = "io.cucumber.android.runner.CucumberAndroidJUnitRunner"
+        testInstrumentationRunner = "kr.roadcanvas.app.test.RoadCanvasTestRunner"
         testInstrumentationRunnerArguments["optionsAnnotationPackage"] = "kr.roadcanvas.app.test"
+    }
+
+    buildTypes {
+        debug {
+            vehicleIntegrationFields(defaultLocation = "simulated", defaultDriving = "aaos")
+        }
+        release {
+            vehicleIntegrationFields(defaultLocation = "pleos", defaultDriving = "aaos")
+        }
+    }
+
+    sourceSets {
+        getByName("test").java.srcDir("src/sharedTest/java")
+        getByName("androidTest").java.srcDir("src/sharedTest/java")
     }
 
     compileOptions {
@@ -30,8 +46,32 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
     }
+}
+
+/**
+ * 차량 연동 구현을 빌드 속성으로 고른다.
+ * 예: -Proadcanvas.location=simulated -Proadcanvas.driving=simulated -Proadcanvas.simRoute=circle
+ * 실제 구현(pleos, aaos)이 들어오기 전에는 앱이 모의 구현으로 대체하고 화면에 미구현으로 표시한다.
+ */
+fun VariantDimension.vehicleIntegrationFields(defaultLocation: String, defaultDriving: String) {
+    fun option(property: String, field: String, default: String, allowed: List<String>) {
+        val value = providers.gradleProperty("roadcanvas.$property").orNull ?: default
+        require(value in allowed) {
+            "roadcanvas.$property 값 '$value'는 지원하지 않습니다. 사용 가능: ${allowed.joinToString()}"
+        }
+        buildConfigField("String", field, "\"$value\"")
+    }
+    option("location", "VEHICLE_LOCATION", defaultLocation, listOf("simulated", "pleos"))
+    option("driving", "VEHICLE_DRIVING", defaultDriving, listOf("simulated", "aaos"))
+    option(
+        "simRoute",
+        "VEHICLE_SIM_ROUTE",
+        "circle",
+        listOf("circle", "squished", "line", "stationary")
+    )
 }
 
 dependencies {
@@ -40,7 +80,10 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
 
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")

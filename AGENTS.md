@@ -31,6 +31,15 @@
 - GitHub Actions는 PR과 `main` push에서 GitHub 호스팅 러너로 ktlint·Android Lint·앱과 Android 테스트 APK 빌드를 실행하고, `mac-mini` self-hosted 러너에서 단위 테스트와 Pleos UI 테스트를 실행한다. 러너가 오프라인이면 해당 작업은 대기한다. CI 결과가 실제로 실행되기 전에는 통과했다고 주장하지 않는다.
 - 단위 테스트 커버리지는 `./gradlew :app:unitTestCoverageReport`로 JaCoCo XML과 HTML을 생성한다. CI는 단위 테스트 커버리지와 JUnit 결과를 `unit` 플래그로, UI 테스트 JUnit 결과를 `ui` 플래그로 Codecov에 업로드한다. 테스트가 실패해도 생성된 결과를 업로드하며, CI 실패는 유지한다. 단위 테스트가 없으면 단위 테스트 커버리지 보고서는 생성되지 않는다. 커버리지 수집은 테스트 성공이나 Gherkin 시나리오 검증을 대신하지 않는다. UI 테스트 커버리지 수집은 아직 설정되지 않았다.
 
+## 차량 연동 구현 선택
+
+- 화면과 기록 로직은 `kr.roadcanvas.app.vehicle`의 `LocationProvider`와 `DrivingRestrictionProvider`에만 의존한다. 의존성은 `RoadCanvasApplication`이 만든 `AppContainer`(`kr.roadcanvas.app.di`)에서 받는다.
+- 구현은 빌드 속성으로 고른다. `-Proadcanvas.location=simulated|pleos`, `-Proadcanvas.driving=simulated|aaos`, `-Proadcanvas.simRoute=circle|squished|line|stationary`. 예: `./gradlew assembleDebug -Proadcanvas.simRoute=line`. 허용하지 않는 값은 빌드 설정 단계에서 실패한다.
+- 기본값은 debug가 위치 `simulated`, 주행 규제 `aaos`이고 release가 `pleos`, `aaos`다. 실제 구현(#12 위치, #13 주행 규제)이 들어오기 전에는 `pleos`와 `aaos`를 골라도 모의 구현으로 대체한다. debug 화면 오른쪽 아래에 사용 중인 구현을 작게 표시하며, 대체한 경우 `(AAOS 미구현)`처럼 표시한다.
+- 모의 위치는 위치 수신을 시작하면 경로를 처음부터 반복 재생한다. 기본값은 중심 서울시청(37.5665, 126.9780), 반지름 50m, 초속 5m(시속 18km), 재생 간격 1초다. 원은 63개 지점으로 약 63초에 한 바퀴, 직선 왕복은 동서 100m를 5m 간격으로 왕복(40개 지점)하고, 찌그러진 원은 중심 거리가 약 33~64m로 달라지며, 정지는 중심 한 지점을 반복한다. 값은 `SimulatedRouteConfig`에서 바꾼다.
+- 모의 주행 규제는 항상 조작 가능 상태를 준다.
+- androidTest는 `RoadCanvasTestRunner`가 `TestRoadCanvasApplication`을 사용해 `FakeAppContainer`를 주입한다. 대체 구현은 `app/src/sharedTest/`에 있어 단위 테스트와 androidTest에서 함께 쓴다. 테스트에서 위치 상태·좌표와 주행 규제 상태를 원하는 시점에 바꿀 수 있다.
+
 ## 빌드와 실행
 
 - JDK 17 이상과 Android SDK 플랫폼 35가 필요하다. 앱의 `minSdk`는 28, `targetSdk`는 34다.
