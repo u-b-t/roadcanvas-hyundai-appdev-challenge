@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12부터 시스템이 보여주는 시작 창의 배경도 커버의 어두운 색으로 맞춘다. -->
+    <style name="Theme.RoadCanvas.Launch" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/cover_background</item>
+        <item name="android:windowSplashScreenBackground">@color/cover_background</item>
+    </style>
+</resources>

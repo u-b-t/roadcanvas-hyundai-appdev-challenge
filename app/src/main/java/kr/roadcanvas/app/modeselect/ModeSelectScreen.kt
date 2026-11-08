@@ -1,14 +1,10 @@
 package kr.roadcanvas.app.modeselect
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -24,18 +20,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.shopl.sdg_common.foundation.SDGColor
 import com.shopl.sdg_common.foundation.SDGCornerRadius
 import com.shopl.sdg_common.foundation.typography.SDGTypography
-import kr.roadcanvas.app.R
+import kr.roadcanvas.app.ui.components.COVER_BACKGROUND_COLOR
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
+import kr.roadcanvas.app.ui.components.CoverBackground
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
 import kr.roadcanvas.app.ui.theme.CONTROL_SPACING
 import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
@@ -52,8 +45,8 @@ const val MY_DRAWINGS_LABEL = "내 그림"
 const val MODE_SELECT_COVER_TAG = "modeSelectCover"
 const val MODE_SELECT_LIST_TAG = "modeSelectList"
 
-/** 커버 이미지 왼쪽 어두운 영역의 색. 이미지에서 잰 값이며 목록 뒤 그라데이션과 글자 대비 기준으로 쓴다. */
-val COVER_DARK_COLOR = Color(0xFF020818)
+/** 커버 이미지 왼쪽 어두운 영역의 색. 목록 뒤 그라데이션과 글자 대비 기준으로 쓴다. */
+val COVER_DARK_COLOR = COVER_BACKGROUND_COLOR
 
 /** 어두운 배경 위 모드 항목의 배경. 배경과 구분될 만큼만 밝힌다. */
 val MODE_ITEM_COLOR = SDGColor.Neutral0_a10
@@ -71,9 +64,6 @@ val ON_COMING_SOON_BADGE_COLOR = SDGColor.Neutral700
 /** 모드 목록과 내 그림 버튼을 담는 왼쪽 영역 너비. 16:9 화면에서 커버 이미지의 어두운 영역(약 36%) 안에 들어간다. */
 private val MODE_LIST_WIDTH = 560.dp
 
-/** 목록 뒤를 어둡게 덮는 영역 너비. 화면 비율이 달라 이미지의 어두운 영역이 좁아져도 글자 대비를 유지한다. */
-private val COVER_SCRIM_WIDTH = 760.dp
-
 @Composable
 fun ModeSelectScreen(
     onCircleChallengeClick: () -> Unit,
@@ -86,7 +76,7 @@ fun ModeSelectScreen(
     DriverSideOverlay(
         modifier = modifier,
         controlsWidth = MODE_LIST_WIDTH,
-        background = { CoverBackground() },
+        background = { CoverBackground(imageModifier = Modifier.testTag(MODE_SELECT_COVER_TAG)) },
         controls = {
             Text(
                 text = MODE_SELECT_TITLE,
@@ -130,32 +120,6 @@ fun ModeSelectScreen(
             }
         }
     )
-}
-
-/** 커버 이미지를 화면 전체에 깔고, 오른쪽 원 경로가 잘리지 않도록 오른쪽 기준으로 맞춘다. */
-@Composable
-private fun CoverBackground() {
-    Box(modifier = Modifier.fillMaxSize().background(COVER_DARK_COLOR)) {
-        Image(
-            painter = painterResource(R.drawable.road_canvas_cover),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            alignment = Alignment.CenterEnd,
-            modifier = Modifier.fillMaxSize().testTag(MODE_SELECT_COVER_TAG)
-        )
-        Box(
-            modifier = Modifier
-                .width(COVER_SCRIM_WIDTH)
-                .fillMaxHeight()
-                .background(
-                    Brush.horizontalGradient(
-                        0f to COVER_DARK_COLOR,
-                        0.75f to COVER_DARK_COLOR,
-                        1f to Color.Transparent
-                    )
-                )
-        )
-    }
 }
 
 @Composable

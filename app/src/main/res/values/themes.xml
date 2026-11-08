@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 앱 실행 화면의 창 테마. 첫 화면을 그리기 전 창 배경을 커버의 어두운 색으로 채워
+         회색 빈 창 없이 시작 화면의 커버 배경으로 이어지게 한다. -->
+    <style name="Theme.RoadCanvas.Launch" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/cover_background</item>
+    </style>
+</resources>

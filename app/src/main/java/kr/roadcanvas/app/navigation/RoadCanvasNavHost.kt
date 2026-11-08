@@ -1,5 +1,7 @@
 package kr.roadcanvas.app.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -65,14 +67,17 @@ fun RoadCanvasNavHost(
     fun NavGraphBuilder.screen(
         route: String,
         arguments: List<NamedNavArgument> = emptyList(),
+        exitTransition: ScreenExitTransition? = null,
         content: @Composable (NavBackStackEntry) -> Unit
-    ) = gatedComposable(route, arguments, restriction, content)
+    ) = gatedComposable(route, arguments, restriction, exitTransition, content)
     NavHost(
         navController = navController,
         startDestination = Routes.SPLASH,
         modifier = modifier
     ) {
-        screen(Routes.SPLASH) {
+        // 시작 화면은 사라지는 효과 없이 그대로 두어 모드 선택 화면이 같은 커버 배경 위에서 나타나게 한다.
+        // 두 화면을 함께 흐리게 하면 그 사이로 테마 배경이 비쳐 배경이 끊겨 보인다.
+        screen(Routes.SPLASH, exitTransition = { ExitTransition.None }) {
             val scope = rememberCoroutineScope()
             SplashScreen(
                 durationMillis = splashDurationMillis,
@@ -158,12 +163,16 @@ fun RoadCanvasNavHost(
     }
 }
 
+private typealias ScreenExitTransition =
+    AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition?
+
 private fun NavGraphBuilder.gatedComposable(
     route: String,
     arguments: List<NamedNavArgument>,
     restriction: State<DrivingRestriction>,
+    exitTransition: ScreenExitTransition?,
     content: @Composable (NavBackStackEntry) -> Unit
-) = composable(route, arguments) { entry ->
+) = composable(route, arguments, exitTransition = exitTransition) { entry ->
     val current by restriction
     StopNoticeGate(reason = stopNoticeReasonOf(route, current)) { content(entry) }
 }
