@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -76,3 +77,11 @@ fun DriverSideOverlay(
         }
     }
 }
+
+/**
+ * 지도 위 왼쪽에 조작 영역을 띄울 때([DriverSideOverlay] 등) 지도에 줄 콘텐츠 여백. 조작 영역이 가리는 왼쪽 띠와
+ * 그 오른쪽 간격([SCREEN_PADDING])만큼 지도 로고·컨트롤과 카메라 중심, 경로를 오른쪽으로 옮긴다.
+ * 조작 영역처럼 언어 방향과 관계없이 왼쪽에 준다.
+ */
+fun driverSideOverlayContentPadding(controlsWidth: Dp = CONTROL_PANEL_WIDTH): PaddingValues =
+    PaddingValues.Absolute(left = SCREEN_PADDING + controlsWidth + SCREEN_PADDING)

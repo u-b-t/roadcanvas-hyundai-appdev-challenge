@@ -17,6 +17,7 @@ import kr.roadcanvas.app.vehicle.fake.FakeDrivingRestrictionProvider
 import kr.roadcanvas.app.vehicle.fake.FakeLocationProvider
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
@@ -126,5 +127,24 @@ class ChallengeReadyViewModelTest {
             ),
             viewModel.status.value
         )
+    }
+
+    @Test
+    fun `현재 위치는 받은 마지막 위치이고 다시 시도하면 지운다`() = runTest(dispatcher) {
+        subscribe()
+        backgroundScope.launch { viewModel.currentLocation.collect {} }
+        assertNull(viewModel.currentLocation.value)
+
+        locationProvider.sendLocation(LocationSample(37.5665, 126.978, 0L))
+        locationProvider.sendLocation(LocationSample(37.5674, 126.978, 1L))
+
+        assertEquals(LocationSample(37.5674, 126.978, 1L), viewModel.currentLocation.value)
+        assertEquals(ChallengeReadyStatus.Ready, viewModel.status.value)
+        assertEquals(1, locationProvider.subscriberCount.value)
+
+        viewModel.retry()
+
+        assertNull(viewModel.currentLocation.value)
+        assertEquals(ChallengeReadyStatus.LocatingPosition, viewModel.status.value)
     }
 }

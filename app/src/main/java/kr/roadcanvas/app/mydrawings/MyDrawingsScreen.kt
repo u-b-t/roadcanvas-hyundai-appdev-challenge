@@ -58,6 +58,7 @@ import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.CarEmptyState
 import kr.roadcanvas.app.ui.components.DriverSideLayout
 import kr.roadcanvas.app.ui.components.OverlayCard
+import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 import kr.roadcanvas.app.ui.theme.CONTROL_PANEL_WIDTH
 import kr.roadcanvas.app.ui.theme.CONTROL_SPACING
 import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
@@ -384,7 +385,7 @@ private fun DrawingDetail(
             is DrawingDetailState.Loaded -> DrawingRouteMap(
                 drawing = detail.drawing,
                 // 오버레이가 가리는 왼쪽을 지도 콘텐츠 영역에서 빼 경로가 오버레이 오른쪽에 보이게 한다.
-                contentPadding = PaddingValues(start = SCREEN_PADDING * 2 + CONTROL_PANEL_WIDTH),
+                contentPadding = driverSideOverlayContentPadding(),
                 modifier = Modifier.fillMaxSize()
             )
             else -> Box(Modifier.fillMaxSize().background(SDGColor.Neutral100))

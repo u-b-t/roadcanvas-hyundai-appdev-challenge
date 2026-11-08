@@ -4,19 +4,11 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,7 +20,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,7 +33,11 @@ import kr.roadcanvas.app.map.RoutePoint
 import kr.roadcanvas.app.recording.RecordingPermissions
 import kr.roadcanvas.app.recording.RecordingRequest
 import kr.roadcanvas.app.recording.RecordingState
-import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
+import kr.roadcanvas.app.ui.components.CarButton
+import kr.roadcanvas.app.ui.components.CarButtonStyle
+import kr.roadcanvas.app.ui.components.DriverSideOverlay
+import kr.roadcanvas.app.ui.components.OverlayCard
+import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 
 const val CIRCLE_PROGRESS_TITLE = "동그라미 챌린지 진행"
 const val ELAPSED_LABEL = "경과 시간"
@@ -147,61 +142,63 @@ fun ChallengeProgressScreen(
 ) {
     var confirmGiveUp by rememberSaveable { mutableStateOf(false) }
 
-    Row(
-        modifier = modifier.fillMaxSize().padding(24.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        RouteMap(
-            points = state.path.map { RoutePoint(it.latitude, it.longitude) },
-            options = RouteMapOptions(showEndpointMarkers = true, inProgress = true),
-            modifier = Modifier.weight(1.4f).fillMaxHeight()
-        )
-        Column(
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(text = CIRCLE_PROGRESS_TITLE, style = MaterialTheme.typography.headlineLarge)
-            when (state.phase) {
-                ChallengeProgressPhase.PREPARING -> StatusText(PROGRESS_PREPARING)
-                ChallengeProgressPhase.FAILED -> StatusText(PROGRESS_FAILED)
-                ChallengeProgressPhase.RECORDING, ChallengeProgressPhase.FINISHED -> {
-                    Measurement(ELAPSED_LABEL, formatElapsed(state.elapsedMillis))
-                    Measurement(DISTANCE_LABEL, formatDistance(state.distanceMeters))
+    DriverSideOverlay(
+        background = {
+            RouteMap(
+                points = state.path.map { RoutePoint(it.latitude, it.longitude) },
+                options = RouteMapOptions(
+                    showEndpointMarkers = true,
+                    inProgress = true,
+                    contentPadding = driverSideOverlayContentPadding()
+                ),
+                modifier = Modifier.fillMaxSize()
+            )
+        },
+        controls = {
+            OverlayCard(modifier = Modifier.fillMaxWidth()) {
+                Text(text = CIRCLE_PROGRESS_TITLE, style = MaterialTheme.typography.headlineSmall)
+                when (state.phase) {
+                    ChallengeProgressPhase.PREPARING -> StatusText(PROGRESS_PREPARING)
+                    ChallengeProgressPhase.FAILED -> StatusText(PROGRESS_FAILED)
+                    ChallengeProgressPhase.RECORDING, ChallengeProgressPhase.FINISHED -> {
+                        Measurement(ELAPSED_LABEL, formatElapsed(state.elapsedMillis))
+                        Measurement(DISTANCE_LABEL, formatDistance(state.distanceMeters))
+                    }
+                }
+                if (state.phase != ChallengeProgressPhase.FAILED) {
+                    state.controlBlockedReason?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
-            Spacer(modifier = Modifier.weight(1f))
             if (state.phase == ChallengeProgressPhase.FAILED) {
-                Button(
+                CarButton(
+                    text = BACK_TO_READY_LABEL,
                     onClick = onBackToReady,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = MIN_TOUCH_TARGET)
-                ) {
-                    Text(text = BACK_TO_READY_LABEL, style = MaterialTheme.typography.titleLarge)
-                }
+                    modifier = Modifier.fillMaxWidth()
+                )
             } else {
-                state.controlBlockedReason?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-                Button(
+                CarButton(
+                    text = FINISH_LABEL,
                     onClick = onFinish,
                     enabled = state.canControl,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = MIN_TOUCH_TARGET)
-                ) {
-                    Text(text = FINISH_LABEL, style = MaterialTheme.typography.headlineSmall)
-                }
-                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth()
+                )
+                CarButton(
+                    text = GIVE_UP_LABEL,
                     onClick = { confirmGiveUp = true },
                     enabled = state.canControl,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = MIN_TOUCH_TARGET)
-                ) {
-                    Text(text = GIVE_UP_LABEL, style = MaterialTheme.typography.titleLarge)
-                }
+                    style = CarButtonStyle.Neutral,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
-        }
-    }
+        },
+        modifier = modifier
+    )
 
     if (confirmGiveUp) {
         AlertDialog(
@@ -230,13 +227,17 @@ fun ChallengeProgressScreen(
 
 @Composable
 private fun StatusText(text: String) {
-    Text(text = text, style = MaterialTheme.typography.headlineSmall)
+    Text(text = text, style = MaterialTheme.typography.titleLarge)
 }
 
 @Composable
 internal fun Measurement(label: String, value: String) {
     Column {
-        Text(text = label, style = MaterialTheme.typography.titleLarge)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Text(text = value, style = MaterialTheme.typography.displaySmall)
     }
 }

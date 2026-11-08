@@ -81,4 +81,28 @@ class RouteMapStateTest {
         assertNull(state.startMarker)
         assertNull(state.endMarker)
     }
+
+    @Test
+    fun `현재 위치 표시는 경로선 대신 마지막 좌표를 현재 위치로 쓴다`() {
+        val options = RouteMapOptions(showCurrentLocation = true)
+
+        val located = RouteMapState.of(route, options, MapAuthState.Configured)
+        val waiting = RouteMapState.of(emptyList(), options, MapAuthState.Configured)
+
+        assertEquals(RouteMapState.CurrentLocation(route.last()), located)
+        assertEquals(RouteMapState.CurrentLocation(point = null), waiting)
+        assertNull(located.notice)
+        assertNull(waiting.notice)
+    }
+
+    @Test
+    fun `현재 위치 표시도 키가 없으면 키 없음 안내를 표시한다`() {
+        val state = RouteMapState.of(
+            route,
+            RouteMapOptions(showCurrentLocation = true),
+            MapAuthState.KeyMissing
+        )
+
+        assertEquals(RouteMapState.KeyMissing, state)
+    }
 }

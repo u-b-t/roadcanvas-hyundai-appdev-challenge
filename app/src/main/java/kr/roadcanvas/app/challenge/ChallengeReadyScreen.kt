@@ -12,20 +12,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -42,7 +35,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kr.roadcanvas.app.appContainer
-import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
+import kr.roadcanvas.app.map.RouteMap
+import kr.roadcanvas.app.map.RouteMapOptions
+import kr.roadcanvas.app.map.RoutePoint
+import kr.roadcanvas.app.ui.components.CarButton
+import kr.roadcanvas.app.ui.components.CarButtonStyle
+import kr.roadcanvas.app.ui.components.DriverSideOverlay
+import kr.roadcanvas.app.ui.components.OverlayCard
+import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 
 const val CIRCLE_READY_TITLE = "동그라미 챌린지 준비"
 const val CHALLENGE_GOAL_HEADING = "목표"
@@ -88,6 +88,7 @@ fun ChallengeReadyRoute(onStart: () -> Unit, onBack: () -> Unit, modifier: Modif
     )
     // 화면이 멈추면 구독자가 없어져 위치와 주행 규제 구독도 해제된다.
     val status by viewModel.status.collectAsStateWithLifecycle()
+    val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
 
     var requestedPermissions by rememberSaveable { mutableStateOf(emptyList<String>()) }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -115,7 +116,8 @@ fun ChallengeReadyRoute(onStart: () -> Unit, onBack: () -> Unit, modifier: Modif
             context.findActivity()?.let(viewModel::showAccessBlockedNotice) == true
         },
         onRetry = viewModel::retry,
-        modifier = modifier
+        modifier = modifier,
+        currentLocation = currentLocation?.let { RoutePoint(it.latitude, it.longitude) }
     )
 }
 
@@ -128,60 +130,74 @@ fun ChallengeReadyScreen(
     onOpenSettings: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    currentLocation: RoutePoint? = null,
     onShowBlockedNotice: () -> Boolean = { false }
 ) {
     // 차량의 차단 안내를 띄우지 못하면 앱 안에서 같은 내용을 안내한다.
     var showBlockedNotice by rememberSaveable { mutableStateOf(false) }
 
-    Row(
-        modifier = modifier.fillMaxSize().padding(32.dp),
-        horizontalArrangement = Arrangement.spacedBy(32.dp)
-    ) {
-        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            Text(text = CIRCLE_READY_TITLE, style = MaterialTheme.typography.headlineLarge)
-            Spacer(modifier = Modifier.height(32.dp))
-            Text(text = CHALLENGE_GOAL_HEADING, style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = CHALLENGE_GOAL, style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(32.dp))
-            Text(text = CHALLENGE_RULES_HEADING, style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(8.dp))
-            listOf(CHALLENGE_RULE_START_STOP, CHALLENGE_RULE_NO_PAUSE, CHALLENGE_RULE_GIVE_UP)
-                .forEach { rule ->
+    DriverSideOverlay(
+        background = {
+            RouteMap(
+                points = listOfNotNull(currentLocation),
+                options = RouteMapOptions(
+                    showCurrentLocation = true,
+                    contentPadding = driverSideOverlayContentPadding()
+                ),
+                modifier = Modifier.fillMaxSize()
+            )
+        },
+        controls = {
+            // 내용이 화면 높이를 넘으면 안내 카드만 스크롤하고 상태와 버튼은 항상 보이게 둔다.
+            OverlayCard(modifier = Modifier.fillMaxWidth().weight(1f, fill = false)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(text = CIRCLE_READY_TITLE, style = MaterialTheme.typography.headlineSmall)
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = rule,
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        text = CHALLENGE_GOAL_HEADING,
+                        style = MaterialTheme.typography.titleMedium
                     )
+                    Text(text = CHALLENGE_GOAL, style = MaterialTheme.typography.bodyLarge)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = CHALLENGE_RULES_HEADING,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    listOf(
+                        CHALLENGE_RULE_START_STOP,
+                        CHALLENGE_RULE_NO_PAUSE,
+                        CHALLENGE_RULE_GIVE_UP
+                    ).forEach { rule ->
+                        Text(text = rule, style = MaterialTheme.typography.bodyLarge)
+                    }
                 }
-        }
-        Column(
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+            }
             StatusCard(
                 status = status,
                 onRequestPermission = onRequestPermission,
                 onOpenSettings = onOpenSettings,
                 onShowBlockedNotice = { showBlockedNotice = !onShowBlockedNotice() },
                 onRetry = onRetry,
-                modifier = Modifier.fillMaxWidth().weight(1f)
+                modifier = Modifier.fillMaxWidth()
             )
-            Button(
+            CarButton(
+                text = START_LABEL,
                 onClick = onStart,
                 enabled = status.canStart,
-                modifier = Modifier.fillMaxWidth().heightIn(min = MIN_TOUCH_TARGET)
-            ) {
-                Text(text = START_LABEL, style = MaterialTheme.typography.headlineSmall)
-            }
-            OutlinedButton(
+                modifier = Modifier.fillMaxWidth()
+            )
+            CarButton(
+                text = BACK_TO_MODE_SELECT_LABEL,
                 onClick = onBack,
-                modifier = Modifier.fillMaxWidth().heightIn(min = MIN_TOUCH_TARGET)
-            ) {
-                Text(text = BACK_TO_MODE_SELECT_LABEL, style = MaterialTheme.typography.titleLarge)
-            }
-        }
-    }
+                style = CarButtonStyle.Neutral,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        modifier = modifier
+    )
 
     if (showBlockedNotice) {
         AlertDialog(
@@ -204,38 +220,33 @@ private fun StatusCard(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val containerColor = if (status.canStart) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = containerColor)) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(
-                16.dp,
-                alignment = Alignment.CenterVertically
+    OverlayCard(modifier = modifier) {
+        Text(
+            text = status.message,
+            style = MaterialTheme.typography.titleLarge,
+            color = if (status.canStart) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
+        )
+        val action: Pair<String, () -> Unit>? = when (status) {
+            is ChallengeReadyStatus.PermissionRequired -> if (status.permanentlyDenied) {
+                OPEN_SETTINGS_LABEL to onOpenSettings
+            } else {
+                REQUEST_PERMISSION_LABEL to { onRequestPermission(status.permissions) }
+            }
+            ChallengeReadyStatus.Blocked -> SHOW_BLOCKED_NOTICE_LABEL to onShowBlockedNotice
+            is ChallengeReadyStatus.Error -> RETRY_LABEL to onRetry
+            else -> null
+        }
+        if (action != null) {
+            CarButton(
+                text = action.first,
+                onClick = action.second,
+                style = CarButtonStyle.Line,
+                modifier = Modifier.fillMaxWidth()
             )
-        ) {
-            Text(text = status.message, style = MaterialTheme.typography.headlineSmall)
-            val action: Pair<String, () -> Unit>? = when (status) {
-                is ChallengeReadyStatus.PermissionRequired -> if (status.permanentlyDenied) {
-                    OPEN_SETTINGS_LABEL to onOpenSettings
-                } else {
-                    REQUEST_PERMISSION_LABEL to { onRequestPermission(status.permissions) }
-                }
-                ChallengeReadyStatus.Blocked -> SHOW_BLOCKED_NOTICE_LABEL to onShowBlockedNotice
-                is ChallengeReadyStatus.Error -> RETRY_LABEL to onRetry
-                else -> null
-            }
-            if (action != null) {
-                Button(
-                    onClick = action.second,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = MIN_TOUCH_TARGET)
-                ) {
-                    Text(text = action.first, style = MaterialTheme.typography.titleLarge)
-                }
-            }
         }
     }
 }
