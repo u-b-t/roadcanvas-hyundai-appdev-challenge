@@ -232,16 +232,14 @@ class ChallengeResultStateTest {
     }
 
     @Test
-    fun `이동하지 않은 동그라미 챌린지도 저장한다`() {
-        val result = challengeResultOf(
-            DrawingMode.CIRCLE,
-            path(TestPaths.stationary(30)),
-            START,
-            START + 30_000
-        )
+    fun `동그라미 챌린지는 위치가 부족하거나 움직이지 않은 도전만 저장하지 않는다`() {
+        fun savable(points: List<GeoPoint>) =
+            challengeResultOf(DrawingMode.CIRCLE, path(points), START, START + 60_000).savable
 
-        assertTrue(result.savable)
-        assertEquals(0, result.toCompletedDrawing().score)
+        assertFalse(savable(TestPaths.stationary(3)))
+        assertFalse(savable(TestPaths.stationary(30)))
+        assertTrue(savable(TestPaths.straightOutAndBack(100.0)))
+        assertTrue(savable(TestPaths.circle(50.0)))
     }
 
     @Test
