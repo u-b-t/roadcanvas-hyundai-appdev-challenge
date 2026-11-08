@@ -2,9 +2,29 @@ package kr.roadcanvas.app.map
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.unit.dp
+import kotlin.math.PI
+import kotlin.math.cos
 
 /** 지도에 표시할 경로의 한 지점 */
 data class RoutePoint(val latitude: Double, val longitude: Double)
+
+/** 경로와 함께 그리는 기준 원. 동그라미 점수 계산에 쓴 맞춤 원을 보여줄 때 쓴다. */
+data class RouteCircle(val center: RoutePoint, val radiusMeters: Double) {
+    /** 원을 감싸는 사각형의 남서쪽과 북동쪽 꼭짓점. 카메라를 맞출 때 원 전체가 보이게 한다. */
+    fun boundsCorners(): List<RoutePoint> {
+        val latitudeDelta = radiusMeters / METERS_PER_DEGREE_LATITUDE
+        val longitudeDelta =
+            radiusMeters / (METERS_PER_DEGREE_LATITUDE * cos(center.latitude * PI / 180))
+        return listOf(
+            RoutePoint(center.latitude - latitudeDelta, center.longitude - longitudeDelta),
+            RoutePoint(center.latitude + latitudeDelta, center.longitude + longitudeDelta)
+        )
+    }
+
+    private companion object {
+        const val METERS_PER_DEGREE_LATITUDE = 6_371_000.0 * PI / 180
+    }
+}
 
 /**
  * 경로 지도 표시 옵션.
@@ -13,13 +33,15 @@ data class RoutePoint(val latitude: Double, val longitude: Double)
  * [showCurrentLocation]이 true이면 경로선 대신 마지막 좌표를 현재 위치로 표시한다.
  * [contentPadding]은 지도 위에 올린 오버레이가 가리는 영역이다. 경로·안내와 지도 로고는 이 영역을 피해 둔다.
  * [currentPosition]을 주면 경로 위에 현재 위치와 진행 방향을 출발점 마커와 구분해 표시한다. 카메라 이동에는 영향이 없다.
+ * [referenceCircle]이 있으면 경로와 구분되는 스타일로 함께 그리고, 전체 경로 보기에서 원도 화면에 들어오게 맞춘다.
  */
 data class RouteMapOptions(
     val showEndpointMarkers: Boolean = true,
     val inProgress: Boolean = false,
     val showCurrentLocation: Boolean = false,
     val contentPadding: PaddingValues = PaddingValues(0.dp),
-    val currentPosition: CurrentPosition? = null
+    val currentPosition: CurrentPosition? = null,
+    val referenceCircle: RouteCircle? = null
 )
 
 /** 경로를 그릴 때 카메라를 맞추는 방식 */
@@ -55,9 +77,14 @@ sealed interface RouteMapState {
         val points: List<RoutePoint>,
         val camera: RouteCamera,
         val startMarker: RoutePoint?,
-        val endMarker: RoutePoint?
+        val endMarker: RoutePoint?,
+        val circle: RouteCircle? = null
     ) : RouteMapState {
         override val notice: String? = null
+
+        /** 전체 경로 보기에서 화면에 들어와야 하는 좌표. 기준 원이 있으면 원을 감싸는 꼭짓점도 넣는다. */
+        val boundsPoints: List<RoutePoint>
+            get() = points + circle?.boundsCorners().orEmpty()
     }
 
     companion object {
@@ -77,13 +104,15 @@ sealed interface RouteMapState {
                 points = points,
                 camera = RouteCamera.FOLLOW_LATEST,
                 startMarker = points.first().takeIf { options.showEndpointMarkers },
-                endMarker = null
+                endMarker = null,
+                circle = options.referenceCircle
             )
             else -> Route(
                 points = points,
                 camera = RouteCamera.FIT_BOUNDS,
                 startMarker = points.first().takeIf { options.showEndpointMarkers },
-                endMarker = points.last().takeIf { options.showEndpointMarkers }
+                endMarker = points.last().takeIf { options.showEndpointMarkers },
+                circle = options.referenceCircle
             )
         }
     }

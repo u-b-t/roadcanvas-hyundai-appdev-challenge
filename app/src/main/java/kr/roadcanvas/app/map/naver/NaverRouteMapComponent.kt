@@ -26,6 +26,7 @@ import com.naver.maps.geometry.LatLngBounds
 import com.naver.maps.map.CameraUpdate
 import com.naver.maps.map.MapView
 import com.naver.maps.map.NaverMap
+import com.naver.maps.map.overlay.CircleOverlay
 import com.naver.maps.map.overlay.LocationOverlay
 import com.naver.maps.map.overlay.Marker
 import com.naver.maps.map.overlay.PathOverlay
@@ -34,6 +35,7 @@ import kr.roadcanvas.app.map.MapAuth
 import kr.roadcanvas.app.map.MapInsets
 import kr.roadcanvas.app.map.RouteCamera
 import kr.roadcanvas.app.map.RouteCameraPadding
+import kr.roadcanvas.app.map.RouteCircle
 import kr.roadcanvas.app.map.RouteMapComponent
 import kr.roadcanvas.app.map.RouteMapNotice
 import kr.roadcanvas.app.map.RouteMapOptions
@@ -118,8 +120,15 @@ private fun NaverRouteMapView(
     AndroidView(factory = { mapView }, modifier = modifier)
 }
 
-/** 경로선과 출발·도착 마커, 현재 위치. 좌표가 바뀌면 같은 오버레이에 좌표열을 다시 지정한다. */
+/** 경로선과 출발·도착 마커, 기준 원, 현재 위치. 좌표가 바뀌면 같은 오버레이에 좌표열을 다시 지정한다. */
 private class RouteOverlays {
+    // 경로선(파란 실선) 아래에 반투명 면과 주황 테두리로 그려 경로와 구분한다.
+    private val circle = CircleOverlay().apply {
+        color = 0x1FFB8C00
+        outlineWidth = 4
+        outlineColor = 0xCCFB8C00.toInt()
+        zIndex = -1
+    }
     private val path = PathOverlay().apply {
         width = 12
         outlineWidth = 2
@@ -148,11 +157,12 @@ private class RouteOverlays {
                 path.map = map
                 startMarker.place(map, state.startMarker)
                 endMarker.place(map, state.endMarker)
+                circle.place(map, state.circle)
                 when (state.camera) {
                     RouteCamera.FIT_BOUNDS -> with(cameraInsets) {
                         map.moveCamera(
                             CameraUpdate.fitBounds(
-                                LatLngBounds.from(coords),
+                                LatLngBounds.from(state.boundsPoints.map { it.toLatLng() }),
                                 left,
                                 top,
                                 right,
@@ -206,6 +216,7 @@ private class RouteOverlays {
         path.map = null
         startMarker.map = null
         endMarker.map = null
+        circle.map = null
     }
 
     /**
@@ -250,6 +261,16 @@ private class RouteOverlays {
             this.map = null
         } else {
             position = point.toLatLng()
+            this.map = map
+        }
+    }
+
+    private fun CircleOverlay.place(map: NaverMap, routeCircle: RouteCircle?) {
+        if (routeCircle == null) {
+            this.map = null
+        } else {
+            center = routeCircle.center.toLatLng()
+            radius = routeCircle.radiusMeters
             this.map = map
         }
     }
