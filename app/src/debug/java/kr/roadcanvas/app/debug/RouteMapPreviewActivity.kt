@@ -24,6 +24,7 @@ import kotlinx.coroutines.delay
 import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RoutePoint
+import kr.roadcanvas.app.ui.theme.RoadCanvasTheme
 import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteConfig
 import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteGenerator
 import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteType
@@ -39,7 +40,7 @@ class RouteMapPreviewActivity : ComponentActivity() {
         val route = SimulatedRouteGenerator.generate(SimulatedRouteType.CIRCLE)
             .map { RoutePoint(it.latitude, it.longitude) }
         setContent {
-            MaterialTheme {
+            RoadCanvasTheme {
                 var inProgress by remember { mutableStateOf(false) }
                 var playedCount by remember { mutableIntStateOf(1) }
                 LaunchedEffect(inProgress) {

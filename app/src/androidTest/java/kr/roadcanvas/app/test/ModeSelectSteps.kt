@@ -15,10 +15,10 @@ import androidx.test.platform.app.InstrumentationRegistry
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
-import kr.roadcanvas.app.modeselect.MIN_TOUCH_TARGET
 import kr.roadcanvas.app.modeselect.MODE_SELECT_TITLE
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
 import kr.roadcanvas.app.navigation.Routes
+import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 

@@ -30,8 +30,8 @@ import kr.roadcanvas.app.appContainer
 import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RoutePoint
-import kr.roadcanvas.app.modeselect.MIN_TOUCH_TARGET
 import kr.roadcanvas.app.modeselect.MY_DRAWINGS_LABEL
+import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 
 const val CIRCLE_RESULT_TITLE = "동그라미 챌린지 결과"
 const val DURATION_LABEL = "소요 시간"

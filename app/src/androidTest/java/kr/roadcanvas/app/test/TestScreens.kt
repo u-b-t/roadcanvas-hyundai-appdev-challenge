@@ -5,11 +5,11 @@ import android.app.Activity
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
+import kr.roadcanvas.app.ui.theme.RoadCanvasTheme
 
 private const val TIMEOUT_MILLIS = 10_000L
 private const val POLL_MILLIS = 20L
@@ -45,7 +45,7 @@ object TestScreens {
     /** 빈 화면을 열고 [content]를 그린다. */
     fun launchContent(content: @Composable () -> Unit): TestScreen<ComponentActivity> =
         launch(ComponentActivity::class.java).also { screen ->
-            screen.onActivity { it.setContent { MaterialTheme { content() } } }
+            screen.onActivity { it.setContent { RoadCanvasTheme { content() } } }
         }
 
     /** 닫히지 않은 시나리오 화면이 있는지 */

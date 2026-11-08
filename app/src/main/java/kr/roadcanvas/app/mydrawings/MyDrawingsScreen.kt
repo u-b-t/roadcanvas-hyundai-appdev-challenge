@@ -41,7 +41,7 @@ import kr.roadcanvas.app.drawing.CompletedDrawing
 import kr.roadcanvas.app.drawing.CompletedDrawingSummary
 import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RoutePoint
-import kr.roadcanvas.app.modeselect.MIN_TOUCH_TARGET
+import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 
 const val MY_DRAWINGS_TITLE = "내 그림 목록"
 const val MY_DRAWINGS_EMPTY = "아직 저장된 그림이 없어요"
