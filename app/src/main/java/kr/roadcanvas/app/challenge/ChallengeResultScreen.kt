@@ -29,6 +29,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.shopl.sdg_common.enums.Keyboard
 import com.shopl.sdg_common.util.keyboardAsState
 import kr.roadcanvas.app.appContainer
+import kr.roadcanvas.app.artwork.ArtworkPublishActions
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.DrawingNameValidation
 import kr.roadcanvas.app.drawing.normalizeDrawingName
@@ -84,12 +85,14 @@ fun ChallengeResultRoute(
                     recorder = container.challengeRecorder,
                     inProgressRepository = container.inProgressDrawingRepository,
                     completedRepository = container.completedDrawingRepository,
-                    onStorageFailure = { Log.w(TAG, "결과 저장소 작업 실패", it) }
+                    onStorageFailure = { Log.w(TAG, "결과 저장소 작업 실패", it) },
+                    artworkPublisher = container.artworkPublisher
                 )
             }
         }
     )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val publishState by viewModel.publishState.collectAsStateWithLifecycle()
 
     // 진행 화면은 이미 닫혔으므로 뒤로 가면 모드 선택으로 간다.
     BackHandler(onBack = onModeSelect)
@@ -111,7 +114,15 @@ fun ChallengeResultRoute(
             onDrawAgain = onTryAgain,
             onModeSelect = onModeSelect,
             onMyDrawings = onMyDrawings,
-            modifier = modifier
+            modifier = modifier,
+            publishState = publishState,
+            publishActions = ArtworkPublishActions(
+                onRequestPublish = viewModel::requestPublish,
+                onConfirmPublish = viewModel::confirmPublish,
+                onCancelConsent = viewModel::cancelPublishConsent,
+                onRetry = viewModel::retryPublish,
+                onUnpublish = viewModel::unpublish
+            )
         )
     }
 }

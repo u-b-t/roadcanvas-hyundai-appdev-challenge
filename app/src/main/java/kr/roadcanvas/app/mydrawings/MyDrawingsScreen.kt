@@ -52,6 +52,10 @@ import com.shopl.sdg_common.foundation.SDGColor
 import com.shopl.sdg_common.foundation.SDGCornerRadius
 import com.shopl.sdg_resource.R as SdgR
 import kr.roadcanvas.app.appContainer
+import kr.roadcanvas.app.artwork.ArtworkPublishActions
+import kr.roadcanvas.app.artwork.ArtworkPublishPanel
+import kr.roadcanvas.app.artwork.ArtworkPublishUiState
+import kr.roadcanvas.app.artwork.PublishStatus
 import kr.roadcanvas.app.challenge.BACK_TO_MODE_SELECT_LABEL
 import kr.roadcanvas.app.challenge.RETRY_LABEL
 import kr.roadcanvas.app.drawing.CompletedDrawing
@@ -95,6 +99,7 @@ const val DELETE_CONFIRM_MESSAGE = "삭제한 기록은 되돌릴 수 없어요"
 const val DELETE_FAILED = "기록을 삭제하지 못했어요"
 const val RENAME_LABEL = "이름 변경"
 const val ADD_NAME_LABEL = "이름 붙이기"
+const val DELETE_BLOCKED_BY_PUBLISH = "공개 중인 작품은 비공개로 바꾼 뒤 삭제할 수 있어요"
 
 const val MY_DRAWINGS_LIST_TAG = "myDrawingsList"
 const val MY_DRAWINGS_ITEM_SCORE_TAG = "myDrawingsItemScore"
@@ -117,10 +122,17 @@ fun MyDrawingsRoute(
     val context = LocalContext.current
     val viewModel: MyDrawingsViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { MyDrawingsViewModel(context.appContainer.completedDrawingRepository) }
+            initializer {
+                val container = context.appContainer
+                MyDrawingsViewModel(
+                    container.completedDrawingRepository,
+                    container.artworkPublisher
+                )
+            }
         }
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val publishState by viewModel.publishState.collectAsStateWithLifecycle()
 
     MyDrawingsScreen(
         state = state,
@@ -135,7 +147,15 @@ fun MyDrawingsRoute(
         onSaveName = viewModel::saveName,
         onStartChallenge = onStartChallenge,
         onBack = onBack,
-        modifier = modifier
+        modifier = modifier,
+        publishState = publishState,
+        publishActions = ArtworkPublishActions(
+            onRequestPublish = viewModel::requestPublish,
+            onConfirmPublish = viewModel::confirmPublish,
+            onCancelConsent = viewModel::cancelPublishConsent,
+            onRetry = viewModel::retryPublish,
+            onUnpublish = viewModel::unpublish
+        )
     )
 }
 
@@ -157,7 +177,9 @@ fun MyDrawingsScreen(
     modifier: Modifier = Modifier,
     onStartRename: () -> Unit = {},
     onCancelRename: () -> Unit = {},
-    onSaveName: (String) -> Unit = {}
+    onSaveName: (String) -> Unit = {},
+    publishState: ArtworkPublishUiState? = null,
+    publishActions: ArtworkPublishActions = ArtworkPublishActions()
 ) {
     when (val list = state.list) {
         is DrawingListState.Loaded -> ListAndDetail(
@@ -173,6 +195,8 @@ fun MyDrawingsScreen(
             detail = {
                 DrawingDetail(
                     state = state,
+                    publishState = publishState,
+                    publishActions = publishActions,
                     onRetryDetail = onRetryDetail,
                     onRequestDelete = onRequestDelete,
                     onStartRename = onStartRename,
@@ -431,6 +455,8 @@ private fun DrawingListItem(
 @Composable
 private fun DrawingDetail(
     state: MyDrawingsUiState,
+    publishState: ArtworkPublishUiState?,
+    publishActions: ArtworkPublishActions,
     onRetryDetail: () -> Unit,
     onRequestDelete: () -> Unit,
     onStartRename: () -> Unit,
@@ -462,6 +488,8 @@ private fun DrawingDetail(
                     ) {
                         DetailOverlayContent(
                             state = state,
+                            publishState = publishState,
+                            publishActions = publishActions,
                             onRetryDetail = onRetryDetail,
                             onStartRename = onStartRename,
                             onCancelRename = onCancelRename,
@@ -472,6 +500,7 @@ private fun DrawingDetail(
                     if (state.detail is DrawingDetailState.Loaded && state.rename == null) {
                         DeleteDrawingButton(
                             deleting = state.deleting,
+                            blocked = publishState.blocksDelete,
                             onClick = onRequestDelete,
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
@@ -487,6 +516,8 @@ private fun DrawingDetail(
 @Composable
 private fun ColumnScope.DetailOverlayContent(
     state: MyDrawingsUiState,
+    publishState: ArtworkPublishUiState?,
+    publishActions: ArtworkPublishActions,
     onRetryDetail: () -> Unit,
     onStartRename: () -> Unit,
     onCancelRename: () -> Unit,
@@ -509,11 +540,19 @@ private fun ColumnScope.DetailOverlayContent(
                 style = CarButtonStyle.Line,
                 modifier = Modifier.fillMaxWidth()
             )
+            publishState?.let { ArtworkPublishPanel(it, publishActions) }
             if (state.deleteFailed) {
                 Text(
                     text = DELETE_FAILED,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.error
+                )
+            }
+            if (publishState.blocksDelete) {
+                Text(
+                    text = DELETE_BLOCKED_BY_PUBLISH,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -586,15 +625,23 @@ private fun RenameEditor(
  * 지도 위에 올리는 작은 삭제 버튼. 실수로 누르지 않도록 채우지 않은 반투명 흰 바탕에 회색 아이콘과 글자로 그리고,
  * 터치 영역은 [MIN_TOUCH_TARGET]을 지킨다.
  */
+/**
+ * 공개 중이거나 등록 중인 작품은 삭제하지 않는다.
+ * 기기 기록을 지우면 기기에서 비공개로 되돌릴 방법이 없어지므로 먼저 비공개로 바꾸게 한다.
+ */
+private val ArtworkPublishUiState?.blocksDelete: Boolean
+    get() = this?.status == PublishStatus.PUBLISHED || this?.status == PublishStatus.PUBLISHING
+
 @Composable
 private fun DeleteDrawingButton(
     deleting: Boolean,
+    blocked: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
         onClick = onClick,
-        enabled = !deleting,
+        enabled = !deleting && !blocked,
         modifier = modifier.heightIn(min = MIN_TOUCH_TARGET),
         shape = SDGCornerRadius.BoxRadius.Radius16,
         color = OVERLAY_CARD_COLOR,
