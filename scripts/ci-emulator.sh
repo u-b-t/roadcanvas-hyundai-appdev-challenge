@@ -9,6 +9,8 @@
 # 건강한 상태: sys.boot_completed가 1, user 0이 RUNNING_UNLOCKED, car_service가 found.
 # 새 에뮬레이터는 RUNNER_TRACKING_ID를 비우고 새 세션으로 분리해 띄운다. 러너가 작업 종료 때
 # 정리하지 않으므로 다음 작업이 재사용한다. macOS 기본 bash 3.2에서 동작해야 한다.
+# 콜드 부팅 전에는 강제 종료로 남은 크래시 보고 DB와 AVD 잠금 파일을 지우고, 크래시 보고 동의
+# 창이 뜨지 않도록 -crash-report-mode disabled로 실행한다.
 set -euo pipefail
 
 SERIAL='emulator-5554'
@@ -22,6 +24,9 @@ COLD_BOOT_TIMEOUT=600
 # 부팅 완료 뒤 user 0 잠금 해제와 car_service 등록을 기다리는 시간
 SERVICE_GRACE=90
 CRASH_PATTERN='System has crashed|DeadSystemException'
+# 에뮬레이터가 크래시 보고 동의 창을 띄우고 기다릴 때 남기는 로그
+CRASH_DIALOG_PATTERN='crashdialog'
+CRASH_DB_DIR="/tmp/android-${USER:-$(id -un)}"
 
 log() { echo "[ci-emulator] $*"; }
 fail() {
@@ -78,6 +83,8 @@ find_avd() {
 }
 
 emulator_pids() { pgrep -f -- "-avd $avd( |\$)" || true; }
+# 크래시 보고 DB는 모든 AVD가 함께 쓰므로 어떤 에뮬레이터든 실행 중이면 지우지 않는다.
+any_emulator_pids() { pgrep -f -- '(emulator|qemu-system-[^ ]*) .*-avd ' || true; }
 
 # 상태를 HEALTH_BOOT, HEALTH_USER0, HEALTH_CAR, HEALTH_STATE에 남기고 건강하면 0을 반환한다.
 check_health() {
@@ -102,7 +109,7 @@ check_health() {
 
 # 건강해질 때까지 기다린다. 부팅이 끝난 뒤 SERVICE_GRACE가 지나도 건강하지 않으면 실패한다.
 wait_for_health() {
-  local boot_timeout=$1 started booted_at='' last_state='' now
+  local boot_timeout=$1 log_file=${2:-} started booted_at='' last_state='' now
   started=$(date +%s)
   while true; do
     if check_health; then
@@ -124,6 +131,10 @@ wait_for_health() {
         log "부팅 후 ${SERVICE_GRACE}초가 지나도 비정상: $HEALTH_STATE"
         return 1
       fi
+    elif [ -n "$log_file" ] && grep -qs "$CRASH_DIALOG_PATTERN" "$log_file"; then
+      log "크래시 보고 동의 창에서 멈췄습니다. adb 포트가 열리지 않아 부팅이 진행되지 않습니다: $HEALTH_STATE"
+      grep -s "$CRASH_DIALOG_PATTERN" "$log_file" | head -5
+      return 1
     elif [ $((now - started)) -ge "$boot_timeout" ]; then
       log "${boot_timeout}초 안에 부팅이 끝나지 않았습니다: $HEALTH_STATE"
       return 1
@@ -160,15 +171,45 @@ stop_emulator() {
   [ -z "$(emulator_pids)" ] || fail '에뮬레이터를 종료하지 못했습니다.'
 }
 
+# 강제 종료로 남은 크래시 보고 DB가 있으면 다음 실행이 동의 창에서 멈추고, 잠금 파일이 남으면
+# AVD가 사용 중으로 판단될 수 있다. 실행 중인 에뮬레이터가 없을 때만 지운다.
+clean_stale_state() {
+  local path removed=''
+  if [ -n "$(emulator_pids)" ]; then
+    fail "에뮬레이터가 실행 중이라 잠금 파일을 지우지 않습니다: $avd"
+  fi
+  for path in "$HOME/.android/avd/$avd.avd/"*.lock; do
+    if [ -e "$path" ]; then
+      rm -f "$path"
+      removed="$removed ${path##*/}"
+    fi
+  done
+  if [ -n "$(any_emulator_pids)" ]; then
+    log '다른 에뮬레이터가 실행 중이라 크래시 보고 DB를 지우지 않습니다.'
+  else
+    for path in "$CRASH_DB_DIR"/emu-crash-*.db; do
+      if [ -e "$path" ]; then
+        rm -rf "$path"
+        removed="$removed $path"
+      fi
+    done
+  fi
+  if [ -n "$removed" ]; then
+    log "남은 상태 정리:$removed"
+  fi
+}
+
 cold_boot() {
+  clean_stale_state
   log "콜드 부팅: $avd (로그 $EMULATOR_LOG)"
   # 러너는 작업이 끝나면 RUNNER_TRACKING_ID가 같은 프로세스를 종료한다. 값을 비우고
   # 새 세션으로 분리해 단계와 작업이 끝나도 에뮬레이터가 남게 한다.
   RUNNER_TRACKING_ID='' nohup perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die "exec: $!\n"' \
-    "$emulator" -avd "$avd" -no-snapshot -port "$PORT" < /dev/null > "$EMULATOR_LOG" 2>&1 &
+    "$emulator" -avd "$avd" -no-snapshot -port "$PORT" -crash-report-mode disabled \
+    < /dev/null > "$EMULATOR_LOG" 2>&1 &
   sleep 5
   with_timeout "$ADB_TIMEOUT" "$adb" start-server > /dev/null 2>&1 || true
-  if ! wait_for_health "$COLD_BOOT_TIMEOUT"; then
+  if ! wait_for_health "$COLD_BOOT_TIMEOUT" "$EMULATOR_LOG"; then
     tail -100 "$EMULATOR_LOG" || true
     fail "콜드 부팅한 에뮬레이터가 정상 상태가 되지 않았습니다: $HEALTH_STATE"
   fi
