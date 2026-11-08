@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -26,15 +28,20 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,6 +57,8 @@ import kr.roadcanvas.app.challenge.RETRY_LABEL
 import kr.roadcanvas.app.drawing.CompletedDrawing
 import kr.roadcanvas.app.drawing.CompletedDrawingSummary
 import kr.roadcanvas.app.drawing.DrawingMode
+import kr.roadcanvas.app.drawing.DrawingNameValidation
+import kr.roadcanvas.app.drawing.validateDrawingName
 import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RoutePoint
@@ -81,11 +90,14 @@ const val CANCEL_LABEL = "취소"
 const val DELETE_CONFIRM_TITLE = "이 기록을 삭제할까요?"
 const val DELETE_CONFIRM_MESSAGE = "삭제한 기록은 되돌릴 수 없어요"
 const val DELETE_FAILED = "기록을 삭제하지 못했어요"
+const val RENAME_LABEL = "이름 변경"
+const val ADD_NAME_LABEL = "이름 붙이기"
 
 const val MY_DRAWINGS_LIST_TAG = "myDrawingsList"
 const val MY_DRAWINGS_ITEM_SCORE_TAG = "myDrawingsItemScore"
 const val DRAWING_DETAIL_TAG = "drawingDetail"
 const val DRAWING_DETAIL_OVERLAY_TAG = "drawingDetailOverlay"
+const val DRAWING_DETAIL_NAME_TAG = "drawingDetailName"
 
 /** 운전석 쪽 목록 영역의 너비. 썸네일, 날짜와 점수가 한 줄에 들어가도록 조작 영역보다 넓다. */
 private val LIST_PANEL_WIDTH = 440.dp
@@ -113,6 +125,9 @@ fun MyDrawingsRoute(
         onRequestDelete = viewModel::requestDelete,
         onConfirmDelete = viewModel::confirmDelete,
         onCancelDelete = viewModel::cancelDelete,
+        onStartRename = viewModel::startRename,
+        onCancelRename = viewModel::cancelRename,
+        onSaveName = viewModel::saveName,
         onStartChallenge = onStartChallenge,
         onBack = onBack,
         modifier = modifier
@@ -134,7 +149,10 @@ fun MyDrawingsScreen(
     onCancelDelete: () -> Unit,
     onStartChallenge: () -> Unit,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onStartRename: () -> Unit = {},
+    onCancelRename: () -> Unit = {},
+    onSaveName: (String) -> Unit = {}
 ) {
     when (val list = state.list) {
         is DrawingListState.Loaded -> ListAndDetail(
@@ -152,6 +170,9 @@ fun MyDrawingsScreen(
                     state = state,
                     onRetryDetail = onRetryDetail,
                     onRequestDelete = onRequestDelete,
+                    onStartRename = onStartRename,
+                    onCancelRename = onCancelRename,
+                    onSaveName = onSaveName,
                     modifier = Modifier.fillMaxSize().testTag(DRAWING_DETAIL_TAG)
                 )
             },
@@ -326,6 +347,20 @@ private fun DrawingList(
     }
 }
 
+/**
+ * 목록 항목의 두 줄 글자. 이름이 있으면 이름과 날짜를, 없으면 날짜와 거리·소요 시간을 보여준다.
+ */
+fun listItemTexts(summary: CompletedDrawingSummary): Pair<String, String> {
+    val date = formatDateTime(summary.completedAtMillis)
+    val name = summary.name
+    return if (name != null) {
+        name to date
+    } else {
+        date to
+            "${formatDistance(summary.distanceMeters)} · ${formatDuration(summary.durationMillis)}"
+    }
+}
+
 /** SDG 리스트 항목처럼 썸네일, 두 줄 글자와 오른쪽 값을 한 줄에 둔다. 고른 항목은 Primary 배경으로 표시한다. */
 @Composable
 private fun DrawingListItem(
@@ -345,15 +380,17 @@ private fun DrawingListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         ModeThumbnail(mode = summary.mode)
+        val (title, subtitle) = listItemTexts(summary)
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = formatDateTime(summary.completedAtMillis),
+                text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${formatDistance(summary.distanceMeters)} · " +
-                    formatDuration(summary.durationMillis),
+                text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -377,6 +414,9 @@ private fun DrawingDetail(
     state: MyDrawingsUiState,
     onRetryDetail: () -> Unit,
     onRequestDelete: () -> Unit,
+    onStartRename: () -> Unit,
+    onCancelRename: () -> Unit,
+    onSaveName: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val layoutDirection = LocalLayoutDirection.current
@@ -397,9 +437,18 @@ private fun DrawingDetail(
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .width(CONTROL_PANEL_WIDTH)
+                            // 키보드가 열려 높이가 줄어도 이름 입력과 버튼까지 스크롤해 볼 수 있다.
+                            .verticalScroll(rememberScrollState())
                             .testTag(DRAWING_DETAIL_OVERLAY_TAG)
                     ) {
-                        DetailOverlayContent(state, onRetryDetail, onRequestDelete)
+                        DetailOverlayContent(
+                            state = state,
+                            onRetryDetail = onRetryDetail,
+                            onRequestDelete = onRequestDelete,
+                            onStartRename = onStartRename,
+                            onCancelRename = onCancelRename,
+                            onSaveName = onSaveName
+                        )
                     }
                 }
             }
@@ -411,11 +460,28 @@ private fun DrawingDetail(
 private fun ColumnScope.DetailOverlayContent(
     state: MyDrawingsUiState,
     onRetryDetail: () -> Unit,
-    onRequestDelete: () -> Unit
+    onRequestDelete: () -> Unit,
+    onStartRename: () -> Unit,
+    onCancelRename: () -> Unit,
+    onSaveName: (String) -> Unit
 ) {
     when (val detail = state.detail) {
-        is DrawingDetailState.Loaded -> {
+        is DrawingDetailState.Loaded -> if (state.rename != null) {
+            RenameEditor(
+                drawing = detail.drawing,
+                rename = state.rename,
+                onCancel = onCancelRename,
+                onSave = onSaveName
+            )
+        } else {
             ScoreCard(drawing = detail.drawing)
+            CarButton(
+                text = if (detail.drawing.name == null) ADD_NAME_LABEL else RENAME_LABEL,
+                onClick = onStartRename,
+                enabled = !state.deleting,
+                style = CarButtonStyle.Line,
+                modifier = Modifier.fillMaxWidth()
+            )
             if (state.deleteFailed) {
                 Text(
                     text = DELETE_FAILED,
@@ -450,9 +516,63 @@ private fun ColumnScope.DetailOverlayContent(
     }
 }
 
-/** 날짜, 큰 점수와 거리·소요 시간을 한 카드에 보여준다. */
+/** 이름 입력, 저장과 취소 버튼. 입력은 지금 이름으로 시작한다. */
+@Composable
+private fun RenameEditor(
+    drawing: CompletedDrawing,
+    rename: RenameState,
+    onCancel: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    val required = drawing.mode.nameRequired
+    val focusManager = LocalFocusManager.current
+    var input by rememberSaveable(drawing.id) { mutableStateOf(drawing.name.orEmpty()) }
+    var attempted by rememberSaveable(drawing.id) { mutableStateOf(false) }
+    DrawingNameInput(
+        name = input,
+        onNameChange = { input = it },
+        required = required,
+        showEmptyError = attempted,
+        enabled = !rename.saving
+    )
+    if (rename.failed) {
+        Text(
+            text = NAME_SAVE_FAILED,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+    CarButton(
+        text = if (rename.saving) SAVING_NAME_LABEL else SAVE_NAME_LABEL,
+        onClick = {
+            attempted = true
+            // 키보드를 닫아 저장 결과와 숨겼던 버튼이 보이게 한다.
+            focusManager.clearFocus()
+            if (validateDrawingName(input, required) is DrawingNameValidation.Valid) onSave(input)
+        },
+        enabled = !rename.saving,
+        modifier = Modifier.fillMaxWidth()
+    )
+    CarButton(
+        text = CANCEL_LABEL,
+        onClick = onCancel,
+        enabled = !rename.saving,
+        style = CarButtonStyle.Neutral,
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+/** 이름, 날짜, 큰 점수와 거리·소요 시간을 한 카드에 보여준다. */
 @Composable
 private fun ScoreCard(drawing: CompletedDrawing) {
+    drawing.name?.let {
+        Text(
+            text = it,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.testTag(DRAWING_DETAIL_NAME_TAG)
+        )
+    }
     Text(
         text = formatDateTime(drawing.completedAtMillis),
         style = MaterialTheme.typography.titleMedium,

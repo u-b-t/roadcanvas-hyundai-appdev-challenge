@@ -13,19 +13,33 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.shopl.sdg_common.enums.Keyboard
+import com.shopl.sdg_common.util.keyboardAsState
 import kr.roadcanvas.app.appContainer
+import kr.roadcanvas.app.drawing.DrawingNameValidation
+import kr.roadcanvas.app.drawing.normalizeDrawingName
+import kr.roadcanvas.app.drawing.validateDrawingName
 import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RoutePoint
 import kr.roadcanvas.app.modeselect.MY_DRAWINGS_LABEL
+import kr.roadcanvas.app.mydrawings.DrawingNameInput
+import kr.roadcanvas.app.mydrawings.NAME_SAVED
+import kr.roadcanvas.app.mydrawings.NAME_SAVE_FAILED
+import kr.roadcanvas.app.mydrawings.SAVE_NAME_LABEL
+import kr.roadcanvas.app.mydrawings.SAVING_NAME_LABEL
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
@@ -78,6 +92,7 @@ fun ChallengeResultRoute(
     ChallengeResultScreen(
         state = state,
         onRetrySave = viewModel::retrySave,
+        onSaveName = viewModel::saveName,
         onTryAgain = onTryAgain,
         onModeSelect = onModeSelect,
         onMyDrawings = onMyDrawings,
@@ -92,8 +107,11 @@ fun ChallengeResultScreen(
     onTryAgain: () -> Unit,
     onModeSelect: () -> Unit,
     onMyDrawings: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSaveName: (String) -> Unit = {}
 ) {
+    // 키보드가 열리면 이동 버튼을 숨겨 이름 입력창과 이름 저장 버튼이 남은 높이에 보이게 한다.
+    val keyboardOpen = keyboardAsState().value == Keyboard.Opened
     val result = (state as? ChallengeResultUiState.Calculated)?.result
     DriverSideOverlay(
         background = {
@@ -122,27 +140,32 @@ fun ChallengeResultScreen(
                         is ChallengeResultUiState.Calculated -> {
                             ResultSummary(state.result)
                             SaveStatus(state.saveStatus, onRetrySave)
+                            if (state.saveStatus == ResultSaveStatus.SAVED) {
+                                ResultNameEditor(state, onSaveName)
+                            }
                         }
                     }
                 }
             }
-            CarButton(
-                text = TRY_AGAIN_LABEL,
-                onClick = onTryAgain,
-                modifier = Modifier.fillMaxWidth()
-            )
-            CarButton(
-                text = BACK_TO_MODE_SELECT_LABEL,
-                onClick = onModeSelect,
-                style = CarButtonStyle.Neutral,
-                modifier = Modifier.fillMaxWidth()
-            )
-            CarButton(
-                text = MY_DRAWINGS_LABEL,
-                onClick = onMyDrawings,
-                style = CarButtonStyle.Neutral,
-                modifier = Modifier.fillMaxWidth()
-            )
+            if (!keyboardOpen) {
+                CarButton(
+                    text = TRY_AGAIN_LABEL,
+                    onClick = onTryAgain,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                CarButton(
+                    text = BACK_TO_MODE_SELECT_LABEL,
+                    onClick = onModeSelect,
+                    style = CarButtonStyle.Neutral,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                CarButton(
+                    text = MY_DRAWINGS_LABEL,
+                    onClick = onMyDrawings,
+                    style = CarButtonStyle.Neutral,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         },
         modifier = modifier
     )
@@ -182,6 +205,52 @@ private fun SaveStatus(status: ResultSaveStatus, onRetrySave: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
         }
+    }
+}
+
+/** 저장한 결과에 이름을 붙이는 입력창과 저장 버튼. 이름이 선택 입력인 모드는 비워 두고 넘어갈 수 있다. */
+@Composable
+private fun ResultNameEditor(
+    state: ChallengeResultUiState.Calculated,
+    onSaveName: (String) -> Unit
+) {
+    val required = state.result.mode.nameRequired
+    val focusManager = LocalFocusManager.current
+    // 저장한 이름이 바뀌면 입력창도 앞뒤 공백을 제거한 저장 값으로 맞춘다.
+    var input by rememberSaveable(state.name) { mutableStateOf(state.name.orEmpty()) }
+    var attempted by rememberSaveable { mutableStateOf(false) }
+    val saving = state.nameSaveStatus == NameSaveStatus.SAVING
+    DrawingNameInput(
+        name = input,
+        onNameChange = { input = it },
+        required = required,
+        showEmptyError = attempted,
+        enabled = !saving
+    )
+    CarButton(
+        text = if (saving) SAVING_NAME_LABEL else SAVE_NAME_LABEL,
+        onClick = {
+            attempted = true
+            // 키보드를 닫아 저장 결과와 숨겼던 버튼이 보이게 한다.
+            focusManager.clearFocus()
+            if (validateDrawingName(input, required) is DrawingNameValidation.Valid) {
+                onSaveName(input)
+            }
+        },
+        enabled = !saving,
+        style = CarButtonStyle.Line,
+        modifier = Modifier.fillMaxWidth()
+    )
+    when (state.nameSaveStatus) {
+        NameSaveStatus.SAVED -> if (normalizeDrawingName(input) == state.name.orEmpty()) {
+            StatusText(NAME_SAVED)
+        }
+        NameSaveStatus.FAILED -> Text(
+            text = NAME_SAVE_FAILED,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.error
+        )
+        NameSaveStatus.IDLE, NameSaveStatus.SAVING -> Unit
     }
 }
 

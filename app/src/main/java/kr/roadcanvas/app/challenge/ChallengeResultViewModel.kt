@@ -11,8 +11,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kr.roadcanvas.app.drawing.CompletedDrawingRepository
+import kr.roadcanvas.app.drawing.DrawingNameValidation
 import kr.roadcanvas.app.drawing.InProgressDrawingRepository
 import kr.roadcanvas.app.drawing.StorageResult
+import kr.roadcanvas.app.drawing.validateDrawingName
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingState
 import kr.roadcanvas.app.score.CircleScoreCalculator
@@ -25,6 +27,8 @@ import kr.roadcanvas.app.score.CircleScoreCalculator
  * 저장에 실패하면 진행 중 기록을 남겨 두어 다시 저장하거나 앱을 다시 실행해 저장할 수 있다.
  * 완료 기록을 저장한 뒤 진행 중 기록을 지우기 전에 프로세스가 종료됐다면, 같은 완료 시각의 기록을 찾아
  * 다시 저장하지 않고 그 기록을 보여준다.
+ *
+ * 이름을 선택 입력하는 모드는 완료 기록을 저장한 뒤 [saveName]으로 이름을 붙인다.
  */
 class ChallengeResultViewModel(
     private val startedAtMillis: Long,
@@ -51,6 +55,33 @@ class ChallengeResultViewModel(
         if (current.saveStatus != ResultSaveStatus.FAILED) return
         mutableState.value = current.copy(saveStatus = ResultSaveStatus.SAVING)
         viewModelScope.launch { save(current.result) }
+    }
+
+    /**
+     * 저장한 완료 기록에 [input]을 이름으로 붙인다. 완료 기록을 저장하기 전이거나 이름 저장 중이면 무시하고,
+     * 이름 규칙에 맞지 않으면 저장하지 않는다. 화면이 규칙 위반을 안내한다.
+     */
+    fun saveName(input: String) {
+        val current = mutableState.value as? ChallengeResultUiState.Calculated ?: return
+        if (current.saveStatus != ResultSaveStatus.SAVED) return
+        if (current.nameSaveStatus == NameSaveStatus.SAVING) return
+        val id = savedStateHandle.get<Long>(KEY_SAVED_ID) ?: return
+        val validation = validateDrawingName(input, current.result.mode.nameRequired)
+        val name = (validation as? DrawingNameValidation.Valid ?: return).name
+        mutableState.value = current.copy(nameSaveStatus = NameSaveStatus.SAVING)
+        viewModelScope.launch {
+            val renamed = withContext(NonCancellable) { completedRepository.rename(id, name) }
+            if (renamed is StorageResult.Failure) onStorageFailure(renamed.cause)
+            mutableState.update {
+                val calculated = it as? ChallengeResultUiState.Calculated ?: return@update it
+                when (renamed) {
+                    is StorageResult.Success ->
+                        calculated.copy(name = name, nameSaveStatus = NameSaveStatus.SAVED)
+                    is StorageResult.Failure ->
+                        calculated.copy(nameSaveStatus = NameSaveStatus.FAILED)
+                }
+            }
+        }
     }
 
     private suspend fun load() {
@@ -82,7 +113,8 @@ class ChallengeResultViewModel(
         } else {
             ChallengeResultUiState.Calculated(
                 challengeResultOf(drawing, calculator),
-                ResultSaveStatus.SAVED
+                ResultSaveStatus.SAVED,
+                name = drawing.name
             )
         }
         // 저장한 뒤 진행 중 기록을 지우지 못했다면 다시 지운다.

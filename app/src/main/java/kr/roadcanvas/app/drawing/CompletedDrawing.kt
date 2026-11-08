@@ -5,6 +5,7 @@ package kr.roadcanvas.app.drawing
  *
  * [metrics]는 점수 세부 지표 이름과 값이다. 점수 계산 모델과 따로 바뀔 수 있도록 이름으로 저장한다.
  * 저장할 때 [id]는 쓰지 않고 저장소가 새 ID를 정한다.
+ * [name]은 사용자가 붙인 이름이며 붙이지 않았으면 null이다.
  */
 data class CompletedDrawing(
     val id: Long = NEW_ID,
@@ -14,7 +15,8 @@ data class CompletedDrawing(
     val score: Int,
     val metrics: Map<String, Double>,
     val distanceMeters: Double,
-    val durationMillis: Long
+    val durationMillis: Long,
+    val name: String? = null
 ) {
     companion object {
         const val NEW_ID = 0L
@@ -28,7 +30,8 @@ data class CompletedDrawingSummary(
     val completedAtMillis: Long,
     val score: Int,
     val distanceMeters: Double,
-    val durationMillis: Long
+    val durationMillis: Long,
+    val name: String? = null
 )
 
 /**

@@ -42,6 +42,10 @@ abstract class CompletedDrawingDao {
     )
     abstract suspend fun findId(mode: String, completedAtMillis: Long): Long?
 
+    /** 바뀐 행 수를 돌려준다. 없는 ID면 0이다. */
+    @Query("UPDATE completed_drawing SET name = :name WHERE id = :id")
+    abstract suspend fun rename(id: Long, name: String?): Int
+
     @Query("DELETE FROM completed_drawing WHERE id = :id")
     abstract suspend fun delete(id: Long)
 

@@ -72,6 +72,47 @@ class DrawingStorageSteps {
         summaries = runBlocking { storage.completed.summaries() }.value()
     }
 
+    @When("저장한 그림의 이름을 {string}로 바꾼다")
+    fun renameSavedDrawing(name: String) {
+        runBlocking { storage.completed.rename(checkNotNull(savedDrawing).id, name) }.value()
+    }
+
+    @When("저장한 그림의 이름을 지운다")
+    fun clearSavedDrawingName() {
+        runBlocking { storage.completed.rename(checkNotNull(savedDrawing).id, null) }.value()
+    }
+
+    @When("없는 그림의 이름을 바꾼다")
+    fun renameMissingDrawing() {
+        lastResult = runBlocking { storage.completed.rename(MISSING_ID, "이름") }
+    }
+
+    @Then("이름 변경은 실패 결과를 받는다")
+    fun assertRenameFailed() {
+        assertTrue("결과: $lastResult", lastResult is StorageResult.Failure)
+    }
+
+    @Then("저장한 그림과 완료 기록 목록의 이름은 {string}다")
+    fun assertSavedDrawingName(name: String) {
+        val id = checkNotNull(savedDrawing).id
+        assertEquals(name, runBlocking { storage.completed.find(id) }.value()?.name)
+        assertEquals(
+            listOf(name),
+            runBlocking { storage.completed.summaries() }.value().map { it.name }
+        )
+    }
+
+    @Then("저장한 그림의 이름이 없다")
+    fun assertSavedDrawingUnnamed() {
+        val id = checkNotNull(savedDrawing).id
+        assertNull(runBlocking { storage.completed.find(id) }.value()?.name)
+    }
+
+    @Then("완료 기록 목록의 이름은 모두 없다")
+    fun assertSummariesUnnamed() {
+        assertTrue("목록: $summaries", summaries.isNotEmpty() && summaries.all { it.name == null })
+    }
+
     @Then("완료 기록 목록의 점수는 {string} 순서다")
     fun assertSummaryOrder(scores: String) {
         assertEquals(scores, summaries.joinToString { it.score.toString() })
@@ -186,6 +227,7 @@ class DrawingStorageSteps {
                 "완료 기록 목록 조회" -> completed.summaries()
                 "완료 기록 단건 조회" -> completed.find(1)
                 "완료 기록 삭제" -> completed.delete(1)
+                "완료 기록 이름 변경" -> completed.rename(1, "이름")
                 "최고 점수 조회" -> completed.bestScore(DrawingMode.CIRCLE)
                 "진행 중 기록 시작" -> inProgress.start(DrawingMode.CIRCLE, MINUTE)
                 "경로 점 추가" -> inProgress.appendPoints(routePoints(1))
@@ -227,6 +269,26 @@ class DrawingStorageSteps {
                 )
             }
         }
+    }
+
+    @Given("버전 {int} 스키마로 만든 저장소 DB에 점수 {int}점인 완료 기록이 있다")
+    fun createDatabaseWithCompleted(version: Int, score: Int) {
+        application.deleteDatabase(TEST_DATABASE)
+        migrationHelper.createDatabase(TEST_DATABASE, version).use { db ->
+            // 이전 버전 스키마에는 엔티티 클래스를 쓸 수 없으므로 SQL로 넣는다.
+            db.execSQL(
+                "INSERT INTO completed_drawing " +
+                    "(id, mode, completed_at, score, distance_meters, duration_millis) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                arrayOf(1, DrawingMode.CIRCLE.key, MINUTE, score, 314.2, 63_000)
+            )
+        }
+    }
+
+    @When("올린 저장소에서 완료 기록 목록을 조회한다")
+    fun loadMigratedSummaries() {
+        openStorage()
+        summaries = runBlocking { storage.completed.summaries() }.value()
     }
 
     @When("올린 저장소에서 진행 중인 도전을 불러온다")
@@ -295,5 +357,6 @@ class DrawingStorageSteps {
     private companion object {
         const val TEST_DATABASE = "test-drawings.db"
         const val MINUTE = 60_000L
+        const val MISSING_ID = 42L
     }
 }

@@ -5,11 +5,25 @@ Feature: 그림 기기 저장
   Issues:
   - [#16 완료한 그림의 기기 저장 기능 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/16)
   - [#38 종료 후 저장 전 프로세스 종료 시 결과 화면으로 복원](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/38)
+  - [#78 완료한 그림에 이름 붙이기](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/78)
 
   Scenario: 완료한 그림을 저장하고 다시 불러온다
     Given 기기 저장소가 비어 있다
     When 점수 87점, 경로 점 3개인 동그라미 그림을 저장한다
     Then 저장한 그림을 불러오면 경로와 점수, 세부 지표가 저장한 내용과 같다
+
+  Scenario: 완료한 그림의 이름을 바꾸거나 지우고 다시 불러온다
+    Given 기기 저장소가 비어 있다
+    And 점수 87점, 경로 점 3개인 동그라미 그림을 저장한다
+    When 저장한 그림의 이름을 "한강 동그라미"로 바꾼다
+    Then 저장한 그림과 완료 기록 목록의 이름은 "한강 동그라미"다
+    When 저장한 그림의 이름을 지운다
+    Then 저장한 그림의 이름이 없다
+
+  Scenario: 없는 그림의 이름은 바꿀 수 없다
+    Given 기기 저장소가 비어 있다
+    When 없는 그림의 이름을 바꾼다
+    Then 이름 변경은 실패 결과를 받는다
 
   Scenario: 완료 기록 목록은 최신순으로 정렬된다
     Given 기기 저장소가 비어 있다
@@ -87,6 +101,7 @@ Feature: 그림 기기 저장
       | 완료 기록 목록 조회 |
       | 완료 기록 단건 조회 |
       | 완료 기록 삭제   |
+      | 완료 기록 이름 변경 |
       | 최고 점수 조회   |
       | 진행 중 기록 시작  |
       | 경로 점 추가    |
@@ -106,3 +121,10 @@ Feature: 그림 기기 저장
     And 올린 저장소에서 진행 중인 도전을 불러온다
     Then 진행 중인 도전의 시작 시각은 5분이고 경로 점 3개가 추가한 순서대로 있다
     And 진행 중인 도전은 종료되지 않았다
+
+  Scenario: 이전 버전 저장소의 완료 기록은 올린 뒤 이름 없는 기록으로 불러온다
+    Given 버전 2 스키마로 만든 저장소 DB에 점수 87점인 완료 기록이 있다
+    When 등록된 마이그레이션으로 현재 버전까지 올린다
+    And 올린 저장소에서 완료 기록 목록을 조회한다
+    Then 완료 기록 목록의 점수는 "87" 순서다
+    And 완료 기록 목록의 이름은 모두 없다
