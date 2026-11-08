@@ -253,6 +253,91 @@ class ChallengeResultViewModelTest {
         assertEquals(1, storageFailures.size)
     }
 
+    @Test
+    fun `저장한 결과에 앞뒤 공백을 제거한 이름을 붙인다`() = runTest(dispatcher) {
+        saveInProgress(circlePath())
+        val viewModel = viewModel()
+
+        viewModel.saveName("  첫 동그라미  ")
+
+        val state = viewModel.uiState.value as ChallengeResultUiState.Calculated
+        assertEquals(NameSaveStatus.SAVED, state.nameSaveStatus)
+        assertEquals("첫 동그라미", state.name)
+        assertEquals("첫 동그라미", savedSummaries().single().name)
+    }
+
+    @Test
+    fun `동그라미 챌린지는 이름을 비워 두어도 저장되고 이름 없이 남는다`() = runTest(dispatcher) {
+        saveInProgress(circlePath())
+        val viewModel = viewModel()
+
+        viewModel.saveName("   ")
+
+        val state = viewModel.uiState.value as ChallengeResultUiState.Calculated
+        assertEquals(ResultSaveStatus.SAVED, state.saveStatus)
+        assertEquals(NameSaveStatus.SAVED, state.nameSaveStatus)
+        assertNull(state.name)
+        assertNull(savedSummaries().single().name)
+    }
+
+    @Test
+    fun `20자를 넘는 이름은 저장하지 않는다`() = runTest(dispatcher) {
+        saveInProgress(circlePath())
+        val viewModel = viewModel()
+
+        viewModel.saveName("가".repeat(21))
+
+        val state = viewModel.uiState.value as ChallengeResultUiState.Calculated
+        assertEquals(NameSaveStatus.IDLE, state.nameSaveStatus)
+        assertNull(savedSummaries().single().name)
+    }
+
+    @Test
+    fun `완료 기록을 저장하지 못했으면 이름을 저장하지 않는다`() = runTest(dispatcher) {
+        saveInProgress(circlePath())
+        completed.failure = IllegalStateException("저장 실패")
+        val viewModel = viewModel()
+
+        viewModel.saveName("이름")
+
+        val state = viewModel.uiState.value as ChallengeResultUiState.Calculated
+        assertEquals(ResultSaveStatus.FAILED, state.saveStatus)
+        assertEquals(NameSaveStatus.IDLE, state.nameSaveStatus)
+    }
+
+    @Test
+    fun `이름 저장에 실패하면 실패 상태이고 다시 저장할 수 있다`() = runTest(dispatcher) {
+        saveInProgress(circlePath())
+        val viewModel = viewModel()
+        completed.failure = IllegalStateException("이름 저장 실패")
+
+        viewModel.saveName("이름")
+
+        val failed = viewModel.uiState.value as ChallengeResultUiState.Calculated
+        assertEquals(NameSaveStatus.FAILED, failed.nameSaveStatus)
+        assertNull(failed.name)
+        assertEquals(1, storageFailures.size)
+
+        completed.failure = null
+        viewModel.saveName("이름")
+
+        val saved = viewModel.uiState.value as ChallengeResultUiState.Calculated
+        assertEquals(NameSaveStatus.SAVED, saved.nameSaveStatus)
+        assertEquals("이름", saved.name)
+    }
+
+    @Test
+    fun `화면이 다시 만들어지면 저장한 이름을 보여준다`() = runTest(dispatcher) {
+        saveInProgress(circlePath())
+        val handle = SavedStateHandle()
+        viewModel(handle).saveName("한강 한 바퀴")
+
+        val restored = viewModel(handle).uiState.value as ChallengeResultUiState.Calculated
+
+        assertEquals("한강 한 바퀴", restored.name)
+        assertEquals(1, savedSummaries().size)
+    }
+
     private companion object {
         const val START = 1_700_000_000_000L
         const val END = START + 185_000L

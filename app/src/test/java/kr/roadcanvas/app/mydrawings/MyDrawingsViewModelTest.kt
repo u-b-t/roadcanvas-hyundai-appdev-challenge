@@ -239,11 +239,115 @@ class MyDrawingsViewModelTest {
     }
 
     /** 원하는 시점까지 응답을 미뤄 로딩과 삭제 중 상태를 확인하는 저장소 */
+    @Test
+    fun `상세에서 이름을 바꾸면 상세와 목록의 이름이 바뀌고 입력을 닫는다`() = runTest(dispatcher) {
+        save(minute = 1, score = 70)
+        val id = save(minute = 2, score = 50)
+        val viewModel = MyDrawingsViewModel(repository)
+
+        viewModel.startRename()
+        assertEquals(RenameState(), viewModel.state.value.rename)
+        viewModel.saveName("  저녁 산책  ")
+
+        val state = viewModel.state.value
+        assertNull(state.rename)
+        assertEquals("저녁 산책", state.loadedDrawing.name)
+        assertEquals("저녁 산책", state.items.single { it.id == id }.name)
+        assertEquals(listOf("저녁 산책", null), state.items.map { it.name })
+        assertEquals("저녁 산책", (fake.find(id) as StorageResult.Success).value?.name)
+    }
+
+    @Test
+    fun `동그라미 기록은 이름을 비워 저장하면 이름을 지운다`() = runTest(dispatcher) {
+        val id = save(minute = 1, score = 70)
+        fake.rename(id, "이전 이름")
+        val viewModel = MyDrawingsViewModel(repository)
+
+        viewModel.startRename()
+        viewModel.saveName(" ")
+
+        assertNull(viewModel.state.value.loadedDrawing.name)
+        assertNull(viewModel.state.value.items.single().name)
+    }
+
+    @Test
+    fun `이름 규칙에 맞지 않으면 저장하지 않고 입력을 유지한다`() = runTest(dispatcher) {
+        save(minute = 1, score = 70)
+        val viewModel = MyDrawingsViewModel(repository)
+
+        viewModel.startRename()
+        viewModel.saveName("가".repeat(21))
+
+        assertEquals(RenameState(), viewModel.state.value.rename)
+        assertNull(viewModel.state.value.loadedDrawing.name)
+    }
+
+    @Test
+    fun `이름 변경에 실패하면 입력을 남기고 실패를 표시한다`() = runTest(dispatcher) {
+        save(minute = 1, score = 70)
+        val viewModel = MyDrawingsViewModel(repository)
+        viewModel.startRename()
+        fake.failure = IllegalStateException("실패")
+
+        viewModel.saveName("새 이름")
+
+        assertEquals(RenameState(failed = true), viewModel.state.value.rename)
+        assertNull(viewModel.state.value.loadedDrawing.name)
+    }
+
+    @Test
+    fun `이름을 저장하는 동안에는 저장 중이고 취소할 수 없다`() = runTest(dispatcher) {
+        save(minute = 1, score = 70)
+        val viewModel = MyDrawingsViewModel(repository)
+        viewModel.startRename()
+        repository.renameGate = CompletableDeferred()
+
+        viewModel.saveName("새 이름")
+        viewModel.cancelRename()
+
+        assertEquals(RenameState(saving = true), viewModel.state.value.rename)
+        repository.renameGate?.complete(Unit)
+        assertNull(viewModel.state.value.rename)
+        assertEquals("새 이름", viewModel.state.value.loadedDrawing.name)
+    }
+
+    @Test
+    fun `이름 변경을 취소하거나 다른 기록을 고르면 입력을 닫는다`() = runTest(dispatcher) {
+        val other = save(minute = 1, score = 70)
+        save(minute = 2, score = 50)
+        val viewModel = MyDrawingsViewModel(repository)
+
+        viewModel.startRename()
+        viewModel.cancelRename()
+        assertNull(viewModel.state.value.rename)
+
+        viewModel.startRename()
+        viewModel.select(other)
+        assertNull(viewModel.state.value.rename)
+    }
+
+    @Test
+    fun `이름을 바꾸는 동안에는 삭제를 확인하지 않는다`() = runTest(dispatcher) {
+        save(minute = 1, score = 70)
+        val viewModel = MyDrawingsViewModel(repository)
+
+        viewModel.startRename()
+        viewModel.requestDelete()
+
+        assertFalse(viewModel.state.value.deleteConfirmVisible)
+    }
+
     private class GatedRepository(private val delegate: CompletedDrawingRepository) :
         CompletedDrawingRepository by delegate {
         var summariesGate: CompletableDeferred<Unit>? = null
         var findGate: CompletableDeferred<Unit>? = null
         var deleteGate: CompletableDeferred<Unit>? = null
+        var renameGate: CompletableDeferred<Unit>? = null
+
+        override suspend fun rename(id: Long, name: String?): StorageResult<Unit> {
+            renameGate?.await()
+            return delegate.rename(id, name)
+        }
 
         override suspend fun summaries(): StorageResult<List<CompletedDrawingSummary>> {
             summariesGate?.await()

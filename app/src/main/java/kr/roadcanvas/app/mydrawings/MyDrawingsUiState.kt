@@ -3,7 +3,7 @@ package kr.roadcanvas.app.mydrawings
 import kr.roadcanvas.app.drawing.CompletedDrawing
 import kr.roadcanvas.app.drawing.CompletedDrawingSummary
 
-/** 내 그림 화면의 목록, 선택한 기록의 상세와 삭제 진행 상태 */
+/** 내 그림 화면의 목록, 선택한 기록의 상세와 삭제·이름 변경 진행 상태 */
 data class MyDrawingsUiState(
     val list: DrawingListState = DrawingListState.Loading,
     val selectedId: Long? = null,
@@ -11,8 +11,13 @@ data class MyDrawingsUiState(
     val detail: DrawingDetailState? = null,
     val deleteConfirmVisible: Boolean = false,
     val deleting: Boolean = false,
-    val deleteFailed: Boolean = false
+    val deleteFailed: Boolean = false,
+    /** 선택한 기록의 이름을 바꾸는 중이면 null이 아니다. */
+    val rename: RenameState? = null
 )
+
+/** 상세의 이름 변경 입력 상태 */
+data class RenameState(val saving: Boolean = false, val failed: Boolean = false)
 
 sealed interface DrawingListState {
     data object Loading : DrawingListState

@@ -10,7 +10,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.roadcanvas.app.drawing.CompletedDrawingRepository
 import kr.roadcanvas.app.drawing.CompletedDrawingSummary
+import kr.roadcanvas.app.drawing.DrawingNameValidation
 import kr.roadcanvas.app.drawing.StorageResult
+import kr.roadcanvas.app.drawing.validateDrawingName
 
 /**
  * 완료 기록 요약 목록을 불러오고 선택한 기록만 경로까지 조회한다.
@@ -37,7 +39,12 @@ class MyDrawingsViewModel(private val repository: CompletedDrawingRepository) : 
         if (mutableState.value.deleting) return
         detailJob?.cancel()
         mutableState.update {
-            it.copy(selectedId = id, detail = DrawingDetailState.Loading, deleteFailed = false)
+            it.copy(
+                selectedId = id,
+                detail = DrawingDetailState.Loading,
+                deleteFailed = false,
+                rename = null
+            )
         }
         detailJob = viewModelScope.launch {
             val detail = when (val result = repository.find(id)) {
@@ -54,9 +61,65 @@ class MyDrawingsViewModel(private val repository: CompletedDrawingRepository) : 
         mutableState.value.selectedId?.let(::select)
     }
 
+    /** 상세를 불러온 기록의 이름 변경 입력을 연다. */
+    fun startRename() {
+        mutableState.update {
+            if (it.detail is DrawingDetailState.Loaded && !it.deleting) {
+                it.copy(rename = RenameState())
+            } else {
+                it
+            }
+        }
+    }
+
+    /** 저장 중이 아니면 이름 변경 입력을 닫는다. */
+    fun cancelRename() {
+        mutableState.update { if (it.rename?.saving == true) it else it.copy(rename = null) }
+    }
+
+    /**
+     * 선택한 기록의 이름을 [input]으로 바꾼다. 이름 규칙에 맞지 않으면 저장하지 않는다.
+     * 성공하면 상세와 목록의 이름을 바꾸고 입력을 닫으며, 실패하면 입력을 남기고 실패를 표시한다.
+     */
+    fun saveName(input: String) {
+        val current = mutableState.value
+        val drawing = (current.detail as? DrawingDetailState.Loaded)?.drawing ?: return
+        if (current.rename == null || current.rename.saving) return
+        val validation = validateDrawingName(input, drawing.mode.nameRequired)
+        val name = (validation as? DrawingNameValidation.Valid ?: return).name
+        mutableState.update { it.copy(rename = RenameState(saving = true)) }
+        viewModelScope.launch {
+            val renamed = repository.rename(drawing.id, name)
+            mutableState.update { state ->
+                when (renamed) {
+                    is StorageResult.Failure ->
+                        state.copy(rename = state.rename?.let { RenameState(failed = true) })
+                    is StorageResult.Success -> state.copy(
+                        rename = null,
+                        detail = (state.detail as? DrawingDetailState.Loaded)
+                            ?.takeIf { it.drawing.id == drawing.id }
+                            ?.let { DrawingDetailState.Loaded(it.drawing.copy(name = name)) }
+                            ?: state.detail,
+                        list = (state.list as? DrawingListState.Loaded)?.let { list ->
+                            DrawingListState.Loaded(
+                                list.items.map {
+                                    if (it.id == drawing.id) it.copy(name = name) else it
+                                }
+                            )
+                        } ?: state.list
+                    )
+                }
+            }
+        }
+    }
+
     fun requestDelete() {
         mutableState.update {
-            if (it.selectedId != null && !it.deleting) it.copy(deleteConfirmVisible = true) else it
+            if (it.selectedId != null && !it.deleting && it.rename == null) {
+                it.copy(deleteConfirmVisible = true)
+            } else {
+                it
+            }
         }
     }
 

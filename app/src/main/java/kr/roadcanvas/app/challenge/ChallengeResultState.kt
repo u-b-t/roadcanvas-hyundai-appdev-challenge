@@ -111,6 +111,15 @@ enum class ResultSaveStatus {
     FAILED
 }
 
+/** 저장한 완료 기록에 이름을 붙이는 단계 */
+enum class NameSaveStatus {
+    /** 이름 저장을 요청하지 않았다. */
+    IDLE,
+    SAVING,
+    SAVED,
+    FAILED
+}
+
 /** 결과 화면 상태: 계산 중 → 저장 중 → 저장됨 또는 저장 실패 */
 sealed interface ChallengeResultUiState {
     /** 종료한 기록을 불러와 점수를 계산하는 중 */
@@ -119,6 +128,11 @@ sealed interface ChallengeResultUiState {
     /** 종료한 기록을 찾거나 불러오지 못했다. */
     data object Unavailable : ChallengeResultUiState
 
-    data class Calculated(val result: ChallengeResult, val saveStatus: ResultSaveStatus) :
-        ChallengeResultUiState
+    /** [name]은 저장한 완료 기록의 이름이며 붙이지 않았으면 null이다. */
+    data class Calculated(
+        val result: ChallengeResult,
+        val saveStatus: ResultSaveStatus,
+        val name: String? = null,
+        val nameSaveStatus: NameSaveStatus = NameSaveStatus.IDLE
+    ) : ChallengeResultUiState
 }
