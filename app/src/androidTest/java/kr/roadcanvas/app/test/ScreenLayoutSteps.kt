@@ -54,7 +54,8 @@ class ScreenLayoutSteps(private val ruleHolder: ComposeRuleHolder) {
 
     @Then("정차 안내 경고 아이콘이 문장 위 화면 왼쪽 절반에 크게 표시된다")
     fun assertStopNoticeIcon() {
-        val icon = boundsOf(hasTestTag(STOP_NOTICE_ICON_TAG))
+        // 설명 없는 아이콘은 병합된 트리에서 상위 노드에 합쳐질 수 있어 병합 전 트리에서 찾는다.
+        val icon = boundsOf(hasTestTag(STOP_NOTICE_ICON_TAG), useUnmergedTree = true)
         val title = boundsOf(hasText(STOP_NOTICE_TITLE))
         val root = composeRule.onRoot().getUnclippedBoundsInRoot()
         assertTrue("아이콘 $icon, 제목 $title", icon.bottom <= title.top)
@@ -62,14 +63,11 @@ class ScreenLayoutSteps(private val ruleHolder: ComposeRuleHolder) {
         assertTrue("아이콘 $icon", icon.width >= STOP_NOTICE_ICON_SIZE)
     }
 
-    private fun boundsOf(matcher: SemanticsMatcher) = run {
+    private fun boundsOf(matcher: SemanticsMatcher, useUnmergedTree: Boolean = false) = run {
         composeRule.mainClock.autoAdvance = true
         composeRule.waitUntil(WAIT_TIMEOUT_MILLIS) {
-            composeRule.onAllNodes(
-                matcher,
-                useUnmergedTree = true
-            ).fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodes(matcher, useUnmergedTree).fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNode(matcher, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        composeRule.onNode(matcher, useUnmergedTree).getUnclippedBoundsInRoot()
     }
 }
