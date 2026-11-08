@@ -39,6 +39,7 @@
 - 모의 위치는 위치 수신을 시작하면 경로를 처음부터 반복 재생한다. 기본값은 중심 서울시청(37.5665, 126.9780), 반지름 50m, 초속 5m(시속 18km), 재생 간격 1초다. 원은 63개 지점으로 약 63초에 한 바퀴, 직선 왕복은 동서 100m를 5m 간격으로 왕복(40개 지점)하고, 찌그러진 원은 중심 거리가 약 33~64m로 달라지며, 정지는 중심 한 지점을 반복한다. 값은 `SimulatedRouteConfig`에서 바꾼다.
 - 모의 주행 규제는 항상 조작 가능 상태를 준다.
 - `aaos` 주행 규제는 `kr.roadcanvas.app.vehicle.aaos`에서 `CarUxRestrictionsManager`를 구독한다. 수집자가 있을 때만 Car 서비스에 연결하고, Car API가 없거나 연결 실패·첫 값 미수신·예외면 확인 불가로 처리한다. 확인 불가는 조작 가능으로 보지 않는다.
+- `MainActivity`는 `distractionOptimized` meta-data로 Distraction Optimization(DO)을 선언해 주행 중에도 플랫폼이 앱 화면을 가리지 않는다. 대신 앱이 주행 규제를 직접 적용한다. `RoadCanvasNavHost`의 모든 화면은 `StopNoticeGate`로 감싸고, 주행 규제가 조작 제한이거나 확인 불가이면 `DRIVING_VISIBLE_ROUTES`(진행 화면, 시작 화면) 외의 화면을 "정차 후 이용할 수 있어요" 안내로 바꾸고 뒤로 가기를 막는다. 가린 동안 화면은 구성에서 빠지지만 저장 가능한 상태는 남아 정차하면 원래 화면으로 돌아온다. 진행 화면은 주행 중에도 경로·경과 시간·이동 거리를 갱신하고 종료·포기만 막는다. 새 화면은 `screen(...)`으로 등록하고, 주행 중 보여줘도 되는 화면만 `DRIVING_VISIBLE_ROUTES`에 넣는다. 디버그 전용 Activity에는 DO를 선언하지 않는다.
 - `pleos` 위치는 `kr.roadcanvas.app.vehicle.pleos`에서 FusedLocation SDK를 쓴다. 수집할 때마다 새 인스턴스로 지원 확인·초기화·리스너 등록을 하고 수집을 멈추면 해제한다. 에뮬레이터에서 앱은 사용자 10으로 실행되므로 권한은 `adb shell pm grant --user 10 kr.roadcanvas.app pleos.car.permission.FUSED_LOCATION`으로 준다. 확인 결과와 미검증 항목은 [FusedLocation 검증 결과](docs/pleos-fused-location-verification.md)에 있다.
 - androidTest는 `RoadCanvasTestRunner`가 `TestRoadCanvasApplication`을 사용해 `FakeAppContainer`를 주입한다. 대체 구현은 `app/src/sharedTest/`에 있어 단위 테스트와 androidTest에서 함께 쓴다. 테스트에서 위치 상태·좌표와 주행 규제 상태를 원하는 시점에 바꿀 수 있다.
 - androidTest 화면은 `ActivityScenario.launch`를 직접 쓰지 않고 `TestScreens`(`launch`, `launchContent`)로 연다. 화면을 닫거나 시나리오가 끝나 태스크가 지워지면 Pleos 런처가 잠시 뒤(에뮬레이터에서 22~145ms) 지도 태스크를 앞으로 가져온다. 그 사이에 연 화면은 가려져 일시정지되고 `No compose hierarchies found`로 실패하므로, `TestScreens`는 태스크가 지워진 뒤 처음 화면을 열기 전에 창 순서가 400ms 동안 바뀌지 않을 때까지 기다린다. 시나리오 전후 정리(화면 닫기, 대체 구현 초기화, 남은 구독 확인)는 `ScenarioHooks`가 하므로 단계 클래스에서 화면을 따로 닫지 않는다.
@@ -55,7 +56,7 @@
 
 - 기록 세션은 `kr.roadcanvas.app.recording`의 `ChallengeRecorder` 하나를 앱 전체에서 공유하고, `AppContainer.recordingRunner`가 실행한다. 앱은 `foregroundServiceType="location"`인 `ChallengeRecordingService`에서, androidTest와 단위 테스트는 `app/src/sharedTest/`의 `FakeRecordingRunner`로 코루틴에서 실행한다.
 - Android 14(targetSdk 34)에서 위치 타입 포그라운드 서비스는 `ACCESS_COARSE_LOCATION` 또는 `ACCESS_FINE_LOCATION`이 없으면 `SecurityException`으로 시작하지 못한다. Pleos 위치 권한만으로는 안 되는 것을 에뮬레이터에서 확인했으므로 시작 버튼을 누를 때 대략적인 위치 권한과 알림 권한을 요청한다. 에뮬레이터에서 직접 허용하려면 `adb shell pm grant --user 10 kr.roadcanvas.app android.permission.ACCESS_COARSE_LOCATION`을 쓴다.
-- 서비스는 기록한 점 수를 logcat `ChallengeRecording` 태그로 남긴다. 주행 중 화면이 차단된 동안의 기록 여부는 `adb logcat -s ChallengeRecording`으로 확인한다.
+- 서비스는 기록한 점 수를 logcat `ChallengeRecording` 태그로 남긴다. 화면이 멈춘 동안(화면 꺼짐, 다른 앱으로 전환)의 기록 여부는 `adb logcat -s ChallengeRecording`으로 확인한다.
 - 종료하지 않은 진행 중 기록이 저장되어 있으면 앱을 다시 실행할 때 진행 화면으로 가서 이어서 기록한다. 종료하면 위치 구독을 멈추고 진행 중 기록에 종료 시각(`ended_at`, DB 버전 2)만 남긴 채 시작·종료 시각을 결과 화면 경로 인자로 넘긴다. 결과 화면은 완료 기록 저장에 성공한 뒤 진행 중 기록을 지운다.
 - 결과 화면(`ChallengeResultViewModel`)은 저장한 완료 기록 ID를 `SavedStateHandle`에 남겨 화면이나 프로세스가 다시 만들어져도 한 번만 저장한다. 저장에 실패하면 진행 중 기록을 남기고 다시 저장 버튼을 보인다. 앱을 다시 열면 `ChallengeRecorder.unsavedFinish()`로 저장하지 못한 결과를 찾아 결과 화면으로 간다. 같은 프로세스면 메모리의 종료 상태를, 프로세스가 종료된 뒤면 저장된 종료 시각을 쓴다. 종료한 기록은 진행 화면이나 기록 서비스가 이어서 기록하지 않는다. 완료 기록을 저장한 뒤 진행 중 기록을 지우기 전에 프로세스가 종료됐으면 결과 화면이 같은 모드·완료 시각의 기록(`CompletedDrawingRepository.findId`)을 찾아 다시 저장하지 않는다. androidTest에서는 `FakeAppContainer.restartProcess()`로 저장소만 남기고 기록 세션을 새로 만들어 프로세스 재생성을 흉내 낸다.
 
@@ -113,7 +114,7 @@
 - 브라우저 조작 도구가 없으면 현재 버전에서 확인된 콘솔의 비공식 로컬 HTTP 인터페이스를 사용할 수 있다. `GET /vehicle/state`에서 `gear.bridge_ready`와 `gear.actual.value`를 확인하고, `PUT /vehicle/gear?gear=Drive` 또는 `gear=Park`로 변경한 뒤 상태를 다시 조회한다. 이 인터페이스는 SDK의 공식 API가 아니므로 버전마다 달라질 수 있다.
 - Virtual Console은 위치(GNSS)를 바꾸지 않는다. 콘솔로 주행해도 FusedLocation 위치는 그대로다. 콘솔 주행을 위치로 이어 시험하려면 콘솔 페이지를 열어 둔 채 `python3 scripts/console-gps-bridge.py --adb "$ANDROID_HOME/platform-tools/adb"`를 실행한다. 0.5초마다 `/vehicle/state`의 기어·속도·핸들 각도를 읽어 위치를 계산하고 `adb emu geo fix`로 보낸다. D는 전진, R은 후진, P·N은 정지다. 시작 위치는 `--lat`, `--lon`, `--heading`으로 정하고 핸들 방향이 반대면 `--invert-steering`을 쓴다. 콘솔 페이지가 비활성(`controls.emulator_active`가 false)이면 위치를 보내지 않는다. 콘솔의 비공식 인터페이스에 의존하는 개발용 도구다.
 - 브라우저 페이지가 열려 있지 않으면 로컬 인터페이스를 사용할 때 `POST /browser/session?client=<고유식별자>`를 1초 간격으로 보내 연결을 유지해야 한다. 확인된 콘솔의 세션 제한은 3초다. 테스트가 끝나면 `POST /browser/session?client=<고유식별자>&closing=1`로 자신이 만든 세션만 닫는다. 이미 사용 중인 다른 세션은 건드리지 않는다. `/vehicle/state`의 `bridge_ready`가 false이거나 요청이 실패하면 성공으로 간주하지 말고 오류를 기록한다.
-- 테스트 대상 상태가 D에서 표시 제한되는 앱이라면 그 제한 화면을 결과로 보고, 주행 중 기능을 사용했다고 주장하지 않는다. 스크린샷도 요청한 화면이 실제로 보이는지 확인한다.
+- 이 앱은 DO를 선언해 D에서도 플랫폼 제한 화면이 뜨지 않고 진행 화면 외의 화면은 앱의 정차 안내가 보인다. DO를 선언하지 않은 앱이나 디버그 전용 화면처럼 D에서 표시 제한되는 화면이라면 그 제한 화면을 결과로 보고, 주행 중 기능을 사용했다고 주장하지 않는다. 스크린샷도 요청한 화면이 실제로 보이는지 확인한다.
 - P 상태에서 왼쪽 위 Theme 버튼으로 Highway와 Forest를 전환한다. Highway에서는 1인칭과 3인칭을 선택할 수 있다. 교차로 좌회전·우회전이나 실제 경로 주행 기능은 확인되지 않았다.
 - `Emulation Controls`에서 차량 상태를 도메인별로 설정해 앱 반응을 시험한다. 연결이 안 되면 `adb devices`, 포트 포워딩, 에뮬레이터 부팅 상태를 확인한다.
 
