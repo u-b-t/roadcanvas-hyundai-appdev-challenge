@@ -105,6 +105,72 @@ class ChallengeRecorderTest {
     }
 
     @Test
+    fun `종료하면 진행 중 기록에 종료 시각을 남긴다`() = runTest(dispatcher) {
+        runRecorder(RecordingRequest.New(DrawingMode.CIRCLE))
+        send(37.5665)
+        now = START + 65_000
+
+        recorder.finish()
+
+        val saved = (repository.load() as StorageResult.Success).value
+        assertEquals(START + 65_000, saved?.endedAtMillis)
+        assertEquals(1, saved?.path?.size)
+    }
+
+    @Test
+    fun `종료 시각을 저장하지 못해도 종료하고 실패를 알린다`() = runTest(dispatcher) {
+        runRecorder(RecordingRequest.New(DrawingMode.CIRCLE))
+        send(37.5665)
+        val error = IllegalStateException("종료 저장 실패")
+        repository.failure = error
+
+        val finished = recorder.finish()
+
+        assertEquals(finished, recorder.state.value)
+        assertEquals(listOf<Throwable>(error), storageFailures)
+        repository.failure = null
+        assertEquals(finished, recorder.unsavedFinish())
+    }
+
+    @Test
+    fun `프로세스가 다시 만들어져도 종료한 기록은 저장하지 못한 종료 기록으로 돌려준다`() = runTest(dispatcher) {
+        runRecorder(RecordingRequest.New(DrawingMode.CIRCLE))
+        send(37.5665)
+        send(37.5674)
+        now = START + 65_000
+        val finished = recorder.finish()
+
+        val restarted = ChallengeRecorder(locationProvider, repository, clock = { now })
+
+        assertEquals(finished, restarted.unsavedFinish())
+        assertFalse(restarted.hasInProgress())
+        assertEquals(RecordingState.Idle, restarted.state.value)
+    }
+
+    @Test
+    fun `종료하지 않은 기록은 프로세스가 다시 만들어져도 저장하지 못한 종료 기록이 아니다`() = runTest(dispatcher) {
+        repository.start(DrawingMode.CIRCLE, START)
+        repository.appendPoints(listOf(RoutePoint(37.5665, LONGITUDE, START)))
+
+        assertNull(recorder.unsavedFinish())
+        assertTrue(recorder.hasInProgress())
+    }
+
+    @Test
+    fun `종료한 기록은 이어서 기록하지 않는다`() = runTest(dispatcher) {
+        repository.start(DrawingMode.CIRCLE, START)
+        repository.appendPoints(listOf(RoutePoint(37.5665, LONGITUDE, START)))
+        repository.finish(START + 65_000)
+
+        val job = runRecorder(RecordingRequest.Resume)
+
+        assertTrue(job.isCompleted)
+        assertEquals(0, locationProvider.requestCount.value)
+        assertEquals(RecordingState.Idle, recorder.state.value)
+        assertEquals(1, savedPath().size)
+    }
+
+    @Test
     fun `기록 중이 아니면 종료할 수 없다`() = runTest(dispatcher) {
         assertNull(recorder.finish())
         assertEquals(RecordingState.Idle, recorder.state.value)

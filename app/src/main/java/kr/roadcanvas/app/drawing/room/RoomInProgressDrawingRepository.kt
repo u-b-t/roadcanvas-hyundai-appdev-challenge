@@ -24,12 +24,17 @@ class RoomInProgressDrawingRepository(private val dao: InProgressDrawingDao) :
             check(appended) { "진행 중인 도전이 없습니다." }
         }
 
+    override suspend fun finish(endedAtMillis: Long): StorageResult<Unit> = storageResultOf {
+        check(dao.finish(endedAtMillis) > 0) { "진행 중인 도전이 없습니다." }
+    }
+
     override suspend fun load(): StorageResult<InProgressDrawing?> = storageResultOf {
         dao.load()?.let { (drawing, points) ->
             InProgressDrawing(
                 mode = DrawingMode.fromKey(drawing.mode),
                 startedAtMillis = drawing.startedAtMillis,
-                path = points.map { RoutePoint(it.latitude, it.longitude, it.timeMillis) }
+                path = points.map { RoutePoint(it.latitude, it.longitude, it.timeMillis) },
+                endedAtMillis = drawing.endedAtMillis
             )
         }
     }

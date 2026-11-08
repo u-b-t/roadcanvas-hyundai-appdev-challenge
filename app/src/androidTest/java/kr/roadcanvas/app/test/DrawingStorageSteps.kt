@@ -123,10 +123,30 @@ class DrawingStorageSteps {
 
     @Then("진행 중인 도전의 시작 시각은 {int}분이고 경로 점 {int}개가 추가한 순서대로 있다")
     fun assertInProgressRestored(minute: Int, count: Int) {
-        assertEquals(
-            InProgressDrawing(DrawingMode.CIRCLE, minute * MINUTE, routePoints(count)),
-            loadedInProgress
-        )
+        val loaded = checkNotNull(loadedInProgress) { "진행 중인 도전이 없습니다." }
+        assertEquals(DrawingMode.CIRCLE, loaded.mode)
+        assertEquals(minute * MINUTE, loaded.startedAtMillis)
+        assertEquals(routePoints(count), loaded.path)
+    }
+
+    @Then("진행 중인 도전은 종료되지 않았다")
+    fun assertInProgressNotEnded() {
+        assertNull(checkNotNull(loadedInProgress) { "진행 중인 도전이 없습니다." }.endedAtMillis)
+    }
+
+    @When("진행 중인 도전을 {int}분에 종료한다")
+    fun finishInProgress(minute: Int) {
+        lastResult = runBlocking { storage.inProgress.finish(minute * MINUTE) }
+    }
+
+    @Then("진행 중인 도전의 종료 시각은 {int}분이다")
+    fun assertInProgressEndedAt(minute: Int) {
+        assertEquals(minute * MINUTE, checkNotNull(loadedInProgress).endedAtMillis)
+    }
+
+    @Then("종료는 실패 결과를 받는다")
+    fun assertFinishFailed() {
+        assertTrue("결과: $lastResult", lastResult is StorageResult.Failure)
     }
 
     @When("진행 중인 도전을 포기해 삭제한다")
@@ -170,6 +190,7 @@ class DrawingStorageSteps {
                 "진행 중 기록 시작" -> inProgress.start(DrawingMode.CIRCLE, MINUTE)
                 "경로 점 추가" -> inProgress.appendPoints(routePoints(1))
                 "진행 중 기록 불러오기" -> inProgress.load()
+                "진행 중 기록 종료" -> inProgress.finish(MINUTE)
                 "진행 중 기록 삭제" -> inProgress.clear()
                 else -> throw IllegalArgumentException("알 수 없는 작업: $operation")
             }
@@ -187,6 +208,31 @@ class DrawingStorageSteps {
     fun createDatabaseAtVersion(version: Int) {
         application.deleteDatabase(TEST_DATABASE)
         migrationHelper.createDatabase(TEST_DATABASE, version).close()
+    }
+
+    @Given("버전 {int} 스키마로 만든 저장소 DB에 시작 시각 {int}분, 경로 점 {int}개인 진행 중인 도전이 있다")
+    fun createDatabaseWithInProgress(version: Int, minute: Int, count: Int) {
+        application.deleteDatabase(TEST_DATABASE)
+        migrationHelper.createDatabase(TEST_DATABASE, version).use { db ->
+            // 이전 버전 스키마에는 엔티티 클래스를 쓸 수 없으므로 SQL로 넣는다.
+            db.execSQL(
+                "INSERT INTO in_progress_drawing (id, mode, started_at) VALUES (?, ?, ?)",
+                arrayOf(1, DrawingMode.CIRCLE.key, minute * MINUTE)
+            )
+            routePoints(count).forEach {
+                db.execSQL(
+                    "INSERT INTO in_progress_route_point (latitude, longitude, time_millis) " +
+                        "VALUES (?, ?, ?)",
+                    arrayOf(it.latitude, it.longitude, it.timeMillis)
+                )
+            }
+        }
+    }
+
+    @When("올린 저장소에서 진행 중인 도전을 불러온다")
+    fun loadMigratedInProgress() {
+        openStorage()
+        loadedInProgress = runBlocking { storage.inProgress.load() }.value()
     }
 
     @When("등록된 마이그레이션으로 현재 버전까지 올린다")

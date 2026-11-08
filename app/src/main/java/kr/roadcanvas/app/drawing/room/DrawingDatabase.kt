@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kr.roadcanvas.app.drawing.DrawingStorage
 
 /**
@@ -30,10 +31,17 @@ abstract class DrawingDatabase : RoomDatabase() {
     abstract fun inProgressDrawingDao(): InProgressDrawingDao
 
     companion object {
-        const val VERSION = 1
+        const val VERSION = 2
         const val NAME = "drawings.db"
 
-        val MIGRATIONS: Array<Migration> = emptyArray()
+        /** 진행 중 기록에 종료 시각을 추가한다. 기존 진행 중 기록은 종료하지 않은 도전으로 남는다. */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE in_progress_drawing ADD COLUMN ended_at INTEGER")
+            }
+        }
+
+        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2)
 
         fun create(context: Context, name: String = NAME): DrawingDatabase =
             Room.databaseBuilder(context, DrawingDatabase::class.java, name)

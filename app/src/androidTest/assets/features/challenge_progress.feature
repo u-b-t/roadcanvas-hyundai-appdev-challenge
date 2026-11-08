@@ -5,6 +5,7 @@ Feature: 동그라미 챌린지 진행
   Issues:
   - [#18 동그라미 챌린지 진행 및 경로 기록 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/18)
   - [#19 동그라미 챌린지 결과 화면 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/19)
+  - [#38 종료 후 저장 전 프로세스 종료 시 결과 화면으로 복원](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/38)
 
   Scenario: 시작하면 받은 위치를 경로에 기록하고 경과 시간과 이동 거리를 표시한다
     Given 동그라미 챌린지 진행 화면에서 기록을 시작했다
@@ -79,6 +80,16 @@ Feature: 동그라미 챌린지 진행
     And 테스트에서 위도 37.5683, 경도 126.978 위치를 기록한다
     Then 기록한 경로 점은 3개다
     And 진행 중 기록에 경로 점 3개가 저장되어 있다
+
+  Scenario: 기록 중에 앱 프로세스가 종료되면 다시 실행할 때 진행 화면에서 이어서 기록한다
+    Given 동그라미 챌린지 진행 화면에서 기록을 시작했다
+    And 테스트에서 위도 37.5665, 경도 126.978 위치를 기록한다
+    When 앱 프로세스가 종료된 뒤 앱을 다시 실행한다
+    Then 화면에 "동그라미 챌린지 진행"이 표시된다
+    When 이어서 기록이 시작될 때까지 기다린다
+    And 테스트에서 위도 37.5674, 경도 126.978 위치를 기록한다
+    Then 기록한 경로 점은 2개다
+    And 진행 중 기록에 경로 점 2개가 저장되어 있다
 
   Scenario: 기록을 시작하지 못하면 안내하고 준비 화면으로 돌아갈 수 있다
     Given 진행 중 기록 저장이 실패하도록 설정되어 있다

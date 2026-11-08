@@ -34,5 +34,14 @@ class FakeAppContainer : AppContainer {
         challengeRecorder = newRecorder()
     }
 
+    /**
+     * 프로세스가 종료됐다가 다시 만들어진 것처럼 기록 실행과 기록 세션의 메모리 상태만 버린다.
+     * 저장소는 기기 저장소처럼 그대로 남는다.
+     */
+    fun restartProcess() {
+        recordingRunner.reset()
+        challengeRecorder = newRecorder()
+    }
+
     private fun newRecorder() = ChallengeRecorder(locationProvider, inProgressDrawingRepository)
 }

@@ -20,6 +20,13 @@ abstract class InProgressDrawingDao {
     @Insert
     abstract suspend fun insertPoints(points: List<InProgressRoutePointEntity>)
 
+    /** 바뀐 행 수를 돌려준다. 시작한 도전이 없으면 0이다. */
+    @Query(
+        "UPDATE in_progress_drawing SET ended_at = :endedAtMillis " +
+            "WHERE id = ${InProgressDrawingEntity.SINGLE_ID}"
+    )
+    abstract suspend fun finish(endedAtMillis: Long): Int
+
     @Query("DELETE FROM in_progress_drawing")
     abstract suspend fun deleteDrawing()
 

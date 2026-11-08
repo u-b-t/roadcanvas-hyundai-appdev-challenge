@@ -112,6 +112,25 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
         openApp()
     }
 
+    @When("앱 프로세스가 종료된 뒤 앱을 다시 실행한다")
+    fun relaunchAfterProcessDeath() {
+        // 화면과 기록 세션을 모두 버리고 저장소만 남긴 채 새 화면을 연다.
+        TestScreens.closeAll()
+        fakeContainer.restartProcess()
+        // 이전 기록 세션이 위치를 더 받아 저장하지 않도록 구독이 끝날 때까지 기다린다.
+        waitUntil { fakeContainer.locationProvider.subscriberCount.value == 0 }
+        openApp()
+    }
+
+    @Then("기록을 이어서 시작하지 않았다")
+    fun assertNotResumed() {
+        composeRule.waitForIdle()
+        check(fakeContainer.recordingRunner.requests.value.isEmpty()) {
+            "기록 실행 요청: ${fakeContainer.recordingRunner.requests.value}"
+        }
+        check(fakeContainer.locationProvider.subscriberCount.value == 0) { "위치를 구독하고 있습니다." }
+    }
+
     @When("결과 화면에서 뒤로 가기를 누른다")
     fun pressBack() {
         composeRule.waitForIdle()

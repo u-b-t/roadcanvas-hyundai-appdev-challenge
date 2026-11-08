@@ -72,7 +72,9 @@ data class CompletedDrawingWithDetails(
 data class InProgressDrawingEntity(
     @PrimaryKey val id: Int = SINGLE_ID,
     val mode: String,
-    @ColumnInfo(name = "started_at") val startedAtMillis: Long
+    @ColumnInfo(name = "started_at") val startedAtMillis: Long,
+    /** 종료했지만 완료 기록으로 저장하기 전이면 종료 시각, 기록 중이면 null이다. 버전 2에서 추가했다. */
+    @ColumnInfo(name = "ended_at") val endedAtMillis: Long? = null
 ) {
     companion object {
         const val SINGLE_ID = 1

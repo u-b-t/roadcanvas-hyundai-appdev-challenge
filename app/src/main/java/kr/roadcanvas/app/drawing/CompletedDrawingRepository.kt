@@ -11,6 +11,12 @@ interface CompletedDrawingRepository {
     /** 경로를 포함한 기록. 없으면 null이다. */
     suspend fun find(id: Long): StorageResult<CompletedDrawing?>
 
+    /**
+     * [completedAtMillis]에 완료한 [mode] 기록의 ID. 없으면 null이다.
+     * 한 번에 하나의 도전만 하므로 같은 도전을 두 번 저장하지 않도록 확인하는 데 쓴다.
+     */
+    suspend fun findId(mode: DrawingMode, completedAtMillis: Long): StorageResult<Long?>
+
     /** 기록을 삭제한다. 없는 ID여도 성공이다. */
     suspend fun delete(id: Long): StorageResult<Unit>
 
