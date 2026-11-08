@@ -173,6 +173,32 @@ class ChallengeRecorderTest {
     }
 
     @Test
+    fun `종료한 뒤 진행 중 기록이 남아 있으면 저장하지 못한 종료 기록이 있다`() = runTest(dispatcher) {
+        runRecorder(RecordingRequest.New(DrawingMode.CIRCLE))
+        send(37.5665)
+        val finished = recorder.finish()
+
+        assertEquals(finished, recorder.unsavedFinish())
+
+        repository.clear()
+
+        assertNull(recorder.unsavedFinish())
+        assertFalse(recorder.hasInProgress())
+    }
+
+    @Test
+    fun `기록 중이거나 다른 도전이 저장되어 있으면 저장하지 못한 종료 기록이 없다`() = runTest(dispatcher) {
+        runRecorder(RecordingRequest.New(DrawingMode.CIRCLE))
+
+        assertNull(recorder.unsavedFinish())
+
+        recorder.finish()
+        repository.start(DrawingMode.CIRCLE, START + 1)
+
+        assertNull(recorder.unsavedFinish())
+    }
+
+    @Test
     fun `진행 중 기록을 만들지 못하면 실패로 알리고 위치를 구독하지 않는다`() = runTest(dispatcher) {
         val error = IllegalStateException("저장 실패")
         repository.failure = error

@@ -234,7 +234,7 @@ private fun StatusText(text: String) {
 }
 
 @Composable
-private fun Measurement(label: String, value: String) {
+internal fun Measurement(label: String, value: String) {
     Column {
         Text(text = label, style = MaterialTheme.typography.titleLarge)
         Text(text = value, style = MaterialTheme.typography.displaySmall)

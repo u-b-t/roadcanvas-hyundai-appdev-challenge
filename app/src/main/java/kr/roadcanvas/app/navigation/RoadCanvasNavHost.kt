@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import kr.roadcanvas.app.appContainer
 import kr.roadcanvas.app.challenge.ChallengeProgressRoute
 import kr.roadcanvas.app.challenge.ChallengeReadyRoute
+import kr.roadcanvas.app.challenge.ChallengeResultRoute
 import kr.roadcanvas.app.challenge.rememberChallengeStarter
 import kr.roadcanvas.app.modeselect.ModeSelectScreen
 import kr.roadcanvas.app.mydrawings.MyDrawingsRoute
@@ -28,8 +29,6 @@ object Routes {
     const val CIRCLE_PROGRESS = "circleProgress"
 
     /**
-     * 결과 화면은 #19에서 실제 화면으로 교체한다.
-     *
      * 종료한 기록은 진행 중 기록 저장소에 그대로 남아 있고, 시작·종료 시각을 인자로 넘긴다.
      * 진행 중 기록은 한 번에 하나뿐이므로 시작 시각으로 그 기록을 확인한다.
      * 결과 화면은 이 기록으로 완료 기록을 저장하는 데 성공한 뒤 진행 중 기록을 지운다.
@@ -62,12 +61,19 @@ fun RoadCanvasNavHost(
                 durationMillis = splashDurationMillis,
                 onFinished = {
                     scope.launch {
-                        // 진행 중이던 도전이 있으면 진행 화면이 기록을 이어간다.
-                        val resume = recorder.hasInProgress()
+                        // 종료했지만 저장하지 못한 도전은 결과 화면이 다시 저장하고,
+                        // 진행 중이던 도전은 진행 화면이 기록을 이어간다.
+                        val unsaved = recorder.unsavedFinish()
+                        val resume = unsaved == null && recorder.hasInProgress()
                         navController.navigate(Routes.MODE_SELECT) {
                             popUpTo(Routes.SPLASH) { inclusive = true }
                         }
-                        if (resume) navController.navigate(Routes.CIRCLE_PROGRESS)
+                        when {
+                            unsaved != null -> navController.navigate(
+                                Routes.circleResult(unsaved.startedAtMillis, unsaved.endedAtMillis)
+                            )
+                            resume -> navController.navigate(Routes.CIRCLE_PROGRESS)
+                        }
                     }
                 }
             )
@@ -107,8 +113,20 @@ fun RoadCanvasNavHost(
                 navArgument(Routes.ARG_STARTED_AT) { type = NavType.LongType },
                 navArgument(Routes.ARG_ENDED_AT) { type = NavType.LongType }
             )
-        ) {
-            PlaceholderScreen(title = CIRCLE_RESULT_TITLE)
+        ) { entry ->
+            val arguments = requireNotNull(entry.arguments)
+            fun leaveTo(route: String) = navController.navigate(route) {
+                popUpTo(Routes.MODE_SELECT)
+            }
+            ChallengeResultRoute(
+                startedAtMillis = arguments.getLong(Routes.ARG_STARTED_AT),
+                endedAtMillis = arguments.getLong(Routes.ARG_ENDED_AT),
+                onTryAgain = { leaveTo(Routes.CIRCLE_READY) },
+                onModeSelect = {
+                    navController.popBackStack(Routes.MODE_SELECT, inclusive = false)
+                },
+                onMyDrawings = { leaveTo(Routes.MY_DRAWINGS) }
+            )
         }
         composable(Routes.MY_DRAWINGS) {
             MyDrawingsRoute(
