@@ -16,6 +16,14 @@ class MyDrawingsUiStateTest {
     }
 
     @Test
+    fun `점수가 없는 자유그림은 최고 점수로 고르지 않는다`() {
+        val free = summary(3, 0).copy(mode = DrawingMode.FREE_DRAWING)
+
+        assertEquals(2L, bestOf(listOf(free, summary(2, 0)))?.id)
+        assertNull(bestOf(listOf(free)))
+    }
+
+    @Test
     fun `삭제 후에는 다음 기록을, 마지막이었다면 앞 기록을 선택한다`() {
         val items = listOf(summary(3, 0), summary(2, 0), summary(1, 0))
 

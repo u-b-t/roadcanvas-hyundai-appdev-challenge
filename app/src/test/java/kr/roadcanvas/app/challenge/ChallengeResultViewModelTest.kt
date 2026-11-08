@@ -64,8 +64,12 @@ class ChallengeResultViewModelTest {
         onStorageFailure = { storageFailures += it }
     )
 
-    private suspend fun saveInProgress(path: List<RoutePoint>, startedAtMillis: Long = START) {
-        inProgress.start(DrawingMode.CIRCLE, startedAtMillis)
+    private suspend fun saveInProgress(
+        path: List<RoutePoint>,
+        startedAtMillis: Long = START,
+        mode: DrawingMode = DrawingMode.CIRCLE
+    ) {
+        inProgress.start(mode, startedAtMillis)
         inProgress.appendPoints(path)
     }
 
@@ -86,10 +90,10 @@ class ChallengeResultViewModelTest {
         val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
 
         assertEquals(ResultSaveStatus.SAVED, state.saveStatus)
-        assertTrue(state.result.score.score >= 90)
+        assertTrue(state.result.score!!.score >= 90)
         assertEquals(END - START, state.result.durationMillis)
         val summary = savedSummaries().single()
-        assertEquals(state.result.score.score, summary.score)
+        assertEquals(state.result.score!!.score, summary.score)
         assertEquals(END, summary.completedAtMillis)
         assertEquals(END - START, summary.durationMillis)
         assertNull(inProgressDrawing())
@@ -145,8 +149,8 @@ class ChallengeResultViewModelTest {
 
         val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
 
-        assertEquals(0, state.result.score.score)
-        assertEquals(ZeroScoreReason.INSUFFICIENT_POINTS, state.result.score.zeroReason)
+        assertEquals(0, state.result.score!!.score)
+        assertEquals(ZeroScoreReason.INSUFFICIENT_POINTS, state.result.score!!.zeroReason)
         assertEquals(ResultSaveStatus.SAVED, state.saveStatus)
         assertEquals(listOf(0), savedSummaries().map { it.score })
     }
@@ -159,7 +163,7 @@ class ChallengeResultViewModelTest {
         val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
 
         assertEquals(ResultSaveStatus.FAILED, state.saveStatus)
-        assertTrue(state.result.score.score >= 90)
+        assertTrue(state.result.score!!.score >= 90)
         assertEquals(circlePath().size, inProgressDrawing()?.path?.size)
         // 최고 기록 조회와 저장이 각각 실패한다.
         assertEquals(2, storageFailures.size)
@@ -372,7 +376,7 @@ class ChallengeResultViewModelTest {
 
         val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
 
-        val score = state.result.score.score
+        val score = state.result.score!!.score
         assertEquals(BestRecordComparison.NewRecord(70, score - 70), state.bestComparison)
     }
 
@@ -387,12 +391,83 @@ class ChallengeResultViewModelTest {
         )
         val handle = SavedStateHandle()
         val first = viewModel(handle).uiState.value as ChallengeResultUiState.Calculated
-        val gap = 100 - first.result.score.score
+        val gap = 100 - first.result.score!!.score
 
         val recreated = viewModel(handle).uiState.value as ChallengeResultUiState.Calculated
 
         assertEquals(BestRecordComparison.BelowBest(100, gap), first.bestComparison)
         assertEquals(first.bestComparison, recreated.bestComparison)
+    }
+
+    @Test
+    fun `자유그림은 점수 없이 자유그림 모드로 저장하고 진행 중 기록을 지운다`() = runTest(dispatcher) {
+        saveInProgress(circlePath(), mode = DrawingMode.FREE_DRAWING)
+
+        val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
+
+        assertEquals(ResultSaveStatus.SAVED, state.saveStatus)
+        assertEquals(DrawingMode.FREE_DRAWING, state.result.mode)
+        assertNull(state.result.score)
+        assertNull(state.result.zeroReasonText)
+        val summary = savedSummaries().single()
+        assertEquals(DrawingMode.FREE_DRAWING, summary.mode)
+        assertEquals(0, summary.score)
+        assertEquals(314.0, summary.distanceMeters, 2.0)
+        assertNull(inProgressDrawing())
+    }
+
+    @Test
+    fun `이동하지 않은 자유그림은 저장하지 않고 진행 중 기록을 지운다`() = runTest(dispatcher) {
+        saveInProgress(stationaryPath(), mode = DrawingMode.FREE_DRAWING)
+
+        val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
+
+        assertEquals(ResultSaveStatus.NOT_SAVED, state.saveStatus)
+        assertEquals(END - START, state.result.durationMillis)
+        assertTrue(savedSummaries().isEmpty())
+        assertNull(inProgressDrawing())
+    }
+
+    @Test
+    fun `저장하지 않은 자유그림은 화면이 다시 만들어져도 저장하지 않는다`() = runTest(dispatcher) {
+        saveInProgress(stationaryPath(), mode = DrawingMode.FREE_DRAWING)
+        val handle = SavedStateHandle()
+        viewModel(handle)
+
+        val recreated = viewModel(handle).uiState.value as ChallengeResultUiState.Calculated
+
+        assertEquals(ResultSaveStatus.NOT_SAVED, recreated.saveStatus)
+        assertEquals(DrawingMode.FREE_DRAWING, recreated.result.mode)
+        assertEquals(END - START, recreated.result.durationMillis)
+        assertTrue(savedSummaries().isEmpty())
+    }
+
+    @Test
+    fun `이동하지 않은 동그라미 챌린지는 0점으로 저장한다`() = runTest(dispatcher) {
+        saveInProgress(stationaryPath())
+
+        val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
+
+        assertEquals(ResultSaveStatus.SAVED, state.saveStatus)
+        assertEquals(listOf(0), savedSummaries().map { it.score })
+    }
+
+    @Test
+    fun `프로세스가 다시 만들어진 뒤에도 저장하지 못한 자유그림을 자유그림으로 저장한다`() = runTest(dispatcher) {
+        saveInProgress(circlePath(), mode = DrawingMode.FREE_DRAWING)
+        inProgress.finish(END)
+
+        val unsaved = requireNotNull(recorder.unsavedFinish())
+        val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
+
+        assertEquals(DrawingMode.FREE_DRAWING, unsaved.mode)
+        assertEquals(ResultSaveStatus.SAVED, state.saveStatus)
+        assertEquals(DrawingMode.FREE_DRAWING, savedSummaries().single().mode)
+        assertNull(recorder.unsavedFinish())
+    }
+
+    private fun stationaryPath() = TestPaths.stationary(5).mapIndexed { i, it ->
+        RoutePoint(it.latitude, it.longitude, START + i * 1_000L)
     }
 
     private companion object {

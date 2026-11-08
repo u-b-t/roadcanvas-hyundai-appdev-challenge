@@ -26,7 +26,7 @@ sealed interface DrawingListState {
 
     data object Error : DrawingListState
 
-    /** [items]는 최신순이다. [best]는 최고 점수 기록이며 같은 점수면 최근 기록이다. */
+    /** [items]는 최신순이다. [best]는 점수를 매기는 모드의 최고 점수 기록이며 같은 점수면 최근 기록이다. */
     data class Loaded(val items: List<CompletedDrawingSummary>) : DrawingListState {
         val best: CompletedDrawingSummary? = bestOf(items)
     }
@@ -43,9 +43,12 @@ sealed interface DrawingDetailState {
     data object Error : DrawingDetailState
 }
 
-/** 최신순 [items]에서 최고 점수 기록. 같은 점수면 앞에 있는 최근 기록을 고른다. */
+/**
+ * 최신순 [items]에서 최고 점수 기록. 같은 점수면 앞에 있는 최근 기록을 고른다.
+ * 점수가 없는 자유그림은 고르지 않는다.
+ */
 fun bestOf(items: List<CompletedDrawingSummary>): CompletedDrawingSummary? =
-    items.maxByOrNull { it.score }
+    items.filter { it.mode.scored }.maxByOrNull { it.score }
 
 /**
  * [deletedId]를 지운 뒤 선택할 기록. 바로 다음 기록을 고르고, 마지막 기록이었다면 바로 앞 기록을 고른다.

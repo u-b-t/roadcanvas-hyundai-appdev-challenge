@@ -45,10 +45,13 @@ class ChallengeRecorder(
      * 종료하지 않은 진행 중 기록이 메모리나 저장소에 있는지.
      * 앱을 다시 실행할 때 진행 화면으로 갈지 정한다.
      */
-    suspend fun hasInProgress(): Boolean {
-        if (mutableState.value is RecordingState.Recording) return true
-        val saved = (repository.load() as? StorageResult.Success)?.value ?: return false
-        return saved.endedAtMillis == null
+    suspend fun hasInProgress(): Boolean = inProgressMode() != null
+
+    /** 종료하지 않은 진행 중 기록의 모드. 없으면 null이다. */
+    suspend fun inProgressMode(): DrawingMode? {
+        (mutableState.value as? RecordingState.Recording)?.let { return it.mode }
+        val saved = (repository.load() as? StorageResult.Success)?.value ?: return null
+        return saved.mode.takeIf { saved.endedAtMillis == null }
     }
 
     /**
@@ -73,9 +76,12 @@ class ChallengeRecorder(
         )
     }
 
-    /** 포그라운드 서비스를 시작하지 못하는 등 기록을 실행할 수 없을 때 실패로 알린다. */
-    fun fail(cause: Throwable) {
-        mutableState.value = RecordingState.Failed(cause)
+    /**
+     * 포그라운드 서비스를 시작하지 못하는 등 기록을 실행할 수 없을 때 실패로 알린다.
+     * 시작하려던 [mode]를 알면 함께 남겨 진행 화면이 그 모드의 준비 화면으로 돌아가게 한다.
+     */
+    fun fail(cause: Throwable, mode: DrawingMode? = null) {
+        mutableState.value = RecordingState.Failed(cause, mode)
     }
 
     /**
@@ -112,7 +118,7 @@ class ChallengeRecorder(
                 true
             }
             is StorageResult.Failure -> {
-                mutableState.value = RecordingState.Failed(result.cause)
+                mutableState.value = RecordingState.Failed(result.cause, mode)
                 false
             }
         }
