@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
@@ -22,7 +23,6 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.LayoutDirection
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
-import kr.roadcanvas.app.modeselect.ModeSelectScreen
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.DriverSideLayout
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
@@ -33,12 +33,14 @@ import org.junit.Assert.assertTrue
 
 private const val CONTROLS_TAG = "designSystemControls"
 private const val CONTENT_TAG = "designSystemContent"
+private const val THEME_SAMPLE_TEXT = "테마 확인"
 
 class DesignSystemSteps(private val ruleHolder: ComposeRuleHolder) {
     private val composeRule get() = ruleHolder.composeRule
 
-    @Given("기기가 다크 모드인 상태로 모드 선택 화면을 연다")
-    fun openModeSelectInDarkMode() {
+    // 모드 선택 화면은 어두운 커버 이미지를 배경으로 쓰므로, 테마의 배경만 그린 화면으로 확인한다.
+    @Given("기기가 다크 모드인 상태로 앱 테마로 감싼 화면을 연다")
+    fun openThemedScreenInDarkMode() {
         composeRule.mainClock.autoAdvance = true
         TestScreens.launchContent {
             val configuration = Configuration(LocalConfiguration.current).apply {
@@ -47,7 +49,9 @@ class DesignSystemSteps(private val ruleHolder: ComposeRuleHolder) {
             }
             CompositionLocalProvider(LocalConfiguration provides configuration) {
                 RoadCanvasTheme {
-                    ModeSelectScreen(onCircleChallengeClick = {}, onMyDrawingsClick = {})
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(THEME_SAMPLE_TEXT)
+                    }
                 }
             }
         }

@@ -7,7 +7,9 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -15,6 +17,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
+import kr.roadcanvas.app.modeselect.MODE_SELECT_COVER_TAG
 import kr.roadcanvas.app.modeselect.MODE_SELECT_TITLE
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
 import kr.roadcanvas.app.navigation.Routes
@@ -39,30 +42,49 @@ class ModeSelectSteps(private val ruleHolder: ComposeRuleHolder) {
         waitForText(MODE_SELECT_TITLE)
     }
 
-    @Then("{string} 카드와 {string} 카드가 가로로 나란히 표시된다")
-    fun assertCardsSideBySide(left: String, right: String) {
-        val leftBounds = clickable(left).assertIsDisplayed().getUnclippedBoundsInRoot()
-        val rightBounds = clickable(right).assertIsDisplayed().getUnclippedBoundsInRoot()
-        assertTrue("$left 카드가 $right 카드 왼쪽에 있어야 한다", leftBounds.right <= rightBounds.left)
-        assertEquals(leftBounds.top.value, rightBounds.top.value, 1f)
-        assertEquals(leftBounds.bottom.value, rightBounds.bottom.value, 1f)
+    @Then("커버 이미지가 화면 전체를 채운다")
+    fun assertCoverFillsScreen() {
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val cover = composeRule.onNodeWithTag(MODE_SELECT_COVER_TAG).assertIsDisplayed()
+            .getUnclippedBoundsInRoot()
+        assertEquals(root.left.value, cover.left.value, 1f)
+        assertEquals(root.top.value, cover.top.value, 1f)
+        assertEquals(root.right.value, cover.right.value, 1f)
+        assertEquals(root.bottom.value, cover.bottom.value, 1f)
     }
 
-    @Then("{string} 카드의 높이는 최소 터치 크기 이상이다")
+    @Then("{string} 항목 아래에 {string} 항목이 표시된다")
+    fun assertItemsStacked(upper: String, lower: String) {
+        val upperBounds = clickable(upper).assertIsDisplayed().getUnclippedBoundsInRoot()
+        val lowerBounds = clickable(lower).assertIsDisplayed().getUnclippedBoundsInRoot()
+        assertTrue("$upper 항목이 $lower 항목 위에 있어야 한다", upperBounds.bottom <= lowerBounds.top)
+        assertEquals(upperBounds.left.value, lowerBounds.left.value, 1f)
+    }
+
+    @Then("{string} 항목은 화면 왼쪽 절반에 있다")
+    @Then("{string} 버튼은 화면 왼쪽 절반에 있다")
+    fun assertOnLeftHalf(label: String) {
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val bounds = clickable(label).assertIsDisplayed().getUnclippedBoundsInRoot()
+        val center = (root.left + root.right) / 2
+        assertTrue("$label $bounds, 화면 $root", bounds.right <= center)
+    }
+
+    @Then("{string} 항목의 높이는 최소 터치 크기 이상이다")
     @Then("{string} 버튼의 높이는 최소 터치 크기 이상이다")
     fun assertLargeTouchTarget(label: String) {
         clickable(label).assertHeightIsAtLeast(MIN_TOUCH_TARGET)
     }
 
-    @When("{string} 카드를 누른다")
+    @When("{string} 항목을 누른다")
     @When("{string} 버튼을 누른다")
     fun click(label: String) {
         clickable(label).performClick()
     }
 
-    @Then("{string} 카드에 {string}이 표시된다")
-    fun assertCardShows(card: String, text: String) {
-        composeRule.onNode(hasText(card) and hasText(text) and hasClickAction())
+    @Then("{string} 항목에 {string}이 표시된다")
+    fun assertItemShows(item: String, text: String) {
+        composeRule.onNode(hasText(item) and hasText(text) and hasClickAction())
             .assertIsDisplayed()
     }
 
