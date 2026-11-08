@@ -168,12 +168,7 @@ fun ChallengeProgressScreen(
         },
         controls = {
             OverlayCard(modifier = Modifier.fillMaxWidth()) {
-                if (!state.driving) {
-                    Text(
-                        text = CIRCLE_PROGRESS_TITLE,
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                }
+                Text(text = CIRCLE_PROGRESS_TITLE, style = MaterialTheme.typography.headlineSmall)
                 when (state.phase) {
                     ChallengeProgressPhase.PREPARING -> StatusText(PROGRESS_PREPARING)
                     ChallengeProgressPhase.FAILED -> StatusText(PROGRESS_FAILED)
