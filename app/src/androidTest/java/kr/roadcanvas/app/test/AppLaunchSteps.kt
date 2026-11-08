@@ -2,12 +2,14 @@ package kr.roadcanvas.app.test
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import io.cucumber.java.After
 import io.cucumber.java.en.Given
@@ -16,14 +18,13 @@ import io.cucumber.java.en.When
 import kr.roadcanvas.app.MainActivity
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 
 private const val WAIT_TIMEOUT_MILLIS = 5_000L
 
 class AppLaunchSteps(private val ruleHolder: ComposeRuleHolder) {
     private val composeRule get() = ruleHolder.composeRule
     private var scenario: ActivityScenario<out Activity>? = null
-    private var closedByBack = false
 
     @Given("앱을 실행한다")
     fun launchApp() {
@@ -48,6 +49,7 @@ class AppLaunchSteps(private val ruleHolder: ComposeRuleHolder) {
     @When("{double}초가 지난다")
     @When("{double}초가 더 지난다")
     fun advanceTime(seconds: Double) {
+        composeRule.mainClock.autoAdvance = false
         composeRule.mainClock.advanceTimeBy((seconds * 1_000).toLong())
     }
 
@@ -59,7 +61,6 @@ class AppLaunchSteps(private val ruleHolder: ComposeRuleHolder) {
             composeRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithText(text).assertIsDisplayed()
-        composeRule.mainClock.autoAdvance = false
     }
 
     @Then("화면 방향이 가로로 고정되어 있다")
@@ -74,15 +75,26 @@ class AppLaunchSteps(private val ruleHolder: ComposeRuleHolder) {
 
     @When("뒤로 가기를 누른다")
     fun pressBack() {
+        composeRule.waitForIdle()
         requireNotNull(scenario).onActivity { activity ->
             (activity as ComponentActivity).onBackPressedDispatcher.onBackPressed()
-            closedByBack = activity.isFinishing
         }
     }
 
     @Then("시작 화면으로 돌아가지 않고 앱 화면이 닫힌다")
     fun assertClosedWithoutSplash() {
-        assertTrue("뒤로 가기 후 앱 화면이 닫혀야 합니다.", closedByBack)
+        // API 31 이상에서 태스크 루트의 뒤로 가기는 시스템이 비동기로 처리한다.
+        val launched = requireNotNull(scenario)
+        val deadline = SystemClock.uptimeMillis() + WAIT_TIMEOUT_MILLIS
+        while (launched.state.isAtLeast(Lifecycle.State.STARTED) &&
+            SystemClock.uptimeMillis() < deadline
+        ) {
+            SystemClock.sleep(50)
+        }
+        assertFalse(
+            "뒤로 가기 후 앱 화면이 닫혀야 합니다. 현재 상태: ${launched.state}",
+            launched.state.isAtLeast(Lifecycle.State.STARTED)
+        )
     }
 
     @After
