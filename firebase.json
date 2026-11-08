@@ -4,8 +4,21 @@
     "indexes": "firebase/firestore.indexes.json"
   },
   "emulators": {
-    "firestore": { "port": 8080 },
-    "ui": { "enabled": false },
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": false
+    },
     "singleProjectMode": true
+  },
+  "auth": {
+    "providers": {
+      "anonymous": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "RoadCanvas",
+        "supportEmail": "support@roadcanvas-f9f2a.firebaseapp.com"
+      }
+    }
   }
 }

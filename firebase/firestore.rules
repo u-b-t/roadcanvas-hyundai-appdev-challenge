@@ -49,6 +49,49 @@ service cloud.firestore {
         }
       }
     }
+    function validArtwork(data) {
+      return data.keys().hasOnly(['ownerUid', 'nickname', 'title', 'visibility', 'createdAt', 'pointChunkCount', 'distanceMeters', 'durationMillis']) &&
+        data.keys().hasAll(['ownerUid', 'nickname', 'title', 'visibility', 'createdAt', 'pointChunkCount', 'distanceMeters', 'durationMillis']) &&
+        shortText(data.ownerUid, 128) && shortText(data.nickname, 30) && shortText(data.title, 20) &&
+        data.visibility in ['DRAFT', 'PUBLISHED'] && data.createdAt is timestamp &&
+        data.pointChunkCount is int && data.pointChunkCount >= 0 && data.pointChunkCount <= 10000 &&
+        data.distanceMeters is number && data.distanceMeters >= 0 &&
+        data.durationMillis is int && data.durationMillis >= 0;
+    }
+    function artworkDoc(artworkId) {
+      return get(/databases/$(database)/documents/artworks/$(artworkId));
+    }
+    function canViewArtwork(artworkId) {
+      let artwork = artworkDoc(artworkId);
+      return signedIn() && (artwork.data.visibility == 'PUBLISHED' || artwork.data.ownerUid == request.auth.uid);
+    }
+    match /artworks/{artworkId} {
+      allow read: if signedIn() && (resource.data.visibility == 'PUBLISHED' || resource.data.ownerUid == request.auth.uid);
+      allow create: if signedIn() && validArtwork(request.resource.data) &&
+        request.resource.data.ownerUid == request.auth.uid && request.resource.data.visibility == 'DRAFT';
+      allow update: if signedIn() && resource.data.ownerUid == request.auth.uid && validArtwork(request.resource.data) &&
+        request.resource.data.ownerUid == resource.data.ownerUid && request.resource.data.createdAt == resource.data.createdAt &&
+        (resource.data.visibility == 'DRAFT' || request.resource.data.pointChunkCount == resource.data.pointChunkCount);
+      allow delete: if false;
+      match /chunks/{chunkId} {
+        allow read: if canViewArtwork(artworkId);
+        allow create, update, delete: if signedIn() && artworkDoc(artworkId).data.ownerUid == request.auth.uid &&
+          artworkDoc(artworkId).data.visibility == 'DRAFT' &&
+          (request.method == 'delete' || (
+            request.resource.data.keys().hasOnly(['index', 'pointsJson']) &&
+            request.resource.data.keys().hasAll(['index', 'pointsJson']) &&
+            request.resource.data.index is int && request.resource.data.index >= 0 &&
+            shortText(request.resource.data.pointsJson, 200000)));
+      }
+      match /votes/{uid} {
+        allow read: if canViewArtwork(artworkId);
+        allow create: if owner(uid) && artworkDoc(artworkId).data.visibility == 'PUBLISHED' &&
+          request.resource.data.keys().hasOnly(['createdAt']) &&
+          request.resource.data.keys().hasAll(['createdAt']) && request.resource.data.createdAt is timestamp;
+        allow update: if false;
+        allow delete: if owner(uid);
+      }
+    }
     match /leaderboards/circle/entries/{uid} {
       allow read: if signedIn();
       allow create, update: if owner(uid) && validEntry(uid, request.resource.data);
