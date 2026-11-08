@@ -149,9 +149,9 @@ fun ChallengeResultScreen(
 @Composable
 private fun ResultSummary(result: ChallengeResult) {
     Text(text = "${result.score.score}점", style = MaterialTheme.typography.displayMedium)
-    result.score.zeroReason?.let {
+    result.zeroReasonText?.let {
         Text(
-            text = zeroScoreReasonText(it),
+            text = it,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.error
         )

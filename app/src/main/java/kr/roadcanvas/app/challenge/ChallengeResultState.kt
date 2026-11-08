@@ -18,7 +18,9 @@ data class ChallengeResult(
     val completedAtMillis: Long,
     val durationMillis: Long,
     val distanceMeters: Double,
-    val score: CircleScoreResult
+    val score: CircleScoreResult,
+    /** 0점 사유 안내. 점수를 계산한 설정의 기준값을 넣는다. 0점이 아니면 null이다. */
+    val zeroReasonText: String?
 ) {
     /** 완료 기록으로 저장할 값. 0점이면 세부 지표 없이 저장한다. */
     fun toCompletedDrawing() = CompletedDrawing(
@@ -39,26 +41,46 @@ fun challengeResultOf(
     startedAtMillis: Long,
     endedAtMillis: Long,
     calculator: CircleScoreCalculator = CircleScoreCalculator()
-) = ChallengeResult(
+) = scoredResult(
     mode = mode,
     path = path,
     completedAtMillis = endedAtMillis,
     durationMillis = (endedAtMillis - startedAtMillis).coerceAtLeast(0L),
     distanceMeters = pathDistanceMeters(path),
-    score = calculator.calculate(path.map { GeoPoint(it.latitude, it.longitude) })
+    score = calculator.calculate(path.map { GeoPoint(it.latitude, it.longitude) }),
+    calculator = calculator
 )
 
 /** 저장한 완료 기록을 다시 보여줄 때 같은 경로로 점수와 0점 사유를 다시 구한다. */
 fun challengeResultOf(
     drawing: CompletedDrawing,
     calculator: CircleScoreCalculator = CircleScoreCalculator()
-) = ChallengeResult(
+) = scoredResult(
     mode = drawing.mode,
     path = drawing.path,
     completedAtMillis = drawing.completedAtMillis,
     durationMillis = drawing.durationMillis,
     distanceMeters = drawing.distanceMeters,
-    score = calculator.calculate(drawing.path.map { GeoPoint(it.latitude, it.longitude) })
+    score = calculator.calculate(drawing.path.map { GeoPoint(it.latitude, it.longitude) }),
+    calculator = calculator
+)
+
+private fun scoredResult(
+    mode: DrawingMode,
+    path: List<RoutePoint>,
+    completedAtMillis: Long,
+    durationMillis: Long,
+    distanceMeters: Double,
+    score: CircleScoreResult,
+    calculator: CircleScoreCalculator
+) = ChallengeResult(
+    mode = mode,
+    path = path,
+    completedAtMillis = completedAtMillis,
+    durationMillis = durationMillis,
+    distanceMeters = distanceMeters,
+    score = score,
+    zeroReasonText = score.zeroReason?.let { zeroScoreReasonText(it, calculator.config) }
 )
 
 /** 세부 지표를 저장소에 기록하는 이름과 값. 이름은 저장된 기록을 읽을 때 쓰므로 바꾸지 않는다. */
@@ -73,16 +95,14 @@ fun CircleScoreMetrics.toNamedValues(): Map<String, Double> = mapOf(
     "pathLengthMeters" to pathLengthMeters
 )
 
-/** 0점 사유 안내. 기준값은 점수 계산 설정에서 가져온다. */
-fun zeroScoreReasonText(
-    reason: ZeroScoreReason,
-    config: CircleScoreConfig = CircleScoreConfig()
-): String = when (reason) {
-    ZeroScoreReason.INSUFFICIENT_POINTS -> "기록한 위치가 ${config.minValidPoints}개보다 적어요"
-    ZeroScoreReason.NO_MOVEMENT -> "이동 거리가 ${config.minPathLengthMeters.toInt()}m보다 짧아요"
-    ZeroScoreReason.NOT_CIRCULAR -> "경로가 직선에 가까워 원으로 볼 수 없어요"
-    ZeroScoreReason.TOO_SMALL -> "원의 지름이 ${config.minDiameterMeters.toInt()}m보다 작아요"
-}
+/** 0점 사유 안내. 기준값은 [config]에서 가져온다. */
+fun zeroScoreReasonText(reason: ZeroScoreReason, config: CircleScoreConfig): String =
+    when (reason) {
+        ZeroScoreReason.INSUFFICIENT_POINTS -> "기록한 위치가 ${config.minValidPoints}개보다 적어요"
+        ZeroScoreReason.NO_MOVEMENT -> "이동 거리가 ${config.minPathLengthMeters.toInt()}m보다 짧아요"
+        ZeroScoreReason.NOT_CIRCULAR -> "경로가 직선에 가까워 원으로 볼 수 없어요"
+        ZeroScoreReason.TOO_SMALL -> "원의 지름이 ${config.minDiameterMeters.toInt()}m보다 작아요"
+    }
 
 /** 완료 기록 저장 단계 */
 enum class ResultSaveStatus {

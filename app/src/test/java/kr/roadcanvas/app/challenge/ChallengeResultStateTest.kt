@@ -2,6 +2,7 @@ package kr.roadcanvas.app.challenge
 
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
+import kr.roadcanvas.app.score.CircleScoreCalculator
 import kr.roadcanvas.app.score.CircleScoreConfig
 import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.TestPaths
@@ -44,7 +45,35 @@ class ChallengeResultStateTest {
         )
 
         assertEquals(ZeroScoreReason.NO_MOVEMENT, result.score.zeroReason)
+        assertEquals("이동 거리가 50m보다 짧아요", result.zeroReasonText)
         assertEquals(emptyMap<String, Double>(), result.toCompletedDrawing().metrics)
+    }
+
+    @Test
+    fun `0점 사유 안내는 점수를 계산한 설정의 기준값을 쓴다`() {
+        val calculator = CircleScoreCalculator(CircleScoreConfig(minValidPoints = 40))
+
+        val result = challengeResultOf(
+            DrawingMode.CIRCLE,
+            path(TestPaths.stationary(30)),
+            START,
+            START + 30_000,
+            calculator
+        )
+
+        assertEquals("기록한 위치가 40개보다 적어요", result.zeroReasonText)
+    }
+
+    @Test
+    fun `0점이 아니면 사유 안내가 없다`() {
+        val result = challengeResultOf(
+            DrawingMode.CIRCLE,
+            path(TestPaths.circle(50.0)),
+            START,
+            START + 90_000
+        )
+
+        assertEquals(null, result.zeroReasonText)
     }
 
     @Test
