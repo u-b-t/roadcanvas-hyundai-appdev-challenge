@@ -1,6 +1,7 @@
 package kr.roadcanvas.app.test
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
@@ -117,12 +118,15 @@ class ChallengeReadySteps(private val ruleHolder: ComposeRuleHolder) {
         guideText = text
         guideLayout = null
         TestScreens.launchContent {
-            KeepWordsText(
-                text = text,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.width(widthDp.dp),
-                onTextLayout = { guideLayout = it }
-            )
+            // 테마의 Surface가 최소 크기를 화면 전체로 넘기므로 Box로 받아 폭 제한이 적용되게 한다.
+            Box {
+                KeepWordsText(
+                    text = text,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.width(widthDp.dp),
+                    onTextLayout = { guideLayout = it }
+                )
+            }
         }
         composeRule.waitUntil(WAIT_TIMEOUT_MILLIS) { guideLayout != null }
     }
