@@ -39,6 +39,43 @@ class ChallengeProgressStateTest {
     }
 
     @Test
+    fun `기록 중 조작할 수 없으면 주행 중 표시로 바꾸고 정차하면 되돌린다`() {
+        assertFalse(challengeProgressOf(recording, DrivingRestriction.UNRESTRICTED, 0L).driving)
+        assertTrue(challengeProgressOf(recording, DrivingRestriction.RESTRICTED, 0L).driving)
+        assertTrue(challengeProgressOf(recording, DrivingRestriction.UNKNOWN, 0L).driving)
+        assertFalse(
+            challengeProgressOf(RecordingState.Idle, DrivingRestriction.RESTRICTED, 0L).driving
+        )
+    }
+
+    @Test
+    fun `기록한 경로로 출발점까지 거리를 계산한다`() {
+        val state = challengeProgressOf(recording, DrivingRestriction.UNRESTRICTED, 0L)
+
+        assertEquals(100.0, state.lap.distanceToStartMeters!!, 1.0)
+        assertFalse(state.showsFinishGuidance)
+    }
+
+    @Test
+    fun `한 바퀴를 돌아 출발점 근처에 오면 종료 안내를 보인다`() {
+        val center = RoutePoint(37.5665, 126.978, 0)
+        val circle = (0..60).map { i ->
+            val angle = 2 * Math.PI * 0.97 * i / 60
+            RoutePoint(
+                center.latitude + 0.00045 * Math.sin(angle),
+                center.longitude + 0.00057 * (1 - Math.cos(angle)),
+                i.toLong()
+            )
+        }
+        val lap = RecordingState.Recording(DrawingMode.CIRCLE, 0L, circle, 300.0)
+
+        assertTrue(challengeProgressOf(lap, DrivingRestriction.RESTRICTED, 0L).showsFinishGuidance)
+        assertTrue(
+            challengeProgressOf(lap, DrivingRestriction.UNRESTRICTED, 0L).showsFinishGuidance
+        )
+    }
+
+    @Test
     fun `기록 중이 아니면 종료와 포기를 할 수 없고 이유도 표시하지 않는다`() {
         listOf(
             RecordingState.Idle,

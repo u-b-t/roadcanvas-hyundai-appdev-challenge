@@ -1,6 +1,8 @@
 package kr.roadcanvas.app.test
 
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
@@ -13,13 +15,18 @@ import io.cucumber.java.Before
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlinx.coroutines.runBlocking
 import kr.roadcanvas.app.RoadCanvasApplication
 import kr.roadcanvas.app.challenge.CIRCLE_PROGRESS_TITLE
 import kr.roadcanvas.app.challenge.CIRCLE_READY_TITLE
 import kr.roadcanvas.app.challenge.CIRCLE_RESULT_TITLE
+import kr.roadcanvas.app.challenge.DISTANCE_TO_START_LABEL
 import kr.roadcanvas.app.challenge.FINISH_LABEL
 import kr.roadcanvas.app.challenge.START_LABEL
+import kr.roadcanvas.app.challenge.TURN_PROGRESS_LABEL
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
@@ -34,6 +41,10 @@ import org.junit.Assert.assertTrue
 
 private const val WAIT_TIMEOUT_MILLIS = 5_000L
 private const val DAY_MILLIS = 86_400_000L
+private const val CIRCLE_SPACING_METERS = 5.0
+private const val BASE_LATITUDE = 37.5665
+private const val BASE_LONGITUDE = 126.978
+private const val EARTH_RADIUS_METERS = 6_371_000.0
 
 /** 진행 화면 시나리오. 기록은 포그라운드 서비스 대신 테스트용 실행기가 코루틴에서 실행한다. */
 class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
@@ -42,6 +53,7 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
     private val fakeContainer get() = application.container as FakeAppContainer
     private val recorder get() = fakeContainer.challengeRecorder
     private var scenario: TestScreen<ComponentActivity>? = null
+    private var rememberedHeight: Float? = null
 
     /** 시작 버튼이 권한 요청 창을 띄우지 않도록 기록에 필요한 권한을 미리 허용한다. */
     @Before
@@ -185,6 +197,52 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
         assertTrue(state.path.all { it.timeMillis >= state.startedAtMillis })
     }
 
+    /** 서울시청에서 출발해 동쪽으로 향하며 반시계 방향으로 도는 원을 5m 간격으로 기록한다. */
+    @When("테스트에서 반지름 {int}m 원을 {double}바퀴 기록한다")
+    fun recordCircle(radius: Int, turns: Double) {
+        val count = (2 * PI * radius * turns / CIRCLE_SPACING_METERS).toInt()
+        val points = (0..count).map { i ->
+            val angle = 2 * PI * turns * i / count
+            offset(east = radius * sin(angle), north = radius - radius * cos(angle))
+        }
+        runBlocking {
+            points.forEach {
+                fakeContainer.locationProvider.sendLocation(
+                    LocationSample(it.latitude, it.longitude, System.currentTimeMillis())
+                )
+            }
+        }
+        waitUntil { (recorder.state.value as? RecordingState.Recording)?.path?.size == points.size }
+    }
+
+    @Then("출발점까지 거리는 {string}다")
+    fun assertDistanceToStart(value: String) {
+        waitUntil {
+            composeRule.onAllNodes(hasText(DISTANCE_TO_START_LABEL) and hasText(value))
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    @Then("회전 진행률은 {int}%에서 {int}% 사이다")
+    fun assertTurnPercent(min: Int, max: Int) {
+        waitUntil {
+            val percent = measurementValue(TURN_PROGRESS_LABEL)?.removeSuffix("%")?.toIntOrNull()
+            percent != null && percent in min..max
+        }
+    }
+
+    @Given("{string} 측정값의 글자 크기를 기억한다")
+    fun rememberMeasurementHeight(label: String) {
+        waitUntil { measurementNode(label) != null }
+        rememberedHeight = requireNotNull(measurementNode(label)).boundsInRoot.height
+    }
+
+    @Then("{string} 측정값이 기억한 크기보다 크게 표시된다")
+    fun assertMeasurementLarger(label: String) {
+        val before = requireNotNull(rememberedHeight) { "기억한 크기가 없습니다." }
+        waitUntil { (measurementNode(label)?.boundsInRoot?.height ?: 0f) > before }
+    }
+
     @Then("기록한 경로 점은 {int}개다")
     fun assertRecordedCount(count: Int) {
         waitUntil { (recorder.state.value as? RecordingState.Recording)?.path?.size == count }
@@ -216,6 +274,24 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
         scenario = TestScreens.launchContent {
             RoadCanvasNavHost(navController = rememberNavController(), splashDurationMillis = 0L)
         }
+    }
+
+    /** 이름과 값을 묶은 측정값 노드 */
+    private fun measurementNode(label: String) =
+        composeRule.onAllNodesWithText(label).fetchSemanticsNodes().firstOrNull()
+
+    private fun measurementValue(label: String): String? = measurementNode(label)
+        ?.config
+        ?.getOrNull(SemanticsProperties.Text)
+        ?.map { it.text }
+        ?.firstOrNull { it != label }
+
+    /** 서울시청에서 동쪽 [east] m, 북쪽 [north] m 떨어진 점 */
+    private fun offset(east: Double, north: Double): RoutePoint {
+        val latitude = BASE_LATITUDE + Math.toDegrees(north / EARTH_RADIUS_METERS)
+        val longitude = BASE_LONGITUDE +
+            Math.toDegrees(east / (EARTH_RADIUS_METERS * cos(Math.toRadians(BASE_LATITUDE))))
+        return RoutePoint(latitude, longitude, 0L)
     }
 
     private fun savedInProgress() = runBlocking {

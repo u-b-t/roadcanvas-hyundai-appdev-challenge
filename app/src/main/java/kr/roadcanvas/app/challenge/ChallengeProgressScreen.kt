@@ -19,7 +19,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -27,6 +29,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kr.roadcanvas.app.appContainer
 import kr.roadcanvas.app.drawing.DrawingMode
+import kr.roadcanvas.app.map.CurrentPosition
 import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RoutePoint
@@ -42,13 +45,16 @@ import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 const val CIRCLE_PROGRESS_TITLE = "동그라미 챌린지 진행"
 const val ELAPSED_LABEL = "경과 시간"
 const val DISTANCE_LABEL = "이동 거리"
+const val DISTANCE_TO_START_LABEL = "출발점까지"
+const val TURN_PROGRESS_LABEL = "회전 진행률"
+const val FINISH_GUIDANCE = "출발점 도착! 정차 후 종료하세요"
 const val FINISH_LABEL = "종료"
 const val GIVE_UP_LABEL = "포기"
 const val PROGRESS_PREPARING = "기록을 준비하고 있어요"
 const val PROGRESS_FAILED = "기록을 시작하지 못했어요"
 const val BACK_TO_READY_LABEL = "준비 화면으로"
-const val CONTROL_RESTRICTED_REASON = "주행 중에는 종료하거나 포기할 수 없어요"
-const val CONTROL_UNKNOWN_REASON = "주행 상태를 확인할 수 없어 종료하거나 포기할 수 없어요"
+const val CONTROL_RESTRICTED_REASON = "정차하면 종료할 수 있어요"
+const val CONTROL_UNKNOWN_REASON = "주행 상태 확인 불가"
 const val GIVE_UP_CONFIRM_TITLE = "도전을 포기할까요?"
 const val GIVE_UP_CONFIRM_MESSAGE = "지금까지 기록한 경로를 지우고 저장하지 않아요"
 const val GIVE_UP_CONFIRM_LABEL = "포기하기"
@@ -149,29 +155,38 @@ fun ChallengeProgressScreen(
                 options = RouteMapOptions(
                     showEndpointMarkers = true,
                     inProgress = true,
-                    contentPadding = driverSideOverlayContentPadding()
+                    contentPadding = driverSideOverlayContentPadding(),
+                    currentPosition = state.path.lastOrNull()?.let {
+                        CurrentPosition(
+                            RoutePoint(it.latitude, it.longitude),
+                            state.lap.headingDegrees
+                        )
+                    }
                 ),
                 modifier = Modifier.fillMaxSize()
             )
         },
         controls = {
             OverlayCard(modifier = Modifier.fillMaxWidth()) {
-                Text(text = CIRCLE_PROGRESS_TITLE, style = MaterialTheme.typography.headlineSmall)
+                if (!state.driving) {
+                    Text(
+                        text = CIRCLE_PROGRESS_TITLE,
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
                 when (state.phase) {
                     ChallengeProgressPhase.PREPARING -> StatusText(PROGRESS_PREPARING)
                     ChallengeProgressPhase.FAILED -> StatusText(PROGRESS_FAILED)
                     ChallengeProgressPhase.RECORDING, ChallengeProgressPhase.FINISHED -> {
-                        Measurement(ELAPSED_LABEL, formatElapsed(state.elapsedMillis))
-                        Measurement(DISTANCE_LABEL, formatDistance(state.distanceMeters))
+                        if (state.showsFinishGuidance) {
+                            Guidance(FINISH_GUIDANCE, MaterialTheme.colorScheme.primary)
+                        }
+                        ProgressMeasurements(state)
                     }
                 }
-                if (state.phase != ChallengeProgressPhase.FAILED) {
+                if (state.phase != ChallengeProgressPhase.FAILED && !state.showsFinishGuidance) {
                     state.controlBlockedReason?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
+                        Guidance(it, MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -181,7 +196,8 @@ fun ChallengeProgressScreen(
                     onClick = onBackToReady,
                     modifier = Modifier.fillMaxWidth()
                 )
-            } else {
+            } else if (!state.driving) {
+                // 주행 중에는 쓸 수 없는 버튼을 숨겨 지도를 가리지 않는다. 정차하면 다시 보인다.
                 CarButton(
                     text = FINISH_LABEL,
                     onClick = onFinish,
@@ -230,14 +246,36 @@ private fun StatusText(text: String) {
     Text(text = text, style = MaterialTheme.typography.titleLarge)
 }
 
+/** 주행 중에는 한눈에 읽도록 측정값을 크게 보여주고, 정차 중에는 회전 진행률까지 보여준다. */
 @Composable
-internal fun Measurement(label: String, value: String) {
-    Column {
+private fun ProgressMeasurements(state: ChallengeProgressUiState) {
+    val large = state.driving
+    Measurement(ELAPSED_LABEL, formatElapsed(state.elapsedMillis), large)
+    Measurement(DISTANCE_LABEL, formatDistance(state.distanceMeters), large)
+    Measurement(
+        DISTANCE_TO_START_LABEL,
+        formatDistanceToStart(state.lap.distanceToStartMeters),
+        large
+    )
+    if (!large) Measurement(TURN_PROGRESS_LABEL, formatTurnPercent(state.lap.turnPercent))
+}
+
+/** 짧고 크게 쓰는 안내. 주행 중에도 읽을 수 있도록 [color]로 강조한다. */
+@Composable
+private fun Guidance(text: String, color: Color) {
+    Text(text = text, style = MaterialTheme.typography.headlineSmall, color = color)
+}
+
+@Composable
+internal fun Measurement(label: String, value: String, large: Boolean = false) {
+    val typography = MaterialTheme.typography
+    // 이름과 값을 한 번에 읽도록 묶는다.
+    Column(modifier = Modifier.semantics(mergeDescendants = true) {}) {
         Text(
             text = label,
-            style = MaterialTheme.typography.titleMedium,
+            style = if (large) typography.titleLarge else typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Text(text = value, style = MaterialTheme.typography.displaySmall)
+        Text(text = value, style = if (large) typography.displayMedium else typography.displaySmall)
     }
 }

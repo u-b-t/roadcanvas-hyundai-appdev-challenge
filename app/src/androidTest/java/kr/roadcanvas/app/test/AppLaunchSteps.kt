@@ -9,8 +9,8 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -70,7 +70,8 @@ class AppLaunchSteps(private val ruleHolder: ComposeRuleHolder) {
         composeRule.waitUntil(WAIT_TIMEOUT_MILLIS) {
             composeRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithText(text).assertIsDisplayed()
+        // 이동 거리와 출발점까지 거리처럼 같은 글이 여러 곳에 보일 수 있다.
+        composeRule.onAllNodesWithText(text).onFirst().assertIsDisplayed()
     }
 
     @Then("앱 창 배경이 커버의 어두운 색이다")
