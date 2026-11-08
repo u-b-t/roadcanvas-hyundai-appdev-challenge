@@ -1,5 +1,8 @@
 package kr.roadcanvas.app.di
 
+import kr.roadcanvas.app.drawing.CompletedDrawingRepository
+import kr.roadcanvas.app.drawing.DrawingStorage
+import kr.roadcanvas.app.drawing.InProgressDrawingRepository
 import kr.roadcanvas.app.vehicle.DrivingRestrictionProvider
 import kr.roadcanvas.app.vehicle.IntegrationSource
 import kr.roadcanvas.app.vehicle.LocationProvider
@@ -13,6 +16,7 @@ import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteGenerator
 /** 빌드 속성으로 고른 구현을 구성한다. 실제 구현이 없는 동안에는 모의 구현을 사용한다. */
 class DefaultAppContainer(
     selection: VehicleIntegrationSelection,
+    drawingStorage: DrawingStorage,
     routeConfig: SimulatedRouteConfig = SimulatedRouteConfig()
 ) : AppContainer {
     override val vehicleIntegrationInfo: VehicleIntegrationInfo = selection.resolve()
@@ -31,4 +35,9 @@ class DefaultAppContainer(
             IntegrationSource.SIMULATED -> SimulatedDrivingRestrictionProvider()
             else -> error("${vehicleIntegrationInfo.driving.key} 주행 규제 구현이 없습니다.")
         }
+
+    override val completedDrawingRepository: CompletedDrawingRepository = drawingStorage.completed
+
+    override val inProgressDrawingRepository: InProgressDrawingRepository =
+        drawingStorage.inProgress
 }

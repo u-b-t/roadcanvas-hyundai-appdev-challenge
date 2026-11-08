@@ -1,5 +1,7 @@
 package kr.roadcanvas.app.di
 
+import kr.roadcanvas.app.drawing.CompletedDrawingRepository
+import kr.roadcanvas.app.drawing.InProgressDrawingRepository
 import kr.roadcanvas.app.vehicle.DrivingRestrictionProvider
 import kr.roadcanvas.app.vehicle.LocationProvider
 import kr.roadcanvas.app.vehicle.VehicleIntegrationInfo
@@ -9,4 +11,6 @@ interface AppContainer {
     val locationProvider: LocationProvider
     val drivingRestrictionProvider: DrivingRestrictionProvider
     val vehicleIntegrationInfo: VehicleIntegrationInfo
+    val completedDrawingRepository: CompletedDrawingRepository
+    val inProgressDrawingRepository: InProgressDrawingRepository
 }
