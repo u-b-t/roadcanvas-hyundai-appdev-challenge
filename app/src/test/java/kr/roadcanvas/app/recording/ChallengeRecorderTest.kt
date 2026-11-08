@@ -62,6 +62,49 @@ class ChallengeRecorderTest {
     }
 
     @Test
+    fun `시작 전에 측정한 위치는 경로에 기록하지 않는다`() = runTest(dispatcher) {
+        runRecorder(RecordingRequest.New(DrawingMode.CIRCLE))
+
+        // 구독하자마자 오는 마지막으로 알려진 위치
+        now += 200
+        locationProvider.sendLocation(LocationSample(37.5000, LONGITUDE, START - 30_000))
+        send(37.5665)
+        send(37.5674)
+
+        val state = recorder.state.value as RecordingState.Recording
+        assertEquals(listOf(37.5665, 37.5674), state.path.map { it.latitude })
+        assertEquals(state.path, savedPath())
+        assertEquals(100.07, state.distanceMeters, 0.01)
+    }
+
+    @Test
+    fun `위치 시각이 없으면 받은 시각으로 기록한다`() = runTest(dispatcher) {
+        runRecorder(RecordingRequest.New(DrawingMode.CIRCLE))
+
+        now += 1_000
+        locationProvider.sendLocation(LocationSample(37.5665, LONGITUDE, 0L))
+
+        val path = (recorder.state.value as RecordingState.Recording).path
+        assertEquals(listOf(RoutePoint(37.5665, LONGITUDE, START + 1_000)), path)
+        assertEquals(path, savedPath())
+    }
+
+    @Test
+    fun `이어서 기록할 때도 원래 시작 전에 측정한 위치는 기록하지 않는다`() = runTest(dispatcher) {
+        repository.start(DrawingMode.CIRCLE, START)
+        repository.appendPoints(listOf(RoutePoint(37.5665, LONGITUDE, START + 1_000)))
+        now = START + 120_000
+
+        runRecorder(RecordingRequest.Resume)
+        locationProvider.sendLocation(LocationSample(37.5000, LONGITUDE, START - 1))
+        send(37.5683)
+
+        val state = recorder.state.value as RecordingState.Recording
+        assertEquals(listOf(37.5665, 37.5683), state.path.map { it.latitude })
+        assertEquals(200.14, state.distanceMeters, 0.02)
+    }
+
+    @Test
     fun `같은 좌표가 연달아 오면 하나만 남긴다`() = runTest(dispatcher) {
         runRecorder(RecordingRequest.New(DrawingMode.CIRCLE))
 
