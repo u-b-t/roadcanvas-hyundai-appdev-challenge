@@ -25,6 +25,29 @@ class ChallengeProgressStateTest {
     }
 
     @Test
+    fun `기록 상태의 모드를 화면 상태에 넘기고 기록을 준비하는 동안에는 모드를 모른다`() {
+        val free = RecordingState.Recording(DrawingMode.FREE_DRAWING, 10_000L, path, 100.0)
+
+        assertEquals(
+            DrawingMode.FREE_DRAWING,
+            challengeProgressOf(free, DrivingRestriction.UNRESTRICTED, 0L).mode
+        )
+        assertEquals(
+            DrawingMode.FREE_DRAWING,
+            challengeProgressOf(
+                RecordingState.Failed(IllegalStateException(), DrawingMode.FREE_DRAWING),
+                DrivingRestriction.UNRESTRICTED,
+                0L
+            ).mode
+        )
+        assertNull(
+            challengeProgressOf(RecordingState.Idle, DrivingRestriction.UNRESTRICTED, 0L).mode
+        )
+        assertEquals(FREE_DRAWING_PROGRESS_TITLE, progressTitleOf(DrawingMode.FREE_DRAWING))
+        assertEquals(CIRCLE_PROGRESS_TITLE, progressTitleOf(DrawingMode.CIRCLE))
+    }
+
+    @Test
     fun `정차해 조작할 수 있을 때만 종료와 포기를 할 수 있다`() {
         val unrestricted = challengeProgressOf(recording, DrivingRestriction.UNRESTRICTED, 0L)
         val restricted = challengeProgressOf(recording, DrivingRestriction.RESTRICTED, 0L)

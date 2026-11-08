@@ -60,7 +60,7 @@
 - 점수 세부 지표는 점수 계산 모델에 의존하지 않도록 이름과 값(`Map<String, Double>`)으로 저장한다.
 - 완료 기록 이름(`name`, DB 버전 3)은 `kr.roadcanvas.app.drawing.validateDrawingName`으로 앞뒤 공백을 제거하고 1~20자만 받는다. `DrawingMode.nameRequired`가 false인 모드(동그라미)는 비워 두면 이름 없이 저장한다. 이름 입력은 SDG `SDGSimpleTextInput`을 차량 크기로 감싼 `CarTextInput`을 쓰고, 키보드가 열리면 입력창과 저장 버튼이 보이도록 나머지 버튼을 숨긴다.
 - 스키마를 바꾸면 `DrawingDatabase.VERSION`을 올리고 `MIGRATIONS`에 마이그레이션을 추가한다. 빌드가 `app/schemas/`에 버전별 스키마를 기록하므로 함께 커밋한다. androidTest는 이 스키마로 마이그레이션을 검증한다.
-- debug 빌드에서 `adb shell am start -n kr.roadcanvas.app/.debug.SeedDrawingsActivity`로 모의 원·찌그러진 원 경로의 완료 기록 두 건을 저장해 내 그림 화면을 확인한다. 실행할 때마다 추가되며 지우려면 앱 데이터를 삭제한다.
+- debug 빌드에서 `adb shell am start -n kr.roadcanvas.app/.debug.SeedDrawingsActivity`로 모의 원·찌그러진 원 경로의 동그라미 챌린지 기록 두 건과 직선 왕복 경로의 자유그림 기록 한 건을 저장해 내 그림 화면을 확인한다. 실행할 때마다 추가되며 지우려면 앱 데이터를 삭제한다.
 - 저장소 단위 테스트는 Robolectric과 in-memory DB로 실행한다. 테스트용 대체 구현은 `app/src/sharedTest/`의 `kr.roadcanvas.app.drawing.fake`에 있고 `failure`를 지정해 실패를 주입한다.
 
 ## 도전 기록

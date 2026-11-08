@@ -2,6 +2,7 @@ package kr.roadcanvas.app.challenge
 
 import java.util.Locale
 import kotlin.math.roundToLong
+import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.recording.RecordingState
 import kr.roadcanvas.app.vehicle.DrivingRestriction
@@ -20,6 +21,7 @@ enum class ChallengeProgressPhase {
 /**
  * 진행 화면 상태. [path]와 [elapsedMillis]는 화면 갱신 시점의 값이다.
  * [lap]은 [path]로 계산한 출발점까지 거리와 회전 진행률이다.
+ * [mode]는 기록 중인 도전의 모드이며 기록을 준비하는 중이거나 모르면 null이다.
  */
 data class ChallengeProgressUiState(
     val phase: ChallengeProgressPhase,
@@ -27,7 +29,8 @@ data class ChallengeProgressUiState(
     val distanceMeters: Double,
     val path: List<RoutePoint>,
     val restriction: DrivingRestriction,
-    val lap: LapProgress = LapProgress.EMPTY
+    val lap: LapProgress = LapProgress.EMPTY,
+    val mode: DrawingMode? = null
 ) {
     /**
      * 기록 중 조작할 수 없는 상태. 주행 중이거나 주행 상태를 확인할 수 없으면 종료·포기 버튼을 숨기고
@@ -36,9 +39,16 @@ data class ChallengeProgressUiState(
     val driving: Boolean
         get() = phase == ChallengeProgressPhase.RECORDING && !restriction.allowsInteraction
 
+    /**
+     * 출발점까지 거리와 회전 진행률처럼 원을 그리는 도전에만 쓰는 정보를 보여줄지.
+     * 자유그림은 출발점으로 돌아올 필요가 없으므로 보여주지 않는다. 진행 방향은 모든 모드에서 쓴다.
+     */
+    val showsLapProgress: Boolean
+        get() = mode != DrawingMode.FREE_DRAWING
+
     /** 한 바퀴를 돌고 출발점 근처로 돌아와 정차 후 종료하라고 안내할 때 */
     val showsFinishGuidance: Boolean
-        get() = phase == ChallengeProgressPhase.RECORDING && lap.readyToFinish
+        get() = phase == ChallengeProgressPhase.RECORDING && showsLapProgress && lap.readyToFinish
 
     /** 정차해 조작할 수 있을 때만 종료·포기할 수 있다. */
     val canControl: Boolean
@@ -76,7 +86,8 @@ fun challengeProgressOf(
         distanceMeters = recording.distanceMeters,
         path = recording.path,
         restriction = restriction,
-        lap = lapProgressOf(recording.path)
+        lap = lapProgressOf(recording.path),
+        mode = recording.mode
     )
     is RecordingState.Finished -> ChallengeProgressUiState(
         phase = ChallengeProgressPhase.FINISHED,
@@ -84,14 +95,16 @@ fun challengeProgressOf(
         distanceMeters = recording.distanceMeters,
         path = recording.path,
         restriction = restriction,
-        lap = lapProgressOf(recording.path)
+        lap = lapProgressOf(recording.path),
+        mode = recording.mode
     )
     is RecordingState.Failed -> ChallengeProgressUiState(
         ChallengeProgressPhase.FAILED,
         0L,
         0.0,
         emptyList(),
-        restriction
+        restriction,
+        mode = recording.mode
     )
 }
 
