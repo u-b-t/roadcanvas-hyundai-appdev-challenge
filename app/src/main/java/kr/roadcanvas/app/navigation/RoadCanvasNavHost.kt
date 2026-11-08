@@ -16,6 +16,7 @@ import kr.roadcanvas.app.challenge.ChallengeProgressRoute
 import kr.roadcanvas.app.challenge.ChallengeReadyRoute
 import kr.roadcanvas.app.challenge.rememberChallengeStarter
 import kr.roadcanvas.app.modeselect.ModeSelectScreen
+import kr.roadcanvas.app.mydrawings.MyDrawingsRoute
 import kr.roadcanvas.app.splash.SPLASH_DURATION_MILLIS
 import kr.roadcanvas.app.splash.SplashScreen
 
@@ -40,7 +41,6 @@ object Routes {
     fun circleResult(startedAtMillis: Long, endedAtMillis: Long) =
         "circleResult/$startedAtMillis/$endedAtMillis"
 
-    // 내 그림 목록은 #20에서 실제 화면으로 교체한다.
     const val MY_DRAWINGS = "myDrawings"
 }
 
@@ -111,7 +111,14 @@ fun RoadCanvasNavHost(
             PlaceholderScreen(title = CIRCLE_RESULT_TITLE)
         }
         composable(Routes.MY_DRAWINGS) {
-            PlaceholderScreen(title = MY_DRAWINGS_TITLE)
+            MyDrawingsRoute(
+                onStartChallenge = {
+                    navController.navigate(Routes.CIRCLE_READY) {
+                        popUpTo(Routes.MY_DRAWINGS) { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }
