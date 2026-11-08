@@ -24,11 +24,14 @@ service cloud.firestore {
            'algorithmVersion' in data && shortText(data.algorithmVersion, 40)) :
           !('score' in data) && !('algorithmVersion' in data));
     }
-    function validEntry(data) {
+    function validEntry(uid, data) {
+      let drawing = get(/databases/$(database)/documents/users/$(uid)/drawings/$(data.drawingId));
       return data.keys().hasOnly(['nickname', 'score', 'achievedAt', 'drawingId', 'algorithmVersion']) &&
         data.keys().hasAll(['nickname', 'score', 'achievedAt', 'drawingId', 'algorithmVersion']) &&
         shortText(data.nickname, 30) && data.score is int && data.score >= 0 && data.score <= 100 &&
-        data.achievedAt is timestamp && shortText(data.drawingId, 128) && shortText(data.algorithmVersion, 40);
+        data.achievedAt is timestamp && shortText(data.drawingId, 128) && shortText(data.algorithmVersion, 40) &&
+        drawing.data.mode == 'CIRCLE' && drawing.data.score == data.score &&
+        drawing.data.algorithmVersion == data.algorithmVersion;
     }
     match /users/{uid} {
       allow read, delete: if owner(uid);
@@ -48,7 +51,7 @@ service cloud.firestore {
     }
     match /leaderboards/circle/entries/{uid} {
       allow read: if signedIn();
-      allow create, update: if owner(uid) && validEntry(request.resource.data);
+      allow create, update: if owner(uid) && validEntry(uid, request.resource.data);
       allow delete: if owner(uid);
     }
   }
