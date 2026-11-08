@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -39,6 +40,12 @@ import org.junit.Assert.assertTrue
 
 private const val WAIT_TIMEOUT_MILLIS = 5_000L
 private const val COLOR_TOLERANCE = 0.05f
+
+/** 배경색을 읽을 위쪽 여백 안 높이. 테두리(1dp)보다 안쪽이고 항목과 버튼의 위쪽 안쪽 여백(12dp 이상)보다 작다. */
+private val BACKGROUND_SAMPLE_INSET = 6.dp
+
+/** 배경색을 읽을 가로 위치(너비 비율). 둥근 모서리를 피한다. */
+private val BACKGROUND_SAMPLE_FRACTIONS = listOf(0.3f, 0.5f, 0.7f)
 
 class ModeSelectSteps(private val ruleHolder: ComposeRuleHolder) {
     private val composeRule get() = ruleHolder.composeRule
@@ -103,15 +110,15 @@ class ModeSelectSteps(private val ruleHolder: ComposeRuleHolder) {
 
     @Then("{string} 항목은 강조색으로 채워진다")
     fun assertFilledWithPrimary(label: String) {
-        val color = backgroundColorOf(label)
-        assertTrue("$label 배경 $color", color.isCloseTo(RoadCanvasColorScheme.primary))
+        val colors = backgroundColorsOf(label)
+        assertTrue("$label 배경 $colors", colors.all { it.isCloseTo(RoadCanvasColorScheme.primary) })
     }
 
     @Then("{string} 항목은 강조색으로 채워지지 않는다")
     @Then("{string} 버튼은 강조색으로 채워지지 않는다")
     fun assertNotFilledWithPrimary(label: String) {
-        val color = backgroundColorOf(label)
-        assertFalse("$label 배경 $color", color.isCloseTo(RoadCanvasColorScheme.primary))
+        val colors = backgroundColorsOf(label)
+        assertFalse("$label 배경 $colors", colors.any { it.isCloseTo(RoadCanvasColorScheme.primary) })
     }
 
     @Then("{string} 항목은 {string} 항목보다 높다")
@@ -162,10 +169,14 @@ class ModeSelectSteps(private val ruleHolder: ComposeRuleHolder) {
         useUnmergedTree = true
     )
 
-    /** 글자와 화살표가 없는 오른쪽 위 안쪽의 색을 항목이나 버튼의 배경색으로 본다. */
-    private fun backgroundColorOf(label: String): Color {
+    /**
+     * 항목이나 버튼의 배경색을 여러 지점에서 읽는다. 글자·화살표·배지가 들어가지 않는 위쪽 안쪽 여백 띠를
+     * 가로로 나눠 읽어, 한 지점에 다른 요소가 겹쳐도 판정이 한 픽셀에 좌우되지 않게 한다.
+     */
+    private fun backgroundColorsOf(label: String): List<Color> {
         val pixels = clickable(label).captureToImage().toPixelMap()
-        return pixels[(pixels.width * 0.95f).toInt(), (pixels.height * 0.15f).toInt()]
+        val y = with(composeRule.density) { BACKGROUND_SAMPLE_INSET.roundToPx() }
+        return BACKGROUND_SAMPLE_FRACTIONS.map { pixels[(pixels.width * it).toInt(), y] }
     }
 
     private fun Color.isCloseTo(other: Color): Boolean = abs(red - other.red) < COLOR_TOLERANCE &&
