@@ -114,8 +114,8 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
 
     @When("앱 프로세스가 종료된 뒤 앱을 다시 실행한다")
     fun relaunchAfterProcessDeath() {
-        scenario?.close()
-        scenario = null
+        // 화면과 기록 세션을 모두 버리고 저장소만 남긴 채 새 화면을 연다.
+        TestScreens.closeAll()
         fakeContainer.restartProcess()
         // 이전 기록 세션이 위치를 더 받아 저장하지 않도록 구독이 끝날 때까지 기다린다.
         waitUntil { fakeContainer.locationProvider.subscriberCount.value == 0 }
