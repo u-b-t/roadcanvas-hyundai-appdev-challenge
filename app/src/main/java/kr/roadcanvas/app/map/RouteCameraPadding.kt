@@ -40,7 +40,7 @@ data class MapInsets(val left: Int, val top: Int, val right: Int, val bottom: In
  */
 object RouteCameraPadding {
     /** 경로와 지도 가장자리 사이 여백 */
-    val EDGE_MARGIN = 32.dp
+    val EDGE_MARGIN = 48.dp
 
     /** 끝쪽 세로 가운데의 확대·축소 컨트롤 폭. 네이버 지도 SDK 컨트롤 너비 46dp와 끝쪽 여백 10dp다. */
     val ZOOM_CONTROL_WIDTH = 56.dp
