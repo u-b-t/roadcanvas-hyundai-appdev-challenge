@@ -51,17 +51,22 @@ class AndroidCarUxRestrictionsClient(context: Context) : CarUxRestrictionsClient
                 val uxManager =
                     car.getCarManager(Car.CAR_UX_RESTRICTION_SERVICE) as CarUxRestrictionsManager
                 uxManager.registerListener { restrictions ->
-                    listener.onUxRestrictionsChanged(restrictions.isRequiresDistractionOptimization)
+                    deliver(restrictions.isRequiresDistractionOptimization)
                 }
                 manager = uxManager
-                val current = uxManager.currentCarUxRestrictions
-                if (current != null) {
-                    listener.onUxRestrictionsChanged(current.isRequiresDistractionOptimization)
+                uxManager.currentCarUxRestrictions?.let {
+                    deliver(it.isRequiresDistractionOptimization)
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "주행 규제 리스너를 등록하지 못했습니다.", e)
                 unregister(notify = true)
             }
+        }
+
+        private fun deliver(requiresDistractionOptimization: Boolean) {
+            // 플랫폼 차단 화면이 앱을 가려도 수신 값을 logcat으로 확인할 수 있게 남긴다.
+            Log.i(TAG, "requiresDistractionOptimization=$requiresDistractionOptimization")
+            listener.onUxRestrictionsChanged(requiresDistractionOptimization)
         }
 
         private fun unregister(notify: Boolean) {
