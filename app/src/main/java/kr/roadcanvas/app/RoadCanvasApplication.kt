@@ -25,6 +25,7 @@ import kr.roadcanvas.app.vehicle.aaos.AndroidCarUxRestrictionsClient
 import kr.roadcanvas.app.vehicle.pleos.PleosLocationProvider
 
 private const val TAG = "RoadCanvas"
+
 /** 익명 인증과 완료 그림 등록을 다시 시도하는 간격 */
 private const val ACCOUNT_RETRY_DELAY_MILLIS = 30_000L
 

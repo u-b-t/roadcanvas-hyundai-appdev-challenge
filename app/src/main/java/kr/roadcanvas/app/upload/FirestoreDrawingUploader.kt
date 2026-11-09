@@ -11,7 +11,10 @@ import kr.roadcanvas.app.drawing.DrawingMode
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** 같은 로컬 ID를 다시 보내면 같은 문서를 사용한다. */
+/** 리더보드에 함께 기록하는 동그라미 점수 계산 방식의 버전. 계산 방식을 바꾸면 올린다. */
+const val CIRCLE_SCORE_ALGORITHM_VERSION = "1"
+
+/** 같은 로컬 ID를 다시 보내면 같은 문서를 사용한다. 동그라미 기록만 등록한다. */
 class FirestoreDrawingUploader : DrawingUploader {
     override suspend fun upload(account: AnonymousAccount, drawing: CompletedDrawing) {
         if (drawing.mode != DrawingMode.CIRCLE) return
@@ -48,7 +51,7 @@ class FirestoreDrawingUploader : DrawingUploader {
                     "durationMillis" to drawing.durationMillis,
                     "pointChunkCount" to chunks.size,
                     "score" to drawing.score,
-                    "algorithmVersion" to "1"
+                    "algorithmVersion" to CIRCLE_SCORE_ALGORITHM_VERSION
                 )
             ).await()
         }
@@ -66,7 +69,7 @@ class FirestoreDrawingUploader : DrawingUploader {
                         "score" to drawing.score,
                         "achievedAt" to Timestamp(Date(drawing.completedAtMillis)),
                         "drawingId" to id,
-                        "algorithmVersion" to "1"
+                        "algorithmVersion" to CIRCLE_SCORE_ALGORITHM_VERSION
                     )
                 )
             }
