@@ -5,6 +5,8 @@
 #     실행 중인 에뮬레이터가 건강하면 재사용하고, 아니면 종료한 뒤 콜드 부팅한다.
 #   scripts/ci-emulator.sh recover <로그 파일 또는 디렉터리>...
 #     테스트 실패 후 시스템 크래시 흔적이 있거나 상태가 나쁘면 재시작한다.
+#   scripts/ci-emulator.sh check-memory
+#     테스트 후 qemu 메모리가 기준을 넘었으면 재시작한다.
 #
 # 건강한 상태: sys.boot_completed가 1, user 0이 RUNNING_UNLOCKED, car_service가 found.
 # 새 에뮬레이터는 RUNNER_TRACKING_ID를 비우고 새 세션으로 분리해 띄운다. 러너가 작업 종료 때
@@ -13,6 +15,8 @@
 # 창이 뜨지 않도록 -crash-report-mode disabled로 실행한다.
 # 러너에 화면(GUI 세션)이 없으면 창을 만들지 못해 종료하므로 화면 유무와 관계없이 -no-window와
 # 소프트웨어 렌더링(-gpu swiftshader_indirect)으로 띄우고, 쓰지 않는 오디오와 부팅 애니메이션을 끈다.
+# qemu는 실행하는 동안 메모리를 계속 늘리므로 prepare와 테스트 후 qemu 메모리가 기준
+# (PLEOS_EMULATOR_MEMORY_LIMIT_MB, 기본 3072)을 넘으면 종료하고 콜드 부팅한다.
 set -euo pipefail
 
 SERIAL='emulator-5554'
@@ -29,6 +33,13 @@ CRASH_PATTERN='System has crashed|DeadSystemException'
 # 에뮬레이터가 크래시 보고 동의 창을 띄우고 기다릴 때 남기는 로그
 CRASH_DIALOG_PATTERN='crashdialog'
 CRASH_DB_DIR="/tmp/android-${USER:-$(id -un)}"
+# 렌더링 옵션. 측정 결과는 docs/emulator-memory.md에 있다.
+EMULATOR_GPU=${PLEOS_EMULATOR_GPU:-swiftshader_indirect}
+# 이 값(MB)을 넘으면 재시작한다. 압축·스왑으로 밀려난 메모리도 포함한다.
+MEMORY_LIMIT_MB=${PLEOS_EMULATOR_MEMORY_LIMIT_MB:-3072}
+case "$MEMORY_LIMIT_MB" in
+  '' | *[!0-9]*) echo "::error::PLEOS_EMULATOR_MEMORY_LIMIT_MB는 MB 단위 정수여야 합니다: $MEMORY_LIMIT_MB" >&2; exit 1 ;;
+esac
 
 log() { echo "[ci-emulator] $*"; }
 fail() {
@@ -85,6 +96,7 @@ find_avd() {
 }
 
 emulator_pids() { pgrep -f -- "-avd $avd( |\$)" || true; }
+qemu_pid() { pgrep -f -- "qemu-system-[^ ]* .*-avd $avd( |\$)" | head -1 || true; }
 # 크래시 보고 DB는 모든 AVD가 함께 쓰므로 어떤 에뮬레이터든 실행 중이면 지우지 않는다.
 any_emulator_pids() { pgrep -f -- '(emulator|qemu-system-[^ ]*) .*-avd ' || true; }
 
@@ -107,6 +119,50 @@ check_health() {
   fi
   HEALTH_STATE="boot_completed=${HEALTH_BOOT:-none} user0=${HEALTH_USER0:-unknown} car_service=${HEALTH_CAR:-unknown}"
   [ "$HEALTH_BOOT" = 1 ] && [ "$HEALTH_USER0" = RUNNING_UNLOCKED ] && [ "$HEALTH_CAR" = found ]
+}
+
+# top의 MEM(물리 점유량, 압축·스왑으로 밀려난 메모리 포함)을 MEMORY_MB에, 판정에 쓴 값을
+# MEMORY_STATE에 남긴다. ps RSS는 압축된 메모리를 빼서 실제보다 작게 보이므로 참고로만 남긴다.
+# qemu가 없거나 읽지 못하면 1을 반환한다.
+measure_memory() {
+  local pid sample rss_kb
+  MEMORY_MB=''
+  MEMORY_STATE=''
+  pid=$(qemu_pid)
+  [ -n "$pid" ] || return 1
+  sample=$(top -l 1 -pid "$pid" -stats pid,mem,cmprs 2>/dev/null | awk -v pid="$pid" '$1 == pid { print $2, $3 }' || true)
+  rss_kb=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ' || true)
+  MEMORY_MB=$(echo "$sample" | awk '{ print $1 }' | to_mb)
+  [ -n "$MEMORY_MB" ] || return 1
+  MEMORY_STATE="qemu pid $pid 메모리=${MEMORY_MB}MB 압축=$(echo "$sample" | awk '{ print $2 }' | to_mb)MB rss=$((${rss_kb:-0} / 1024))MB 기준=${MEMORY_LIMIT_MB}MB"
+}
+
+# top의 크기 표기(예: 8126M+, 1.2G, 512K)를 MB 정수로 바꾼다.
+to_mb() {
+  awk '{
+    value = $1
+    gsub(/[+-]$/, "", value)
+    unit = substr(value, length(value))
+    number = value + 0
+    if (unit == "G") number *= 1024
+    else if (unit == "K") number /= 1024
+    else if (unit == "B") number /= 1024 * 1024
+    else if (unit != "M") next
+    printf "%d\n", number
+  }'
+}
+
+# 메모리가 기준 이하이거나 확인할 수 없으면 0, 기준을 넘으면 1을 반환한다.
+check_memory() {
+  if ! measure_memory; then
+    log 'qemu 메모리를 확인하지 못했습니다.'
+    return 0
+  fi
+  if [ "$MEMORY_MB" -gt "$MEMORY_LIMIT_MB" ]; then
+    log "메모리 기준 초과: $MEMORY_STATE"
+    return 1
+  fi
+  log "메모리 정상: $MEMORY_STATE"
 }
 
 # 건강해질 때까지 기다린다. 부팅이 끝난 뒤 SERVICE_GRACE가 지나도 건강하지 않으면 실패한다.
@@ -203,18 +259,21 @@ clean_stale_state() {
 
 cold_boot() {
   clean_stale_state
-  log "콜드 부팅: $avd (로그 $EMULATOR_LOG)"
+  log "콜드 부팅: $avd -gpu $EMULATOR_GPU (로그 $EMULATOR_LOG)"
   # 러너는 작업이 끝나면 RUNNER_TRACKING_ID가 같은 프로세스를 종료한다. 값을 비우고
   # 새 세션으로 분리해 단계와 작업이 끝나도 에뮬레이터가 남게 한다.
   RUNNER_TRACKING_ID='' nohup perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die "exec: $!\n"' \
     "$emulator" -avd "$avd" -no-snapshot -port "$PORT" -crash-report-mode disabled \
-    -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim \
+    -no-window -gpu "$EMULATOR_GPU" -no-audio -no-boot-anim \
     < /dev/null > "$EMULATOR_LOG" 2>&1 &
   sleep 5
   with_timeout "$ADB_TIMEOUT" "$adb" start-server > /dev/null 2>&1 || true
   if ! wait_for_health "$COLD_BOOT_TIMEOUT" "$EMULATOR_LOG"; then
     tail -100 "$EMULATOR_LOG" || true
     fail "콜드 부팅한 에뮬레이터가 정상 상태가 되지 않았습니다: $HEALTH_STATE"
+  fi
+  if measure_memory; then
+    log "부팅 직후 $MEMORY_STATE"
   fi
 }
 
@@ -236,6 +295,10 @@ prepare() {
     return 0
   fi
   log '실행 중인 Pleos 에뮬레이터 상태를 확인합니다.'
+  if ! check_memory; then
+    restart "qemu 메모리 ${MEMORY_MB}MB가 기준 ${MEMORY_LIMIT_MB}MB 초과"
+    return 0
+  fi
   if wait_for_health "$EXISTING_BOOT_TIMEOUT"; then
     return 0
   fi
@@ -259,6 +322,16 @@ recover() {
   restart "$reason"
 }
 
+after_test_memory() {
+  if [ -z "$(emulator_pids)" ]; then
+    log '실행 중인 Pleos 에뮬레이터가 없습니다. 다음 prepare가 콜드 부팅합니다.'
+    return 0
+  fi
+  if ! check_memory; then
+    restart "qemu 메모리 ${MEMORY_MB}MB가 기준 ${MEMORY_LIMIT_MB}MB 초과"
+  fi
+}
+
 command=${1:-}
 shift || true
 find_sdk
@@ -266,5 +339,6 @@ find_avd
 case "$command" in
   prepare) prepare ;;
   recover) recover "$@" ;;
-  *) fail "사용법: $0 prepare | recover <로그>..." ;;
+  check-memory) after_test_memory ;;
+  *) fail "사용법: $0 prepare | recover <로그>... | check-memory" ;;
 esac
