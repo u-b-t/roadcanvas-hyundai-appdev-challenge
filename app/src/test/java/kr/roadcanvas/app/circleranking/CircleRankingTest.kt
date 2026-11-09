@@ -46,7 +46,7 @@ class CircleRankingTest {
         assertEquals(CIRCLE_RANKING_SIZE, board.top.size)
         assertEquals(listOf("닉-me"), board.top.filter { it.mine }.map { it.nickname })
         assertEquals(
-            MyCircleRecord(rank = 5, score = 95, achievedAtMillis = 0, inTop = true),
+            MyCircleRecord(uid = "me", rank = 5, score = 95, achievedAtMillis = 0, inTop = true),
             board.mine
         )
     }
@@ -61,7 +61,7 @@ class CircleRankingTest {
 
         // 90점 11명과 같은 점수이므로 공동 1위다.
         assertEquals(
-            MyCircleRecord(rank = 1, score = 90, achievedAtMillis = 1, inTop = false),
+            MyCircleRecord(uid = "me", rank = 1, score = 90, achievedAtMillis = 1, inTop = false),
             mine
         )
     }

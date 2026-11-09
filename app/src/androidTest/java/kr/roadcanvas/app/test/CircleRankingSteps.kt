@@ -10,6 +10,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ApplicationProvider
@@ -26,8 +27,10 @@ import kr.roadcanvas.app.circleranking.CircleRankingEntry
 import kr.roadcanvas.app.circleranking.MY_CIRCLE_OUTSIDE_ROW_TAG
 import kr.roadcanvas.app.circleranking.MY_CIRCLE_RANKING_ROW_TAG
 import kr.roadcanvas.app.circleranking.MY_CIRCLE_RECORD_TAG
+import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.modeselect.CIRCLE_RANKING_HOME_LABEL
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
+import kr.roadcanvas.app.score.TestPaths
 import kr.roadcanvas.app.vehicle.fake.FakeAppContainer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -79,6 +82,41 @@ class CircleRankingSteps(private val ruleHolder: ComposeRuleHolder) {
     @Given("동그라미 챌린지 순위에 내 기록 {int}점이 있다")
     fun putMine(score: Int) {
         store.put(CircleRankingEntry(myUid, "드라이버-test", score, noonOf("2026-11-02")))
+    }
+
+    @Given("{string} 사용자 {string}의 동그라미 순위 기록 {int}점이 반지름 50m 원 경로로 있다")
+    fun putRecord(uid: String, nickname: String, score: Int) {
+        store.putRecord(
+            CircleRankingEntry(uid, nickname, score, noonOf("2026-11-01")),
+            circlePath()
+        )
+    }
+
+    @Given("{string} 사용자 {string}의 동그라미 순위 기록 {int}점이 경로 청크 하나가 빠진 채로 있다")
+    fun putRecordMissingChunk(uid: String, nickname: String, score: Int) {
+        store.putRecord(
+            CircleRankingEntry(uid, nickname, score, noonOf("2026-11-01")),
+            circlePath(),
+            missingChunk = 1
+        )
+    }
+
+    @Given("동그라미 기록 경로를 읽을 수 없다")
+    fun failChunks() {
+        store.chunkFailure = true
+    }
+
+    @Given("동그라미 기록 경로 읽기를 되돌린다")
+    fun restoreChunks() {
+        store.chunkFailure = false
+    }
+
+    @Given("동그라미 순위에서 {string} 줄을 누른다")
+    fun openRecord(nickname: String) {
+        val row = (topRows or hasTestTag(MY_CIRCLE_OUTSIDE_ROW_TAG)) and hasText(nickname)
+        showInScroll(row)
+        composeRule.onAllNodes(row).onFirst().performClick()
+        composeRule.waitForIdle()
     }
 
     @Given("동그라미 순위 서버에 연결할 수 없다")
@@ -174,6 +212,11 @@ class CircleRankingSteps(private val ruleHolder: ComposeRuleHolder) {
         composeRule.waitUntil(WAIT_TIMEOUT_MILLIS) {
             composeRule.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    /** 반지름 50m 원을 1초 간격으로 기록한 경로 */
+    private fun circlePath() = TestPaths.circle(50.0).mapIndexed { i, it ->
+        RoutePoint(it.latitude, it.longitude, noonOf("2026-11-01") + i * 1_000L)
     }
 
     private fun noonOf(date: String): Long = LocalDate.parse(date)

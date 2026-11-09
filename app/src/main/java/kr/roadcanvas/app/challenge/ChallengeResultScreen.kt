@@ -290,7 +290,7 @@ private fun ScoreBreakdown(result: ChallengeResult) {
 }
 
 @Composable
-private fun ScoreComponentRow(component: ScoreComponent) {
+internal fun ScoreComponentRow(component: ScoreComponent) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(

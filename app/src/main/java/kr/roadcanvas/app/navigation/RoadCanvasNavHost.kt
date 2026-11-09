@@ -26,6 +26,7 @@ import kr.roadcanvas.app.challenge.ChallengeReadyRoute
 import kr.roadcanvas.app.challenge.ChallengeResultRoute
 import kr.roadcanvas.app.challenge.rememberChallengeStarter
 import kr.roadcanvas.app.circleranking.CircleRankingRoute
+import kr.roadcanvas.app.circleranking.CircleRecordDetailRoute
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.gallery.PublicArtworkDetailRoute
 import kr.roadcanvas.app.gallery.PublicGalleryRoute
@@ -100,8 +101,12 @@ object Routes {
 
     const val MY_DRAWINGS = "myDrawings"
 
-    /** 동그라미 챌린지 순위 */
+    /** 동그라미 챌린지 순위와 [ARG_UID] 사용자의 순위 기록 상세 */
     const val CIRCLE_RANKING = "circleRanking"
+    const val ARG_UID = "uid"
+    const val CIRCLE_RECORD = "circleRanking/{$ARG_UID}"
+
+    fun circleRecord(uid: String) = "circleRanking/${Uri.encode(uid)}"
 
     /** 공개 작품 목록과 [ARG_ARTWORK_ID] 작품의 상세 */
     const val GALLERY = "gallery"
@@ -287,7 +292,19 @@ fun RoadCanvasNavHost(
             )
         }
         screen(Routes.CIRCLE_RANKING) {
-            CircleRankingRoute(onBack = { navController.popBackStack() })
+            CircleRankingRoute(
+                onBack = { navController.popBackStack() },
+                onOpenRecord = { navController.navigate(Routes.circleRecord(it)) }
+            )
+        }
+        screen(
+            Routes.CIRCLE_RECORD,
+            arguments = listOf(navArgument(Routes.ARG_UID) { type = NavType.StringType })
+        ) { entry ->
+            CircleRecordDetailRoute(
+                uid = requireNotNull(entry.arguments?.getString(Routes.ARG_UID)),
+                onBack = { navController.popBackStack() }
+            )
         }
         screen(Routes.GALLERY) {
             PublicGalleryRoute(
