@@ -1,5 +1,6 @@
 package kr.roadcanvas.app.vehicle.fake
 
+import java.time.LocalDate
 import kr.roadcanvas.app.account.AccountRegistration
 import kr.roadcanvas.app.account.AnonymousAccount
 import kr.roadcanvas.app.artwork.ArtworkPublisher
@@ -8,6 +9,7 @@ import kr.roadcanvas.app.artwork.fake.FakeArtworkPublicationRepository
 import kr.roadcanvas.app.artwork.fake.FakeArtworkStore
 import kr.roadcanvas.app.circleranking.CircleRanking
 import kr.roadcanvas.app.circleranking.fake.FakeCircleRankingStore
+import kr.roadcanvas.app.challenge.DrawingTopicPicker
 import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.drawing.fake.FakeCompletedDrawingRepository
 import kr.roadcanvas.app.drawing.fake.FakeInProgressDrawingRepository
@@ -81,6 +83,8 @@ class FakeAppContainer : AppContainer {
     /** 동그라미 순위 서버 저장소. 순위를 읽는 사용자는 [voterUid]와 같은 인증 사용자다. */
     val circleRankingStore = FakeCircleRankingStore()
     override val circleRanking = CircleRanking(circleRankingStore, currentUid = { voterUid })
+    /** 오늘의 주제는 날짜와 관계없이 첫 주제부터 보이도록 날짜를 고정한다. */
+    override val drawingTopicPicker = DrawingTopicPicker(today = { TOPIC_DATE })
 
     /** 시나리오 사이에 상태가 이어지지 않도록 초기 상태로 되돌린다. */
     fun reset() {
@@ -102,6 +106,7 @@ class FakeAppContainer : AppContainer {
         captureCount = 0
         voiceGuide.reset()
         circleRankingStore.reset()
+        drawingTopicPicker.reset()
         challengeRecorder = newRecorder()
     }
 
@@ -117,6 +122,9 @@ class FakeAppContainer : AppContainer {
     private fun newRecorder() = ChallengeRecorder(locationProvider, inProgressDrawingRepository)
 
     companion object {
+        /** 오늘의 주제가 목록의 첫 주제(하트)가 되는 날짜 */
+        val TOPIC_DATE: LocalDate = LocalDate.ofEpochDay(0)
+
         const val DEFAULT_VOTER_UID = "test"
 
         /** 2026-11-09 12:00(KST) */

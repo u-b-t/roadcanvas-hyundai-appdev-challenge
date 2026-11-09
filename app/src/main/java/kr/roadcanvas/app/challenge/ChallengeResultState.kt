@@ -259,12 +259,14 @@ sealed interface ChallengeResultUiState {
     /**
      * [name]은 저장한 완료 기록의 이름이며 붙이지 않았으면 null이다.
      * [bestComparison]은 다른 기록을 불러오지 못하면 null이다.
+     * [suggestedName]은 이름이 없을 때 입력창에 미리 채울 이름이며 제안하지 않으면 null이다.
      */
     data class Calculated(
         val result: ChallengeResult,
         val saveStatus: ResultSaveStatus,
         val name: String? = null,
         val nameSaveStatus: NameSaveStatus = NameSaveStatus.IDLE,
-        val bestComparison: BestRecordComparison? = null
+        val bestComparison: BestRecordComparison? = null,
+        val suggestedName: String? = null
     ) : ChallengeResultUiState
 }

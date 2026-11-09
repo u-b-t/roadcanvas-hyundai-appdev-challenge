@@ -91,7 +91,8 @@ fun ChallengeResultRoute(
                     completedRepository = container.completedDrawingRepository,
                     onStorageFailure = { Log.w(TAG, "결과 저장소 작업 실패", it) },
                     artworkPublisher = container.artworkPublisher,
-                    territoryGame = container.territoryGame
+                    territoryGame = container.territoryGame,
+                    suggestedName = { container.drawingTopicPicker.startedTopic }
                 )
             }
         }
@@ -328,7 +329,10 @@ internal fun ResultNameEditor(
     val required = state.result.mode.nameRequired
     val focusManager = LocalFocusManager.current
     // 저장한 이름이 바뀌면 입력창도 앞뒤 공백을 제거한 저장 값으로 맞춘다.
-    var input by rememberSaveable(state.name) { mutableStateOf(state.name.orEmpty()) }
+    // 이름이 없으면 제안한 이름(자유그림 오늘의 주제)을 기본값으로 둔다.
+    var input by rememberSaveable(state.name) {
+        mutableStateOf(state.name ?: state.suggestedName.orEmpty())
+    }
     var attempted by rememberSaveable { mutableStateOf(false) }
     val saving = state.nameSaveStatus == NameSaveStatus.SAVING
     DrawingNameInput(

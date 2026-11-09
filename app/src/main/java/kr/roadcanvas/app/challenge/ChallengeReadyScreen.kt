@@ -108,6 +108,10 @@ const val READY_STATUS_BLOCKED = "위치 접근이 차단되어 있어요"
 const val READY_STATUS_ERROR = "위치를 확인하지 못했어요"
 const val BLOCKED_NOTICE_MESSAGE = "차량 설정에서 위치 접근을 허용한 뒤 다시 시도해 주세요"
 
+const val TODAY_TOPIC_LABEL = "오늘의 주제"
+const val NEXT_TOPIC_LABEL = "다른 주제"
+const val TODAY_TOPIC_TAG = "todayTopic"
+
 const val START_LABEL = "시작"
 const val BACK_TO_MODE_SELECT_LABEL = "모드 선택으로"
 const val REQUEST_PERMISSION_LABEL = "권한 요청"
@@ -144,6 +148,10 @@ fun ChallengeReadyRoute(
     val nearbyTerritory by viewModel.nearbyTerritory.collectAsStateWithLifecycle()
     val voiceGuide = context.appContainer.voiceGuide
     val voiceGuideEnabled by voiceGuide.enabled.collectAsStateWithLifecycle()
+    // 자유그림만 오늘의 주제를 보여 주고, 시작하면 그때 주제를 결과 화면의 이름 제안으로 남긴다.
+    val topicPicker = context.appContainer.drawingTopicPicker
+    val topic by topicPicker.topic.collectAsStateWithLifecycle()
+    val freeDrawing = mode == DrawingMode.FREE_DRAWING
 
     var requestedPermissions by rememberSaveable { mutableStateOf(emptyList<String>()) }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -160,7 +168,10 @@ fun ChallengeReadyRoute(
 
     ChallengeReadyScreen(
         status = status,
-        onStart = onStart,
+        onStart = {
+            if (freeDrawing) topicPicker.startWith(topic)
+            onStart()
+        },
         onBack = onBack,
         onRequestPermission = { permissions ->
             requestedPermissions = permissions
@@ -176,10 +187,13 @@ fun ChallengeReadyRoute(
         mode = mode,
         nearbyTerritory = nearbyTerritory,
         voiceGuideEnabled = voiceGuideEnabled.takeIf { mode == DrawingMode.TERRITORY },
-        onVoiceGuideChange = voiceGuide::setEnabled
+        onVoiceGuideChange = voiceGuide::setEnabled,
+        topic = topic.takeIf { freeDrawing },
+        onNextTopic = topicPicker::next
     )
 }
 
+/** [topic]이 있으면 안내 아래에 오늘의 주제와 다른 주제 버튼을 둔다. */
 @Composable
 fun ChallengeReadyScreen(
     status: ChallengeReadyStatus,
@@ -194,7 +208,9 @@ fun ChallengeReadyScreen(
     mode: DrawingMode = DrawingMode.CIRCLE,
     nearbyTerritory: NearbyTerritory? = null,
     voiceGuideEnabled: Boolean? = null,
-    onVoiceGuideChange: (Boolean) -> Unit = {}
+    onVoiceGuideChange: (Boolean) -> Unit = {},
+    topic: String? = null,
+    onNextTopic: () -> Unit = {}
 ) {
     // 차량의 차단 안내를 띄우지 못하면 앱 안에서 같은 내용을 안내한다.
     var showBlockedNotice by rememberSaveable { mutableStateOf(false) }
@@ -248,6 +264,7 @@ fun ChallengeReadyScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+                    topic?.let { TodayTopic(topic = it, onNextTopic = onNextTopic) }
                 }
             }
             StartCard(
@@ -296,6 +313,29 @@ private fun GuideRow(@DrawableRes icon: Int, text: String) {
         )
         KeepWordsText(text = text, style = MaterialTheme.typography.titleLarge)
     }
+}
+
+/** 자유그림 오늘의 주제. 주제를 크게 보이고 다른 주제 버튼으로 바꾼다. */
+@Composable
+private fun TodayTopic(topic: String, onNextTopic: () -> Unit) {
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(
+        text = TODAY_TOPIC_LABEL,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Text(
+        text = topic,
+        style = MaterialTheme.typography.headlineMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.testTag(TODAY_TOPIC_TAG)
+    )
+    CarButton(
+        text = NEXT_TOPIC_LABEL,
+        onClick = onNextTopic,
+        style = CarButtonStyle.Line,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 /** 상태 안내를 시작 버튼 바로 위에 크게 보이고, 상태를 해결하는 버튼이 있으면 시작 버튼 아래에 둔다. */

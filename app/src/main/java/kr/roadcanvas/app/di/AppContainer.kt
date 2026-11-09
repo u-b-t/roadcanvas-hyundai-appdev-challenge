@@ -3,6 +3,7 @@ package kr.roadcanvas.app.di
 import kr.roadcanvas.app.account.AccountRegistration
 import kr.roadcanvas.app.artwork.ArtworkPublisher
 import kr.roadcanvas.app.circleranking.CircleRanking
+import kr.roadcanvas.app.challenge.DrawingTopicPicker
 import kr.roadcanvas.app.drawing.CompletedDrawingRepository
 import kr.roadcanvas.app.drawing.InProgressDrawingRepository
 import kr.roadcanvas.app.gallery.PublicGallery
@@ -34,6 +35,7 @@ interface AppContainer {
     /** 주행 중 음성 안내. 구현하지 않은 컨테이너는 읽지 않는 구현을 쓴다. */
     val voiceGuide: VoiceGuide get() = silentVoiceGuide
     val circleRanking: CircleRanking
+    val drawingTopicPicker: DrawingTopicPicker
 }
 
 private val silentVoiceGuide = SilentVoiceGuide()
