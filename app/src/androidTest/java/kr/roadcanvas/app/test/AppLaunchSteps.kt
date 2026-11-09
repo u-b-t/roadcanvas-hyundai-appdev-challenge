@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
@@ -23,7 +24,6 @@ import kr.roadcanvas.app.MainActivity
 import kr.roadcanvas.app.modeselect.HOME_SCREEN_TAG
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
 import kr.roadcanvas.app.navigation.Routes
-import kr.roadcanvas.app.splash.APP_NAME
 import kr.roadcanvas.app.splash.SPLASH_COVER_TAG
 import kr.roadcanvas.app.ui.components.COVER_BACKGROUND_COLOR
 import org.junit.Assert.assertEquals
@@ -129,7 +129,10 @@ class AppLaunchSteps(private val ruleHolder: ComposeRuleHolder) {
     fun assertSplashNotShownAgain() {
         // 기기에 따라 뒤로 가기 후 화면이 닫히거나 남아 있을 수 있어 두 경우 모두 확인한다.
         if (requireNotNull(scenario).isStarted) {
-            composeRule.onAllNodesWithText(APP_NAME).assertCountEquals(0)
+            composeRule.onAllNodesWithTag(
+                SPLASH_COVER_TAG,
+                useUnmergedTree = true
+            ).assertCountEquals(0)
         }
         val controller = requireNotNull(navController)
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
