@@ -1,8 +1,10 @@
 package kr.roadcanvas.app.gallery
 
+import kr.roadcanvas.app.artwork.ARTWORK_MAX_CHUNKS
+import kr.roadcanvas.app.artwork.ArtworkChunk
+import kr.roadcanvas.app.artwork.artworkChunksOf
+import kr.roadcanvas.app.artwork.pointsJsonOf
 import kr.roadcanvas.app.drawing.RoutePoint
-import kr.roadcanvas.app.gallery.fake.chunksOf
-import kr.roadcanvas.app.gallery.fake.pointsJsonOf
 import kr.roadcanvas.app.gallery.fake.testRoute
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
@@ -14,7 +16,7 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class PublicArtworkRouteTest {
     private val route = testRoute(25)
-    private val chunks = chunksOf(route)
+    private val chunks = artworkChunksOf(route, pointsPerChunk = 10)
 
     @Test
     fun `청크를 index 순서로 이어 경로를 만든다`() {
@@ -32,6 +34,7 @@ class PublicArtworkRouteTest {
         assertInvalid(chunks + chunks.last(), chunks.size)
         assertInvalid(chunks, chunks.size - 1)
         assertInvalid(chunks.map { it.copy(index = it.index + 1) }, chunks.size)
+        assertInvalid(emptyList(), ARTWORK_MAX_CHUNKS + 1)
     }
 
     @Test
@@ -41,11 +44,11 @@ class PublicArtworkRouteTest {
             RoutePoint(37.0, -180.5, 0),
             RoutePoint(37.0, 127.0, -1)
         ).forEach { point ->
-            assertInvalid(listOf(PublicArtworkChunk(0, pointsJsonOf(listOf(point)))), 1)
+            assertInvalid(listOf(ArtworkChunk(0, pointsJsonOf(listOf(point)))), 1)
         }
         assertInvalid(
             listOf(
-                PublicArtworkChunk(0, """[{"latitude":NaN,"longitude":127,"recordedAtMillis":0}]""")
+                ArtworkChunk(0, """[{"latitude":NaN,"longitude":127,"recordedAtMillis":0}]""")
             ),
             1
         )
@@ -59,11 +62,11 @@ class PublicArtworkRouteTest {
 
     @Test
     fun `JSON 형식이 아니거나 숫자가 문자열이면 경로 오류다`() {
-        assertInvalid(listOf(PublicArtworkChunk(0, "not json")), 1)
-        assertInvalid(listOf(PublicArtworkChunk(0, """[{"latitude":37}]""")), 1)
+        assertInvalid(listOf(ArtworkChunk(0, "not json")), 1)
+        assertInvalid(listOf(ArtworkChunk(0, """[{"latitude":37}]""")), 1)
         assertInvalid(
             listOf(
-                PublicArtworkChunk(
+                ArtworkChunk(
                     0,
                     """[{"latitude":"37","longitude":127,"recordedAtMillis":0}]"""
                 )
@@ -72,7 +75,7 @@ class PublicArtworkRouteTest {
         )
     }
 
-    private fun assertInvalid(chunks: List<PublicArtworkChunk>, expectedCount: Int) {
+    private fun assertInvalid(chunks: List<ArtworkChunk>, expectedCount: Int) {
         try {
             decodeArtworkRoute(chunks, expectedCount)
             fail("경로 오류여야 한다: $chunks")

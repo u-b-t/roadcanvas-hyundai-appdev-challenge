@@ -11,8 +11,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import kr.roadcanvas.app.artwork.ArtworkChunk
 import kr.roadcanvas.app.gallery.PublicArtwork
-import kr.roadcanvas.app.gallery.PublicArtworkChunk
 import kr.roadcanvas.app.gallery.PublicArtworkCursor
 import kr.roadcanvas.app.gallery.PublicArtworkDetailScreen
 import kr.roadcanvas.app.gallery.PublicArtworkDetailViewModel
@@ -82,7 +82,7 @@ class PublicGalleryPreviewActivity : ComponentActivity() {
 private class SampleArtworkStore : PublicArtworkStore {
     private class Sample(
         val artwork: PublicArtwork,
-        val chunks: List<PublicArtworkChunk>,
+        val chunks: List<ArtworkChunk>,
         val voters: MutableSet<String>
     )
 
@@ -124,7 +124,7 @@ private class SampleArtworkStore : PublicArtworkStore {
         val route = SimulatedRouteGenerator.generate(type)
         val startMillis = 1_762_000_000_000L + order * 3_600_000L
         val chunks = route.chunked(20).mapIndexed { index, points ->
-            PublicArtworkChunk(
+            ArtworkChunk(
                 index,
                 points.withIndex().joinToString(",", "[", "]") { (offset, point) ->
                     val time = startMillis + (index * 20 + offset) * 1_000L

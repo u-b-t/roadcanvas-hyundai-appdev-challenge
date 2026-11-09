@@ -1,9 +1,9 @@
 package kr.roadcanvas.app.gallery.fake
 
+import kr.roadcanvas.app.artwork.ArtworkChunk
 import kr.roadcanvas.app.gallery.GalleryFailure
 import kr.roadcanvas.app.gallery.GalleryStoreException
 import kr.roadcanvas.app.gallery.PublicArtwork
-import kr.roadcanvas.app.gallery.PublicArtworkChunk
 import kr.roadcanvas.app.gallery.PublicArtworkCursor
 import kr.roadcanvas.app.gallery.PublicArtworkPage
 import kr.roadcanvas.app.gallery.PublicArtworkStore
@@ -11,7 +11,7 @@ import kr.roadcanvas.app.gallery.PublicArtworkStore
 /** 서버에 저장된 작품 문서와 청크, 투표. [published]가 false면 작성자가 비공개(DRAFT)로 바꾼 작품이다. */
 data class FakeServerArtwork(
     val artwork: PublicArtwork,
-    val chunks: List<PublicArtworkChunk>,
+    val chunks: List<ArtworkChunk>,
     val published: Boolean = true,
     val voters: Set<String> = emptySet()
 )
@@ -68,7 +68,7 @@ class FakePublicArtworkStore : PublicArtworkStore {
         return artworks[artworkId]?.takeIf { it.published }?.artwork
     }
 
-    override suspend fun chunks(artworkId: String): List<PublicArtworkChunk> {
+    override suspend fun chunks(artworkId: String): List<ArtworkChunk> {
         request("chunks", artworkId)
         return visible(artworkId).chunks.sortedBy { it.index }
     }

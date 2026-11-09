@@ -1,5 +1,7 @@
 package kr.roadcanvas.app.gallery
 
+import kr.roadcanvas.app.artwork.ArtworkChunk
+
 /** 다른 사용자가 볼 수 있는 공개 작품. 거리는 미터, 시간은 밀리초다. */
 data class PublicArtwork(
     val id: String,
@@ -16,9 +18,6 @@ class PublicArtworkCursor(val value: Any)
 
 /** 공개 작품 한 페이지. 끝 페이지면 [next]가 null이다. */
 data class PublicArtworkPage(val items: List<PublicArtwork>, val next: PublicArtworkCursor?)
-
-/** 서버에 저장된 경로 청크 하나. [pointsJson]은 서버 명세의 좌표 JSON 배열 문자열이다. */
-data class PublicArtworkChunk(val index: Int, val pointsJson: String)
 
 /** 공개 작품을 조회하거나 투표하지 못한 이유. 화면이 안내 문구를 고르는 데 쓴다. */
 enum class GalleryFailure {
@@ -57,7 +56,7 @@ interface PublicArtworkStore {
     suspend fun artwork(artworkId: String): PublicArtwork?
 
     /** 저장된 경로 청크. index 순서로 돌려준다. */
-    suspend fun chunks(artworkId: String): List<PublicArtworkChunk>
+    suspend fun chunks(artworkId: String): List<ArtworkChunk>
 
     /** `votes` 하위 컬렉션의 `count()` 집계 */
     suspend fun voteCount(artworkId: String): Long

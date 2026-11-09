@@ -1,5 +1,8 @@
 package kr.roadcanvas.app.gallery
 
+import kr.roadcanvas.app.artwork.ARTWORK_MAX_CHUNKS
+import kr.roadcanvas.app.artwork.ArtworkChunk
+import kr.roadcanvas.app.artwork.chunksComplete
 import kr.roadcanvas.app.drawing.RoutePoint
 import org.json.JSONArray
 import org.json.JSONException
@@ -7,12 +10,13 @@ import org.json.JSONObject
 
 /**
  * 서버 청크를 index 순서로 이어 경로로 만든다. 서버 규칙이 청크 개수·순서와 좌표를 검증하지 않으므로 여기서 확인한다.
- * index가 0부터 [expectedCount]-1까지 한 번씩 있어야 하고, 좌표는 유한한 위경도 범위, 기록 시각은 0 이상이며
+ * 청크 수는 서버 명세 범위([ARTWORK_MAX_CHUNKS] 이하)이고 index가 0부터 [expectedCount]-1까지 한 번씩 있어야 하며, 좌표는 유한한 위경도 범위, 기록 시각은 0 이상이며
  * 앞 점보다 이르지 않아야 한다. 맞지 않으면 [GalleryFailure.INVALID_ROUTE]인 [GalleryStoreException]을 던진다.
  */
-fun decodeArtworkRoute(chunks: List<PublicArtworkChunk>, expectedCount: Int): List<RoutePoint> {
+fun decodeArtworkRoute(chunks: List<ArtworkChunk>, expectedCount: Int): List<RoutePoint> {
+    if (expectedCount !in 0..ARTWORK_MAX_CHUNKS) invalid("청크 수 ${expectedCount}가 범위를 벗어났습니다.")
     val ordered = chunks.sortedBy { it.index }
-    if (ordered.map { it.index } != (0 until expectedCount).toList()) {
+    if (!chunksComplete(ordered.map { it.index }, expectedCount)) {
         invalid("경로 청크 ${ordered.map { it.index }}가 ${expectedCount}개와 맞지 않습니다.")
     }
     val points = ordered.flatMap { chunk -> parsePoints(chunk) }
@@ -25,7 +29,7 @@ fun decodeArtworkRoute(chunks: List<PublicArtworkChunk>, expectedCount: Int): Li
     return points
 }
 
-private fun parsePoints(chunk: PublicArtworkChunk): List<RoutePoint> = try {
+private fun parsePoints(chunk: ArtworkChunk): List<RoutePoint> = try {
     val array = JSONArray(chunk.pointsJson)
     List(array.length()) { position ->
         val point = array.getJSONObject(position)
