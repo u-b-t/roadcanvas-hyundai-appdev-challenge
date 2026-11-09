@@ -8,6 +8,12 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
+/** 닫힌 원으로 보는 시작점과 끝점의 최대 거리(m). 땅따먹기와 같은 닫힘 기준이다. */
+const val CIRCLE_CLOSURE_TOLERANCE_METERS = TERRITORY_CLOSURE_TOLERANCE_METERS
+
+/** 한 바퀴를 돈 것으로 보는 맞춤 원 중심 기준 최소 누적 회전각(도). */
+const val CIRCLE_MIN_ROTATION_DEGREES = 330.0
+
 /** 점수 계산 상수. 근거는 docs/circle-score.md에 기록한다. */
 data class CircleScoreConfig(
     val circularityWeight: Double = 0.4,
@@ -17,10 +23,16 @@ data class CircleScoreConfig(
     val closureRadiusFactor: Double = 2.0,
     val minDiameterMeters: Double = 30.0,
     val minValidPoints: Int = 10,
-    val minPathLengthMeters: Double = 50.0
+    val minPathLengthMeters: Double = 50.0,
+    val closureToleranceMeters: Double = CIRCLE_CLOSURE_TOLERANCE_METERS,
+    val minRotationDegrees: Double = CIRCLE_MIN_ROTATION_DEGREES
 )
 
-/** 위도·경도 경로가 얼마나 동그란지 0~100점으로 계산한다. */
+/**
+ * 위도·경도 경로가 얼마나 동그란지 0~100점으로 계산한다.
+ * 닫힌 원(시작점과 끝점이 [CircleScoreConfig.closureToleranceMeters] 이내이고 맞춤 원 중심을
+ * [CircleScoreConfig.minRotationDegrees] 이상 돈 경로)만 점수를 받는다.
+ */
 class CircleScoreCalculator(val config: CircleScoreConfig = CircleScoreConfig()) {
 
     fun calculate(points: List<GeoPoint>): CircleScoreResult {
@@ -38,17 +50,25 @@ class CircleScoreCalculator(val config: CircleScoreConfig = CircleScoreConfig())
             return zero(ZeroScoreReason.TOO_SMALL)
         }
 
+        val closureDistance = local.first().distanceTo(local.last())
+        if (closureDistance > config.closureToleranceMeters) {
+            return zero(ZeroScoreReason.NOT_CLOSED, closureDistanceMeters = closureDistance)
+        }
+        val rotation = cumulativeRotation(local, circle.center)
+        val rotationDegrees = Math.toDegrees(abs(rotation))
+        if (rotationDegrees < config.minRotationDegrees) {
+            return zero(ZeroScoreReason.INCOMPLETE_TURN, rotationDegrees = rotationDegrees)
+        }
+
         val radialRms = sqrt(
             local.sumOf { (it.distanceTo(circle.center) - circle.radius).squared() } / local.size
         )
         val radialRmsRatio = radialRms / circle.radius
         val circularity = max(0.0, 1 - radialRmsRatio / config.maxRadialError)
 
-        val closureDistance = local.first().distanceTo(local.last())
         val closure =
             max(0.0, 1 - closureDistance / (config.closureRadiusFactor * circle.radius))
 
-        val rotation = cumulativeRotation(local, circle.center)
         val rotationCompleteness = min(abs(rotation), FULL_TURN) / FULL_TURN
 
         val weighted = config.circularityWeight * circularity +
@@ -71,7 +91,11 @@ class CircleScoreCalculator(val config: CircleScoreConfig = CircleScoreConfig())
         )
     }
 
-    private fun zero(reason: ZeroScoreReason) = CircleScoreResult(0, null, reason)
+    private fun zero(
+        reason: ZeroScoreReason,
+        closureDistanceMeters: Double? = null,
+        rotationDegrees: Double? = null
+    ) = CircleScoreResult(0, null, reason, closureDistanceMeters, rotationDegrees)
 
     private data class Circle(val center: LocalPoint, val radius: Double)
 

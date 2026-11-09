@@ -24,6 +24,16 @@ class CircleScoreSteps {
         path = TestPaths.circle(radius.toDouble())
     }
 
+    @Given("반지름 {int}m인 원을 {double}바퀴만큼 주행했다")
+    fun droveCircleTurns(radius: Int, turns: Double) {
+        path = TestPaths.circle(radius.toDouble(), turns = turns)
+    }
+
+    @Given("반지름 {int}m인 원을 돌다가 출발점 {int}m 앞에서 멈췄다")
+    fun droveOpenCircle(radius: Int, gap: Int) {
+        path = TestPaths.openCircle(radius.toDouble(), gap.toDouble())
+    }
+
     @Given("반지름 {int}m인 원을 위치 잡음 {int}m로 1바퀴 주행했다")
     fun droveNoisyCircle(radius: Int, sigma: Int) {
         path = TestPaths.circle(radius.toDouble(), noiseSigma = sigma.toDouble())
@@ -99,7 +109,9 @@ class CircleScoreSteps {
         val REASONS = mapOf(
             "이동 없음" to ZeroScoreReason.NO_MOVEMENT,
             "위치값 부족" to ZeroScoreReason.INSUFFICIENT_POINTS,
-            "최소 크기 미달" to ZeroScoreReason.TOO_SMALL
+            "최소 크기 미달" to ZeroScoreReason.TOO_SMALL,
+            "닫히지 않음" to ZeroScoreReason.NOT_CLOSED,
+            "한 바퀴 미완성" to ZeroScoreReason.INCOMPLETE_TURN
         )
     }
 }

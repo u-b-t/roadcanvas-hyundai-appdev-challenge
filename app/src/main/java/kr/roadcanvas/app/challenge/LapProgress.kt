@@ -6,6 +6,7 @@ import kotlin.math.cos
 import kotlin.math.roundToInt
 import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.recording.distanceTo
+import kr.roadcanvas.app.score.CIRCLE_MIN_ROTATION_DEGREES
 
 /** 한 바퀴를 돈 뒤 출발점 근처로 보는 거리(m). 이 안에 들어오면 정차 후 종료하라고 안내한다. */
 const val NEAR_START_METERS = 20.0
@@ -16,8 +17,10 @@ const val MIN_HEADING_SEGMENT_METERS = 3.0
 /**
  * 한 바퀴를 돈 것으로 보는 회전 각도. 출발점 근처에 들어온 때는 출발점까지 남은 구간만큼 덜 돌았으므로
  * 한 바퀴(360도)보다 조금 작게 잡는다. 반지름 50m 원이면 출발점 20m 앞에서 약 337도다.
+ * 동그라미 점수가 닫힌 원으로 인정하는 회전각([CIRCLE_MIN_ROTATION_DEGREES])과 같게 두어
+ * 종료 안내를 보고 끝낸 원이 한 바퀴 미완성으로 0점이 되지 않게 한다.
  */
-const val LAP_TURN_DEGREES = 300.0
+const val LAP_TURN_DEGREES = CIRCLE_MIN_ROTATION_DEGREES
 
 private const val FULL_TURN_DEGREES = 360.0
 

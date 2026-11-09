@@ -34,7 +34,7 @@ class DrawingNameDisplayTest {
     }
 
     @Test
-    fun `이름이 있으면 목록 항목에 이름과 날짜를, 없으면 날짜와 거리·소요 시간을 보여준다`() {
+    fun `자유그림에 이름이 있으면 목록 항목에 이름과 날짜를, 없으면 날짜와 거리·소요 시간을 보여준다`() {
         val unnamed = CompletedDrawingSummary(
             id = 1,
             mode = DrawingMode.CIRCLE,
@@ -46,6 +46,26 @@ class DrawingNameDisplayTest {
         val date = formatDateTime(0)
 
         assertEquals(date to "314 m · 1분 3초", listItemTexts(unnamed))
-        assertEquals("한강 하트" to date, listItemTexts(unnamed.copy(name = "한강 하트")))
+        assertEquals(
+            "한강 하트" to date,
+            listItemTexts(unnamed.copy(mode = DrawingMode.FREE_DRAWING, name = "한강 하트"))
+        )
+    }
+
+    @Test
+    fun `자유그림이 아닌 기록은 저장된 이름이 있어도 목록에 보여주지 않는다`() {
+        val circle = CompletedDrawingSummary(
+            id = 1,
+            mode = DrawingMode.CIRCLE,
+            completedAtMillis = 0,
+            score = 90,
+            distanceMeters = 314.0,
+            durationMillis = 63_000,
+            name = "예전 동그라미"
+        )
+        val expected = formatDateTime(0) to "314 m · 1분 3초"
+
+        assertEquals(expected, listItemTexts(circle))
+        assertEquals(expected, listItemTexts(circle.copy(mode = DrawingMode.TERRITORY)))
     }
 }

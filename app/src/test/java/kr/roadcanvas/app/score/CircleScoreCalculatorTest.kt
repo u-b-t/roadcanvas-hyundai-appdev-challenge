@@ -41,9 +41,63 @@ class CircleScoreCalculatorTest {
     }
 
     @Test
-    fun `반원은 60점 이하다`() {
-        assertTrue(score(TestPaths.semicircle(20.0)) <= 60)
-        assertTrue(score(TestPaths.semicircle(200.0)) <= 60)
+    fun `출발점 근처에서 끝낸 반원은 한 바퀴 미완성으로 0점이다`() {
+        val result = calculator.calculate(TestPaths.semicircle(20.0))
+
+        assertEquals(0, result.score)
+        assertEquals(ZeroScoreReason.INCOMPLETE_TURN, result.zeroReason)
+        assertEquals(180.0, result.rotationDegrees!!, 1.0)
+        assertNull(result.metrics)
+    }
+
+    @Test
+    fun `끝점이 출발점에서 먼 반원은 닫히지 않아 0점이다`() {
+        val result = calculator.calculate(TestPaths.semicircle(200.0))
+
+        assertEquals(0, result.score)
+        assertEquals(ZeroScoreReason.NOT_CLOSED, result.zeroReason)
+        assertEquals(400.0, result.closureDistanceMeters!!, 1.0)
+    }
+
+    @Test
+    fun `원 3분의 4는 한 바퀴 미완성으로 0점이다`() {
+        // 끝점이 출발점에서 50m 안에 드는 크기라 닫힘은 통과하고 회전각에서 걸린다.
+        for (radius in listOf(20.0, 30.0)) {
+            val result = calculator.calculate(TestPaths.circle(radius, turns = 0.75))
+
+            assertEquals(0, result.score)
+            assertEquals(ZeroScoreReason.INCOMPLETE_TURN, result.zeroReason)
+            assertEquals(270.0, result.rotationDegrees!!, 1.0)
+        }
+    }
+
+    @Test
+    fun `끝점이 출발점에서 50m보다 멀면 닫히지 않아 0점이다`() {
+        val open = calculator.calculate(TestPaths.openCircle(100.0, gapMeters = 55.0))
+        val closed = calculator.calculate(TestPaths.openCircle(100.0, gapMeters = 45.0))
+
+        assertEquals(ZeroScoreReason.NOT_CLOSED, open.zeroReason)
+        assertEquals(55.0, open.closureDistanceMeters!!, 1.0)
+        assertNull(closed.zeroReason)
+        assertTrue(closed.score > 0)
+    }
+
+    @Test
+    fun `330도 이상 돌면 닫힌 원으로 보고 미만이면 한 바퀴 미완성이다`() {
+        // 반지름 60m면 두 경우 모두 끝점이 출발점에서 50m 안이라 회전각만 다르다.
+        val enough = calculator.calculate(TestPaths.circle(60.0, turns = 335.0 / 360))
+        val short = calculator.calculate(TestPaths.circle(60.0, turns = 325.0 / 360))
+
+        assertNull(enough.zeroReason)
+        assertEquals(ZeroScoreReason.INCOMPLETE_TURN, short.zeroReason)
+    }
+
+    @Test
+    fun `원을 두 바퀴 돌면 한 바퀴와 같이 95점 이상이다`() {
+        val result = calculator.calculate(TestPaths.circle(20.0, turns = 2.0))
+
+        assertTrue("두 바퀴 ${result.score}", result.score >= 95)
+        assertEquals(4 * Math.PI, abs(result.metrics!!.rotationRadians), 0.01)
     }
 
     @Test
@@ -76,11 +130,11 @@ class CircleScoreCalculatorTest {
     }
 
     @Test
-    fun `기록이 끊겨 직선으로 이어진 원은 끊김 없는 원보다 낮고 반원보다 높다`() {
+    fun `기록이 끊겨 직선으로 이어진 원은 끊김 없는 원보다 낮지만 점수를 받는다`() {
         val gap = score(TestPaths.circleWithGap(20.0, missingFraction = 0.25))
 
         assertTrue(gap < score(TestPaths.circle(20.0)))
-        assertTrue(gap > score(TestPaths.semicircle(20.0)))
+        assertTrue(gap > 0)
     }
 
     @Test
@@ -135,7 +189,7 @@ class CircleScoreCalculatorTest {
     fun `세부 지표와 점수는 정해진 범위 안에 있다`() {
         val paths = listOf(
             TestPaths.circle(20.0, noiseSigma = 2.0),
-            TestPaths.semicircle(20.0),
+            TestPaths.openCircle(100.0, gapMeters = 45.0),
             TestPaths.square(40.0),
             TestPaths.ellipse(40.0, 2.0),
             TestPaths.circle(20.0, turns = 1.5)

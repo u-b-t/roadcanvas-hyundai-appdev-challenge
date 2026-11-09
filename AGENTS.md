@@ -66,8 +66,13 @@
 
 - 완료 기록과 진행 중 기록은 Room(KSP) DB `drawings.db`에 앱 전용 내부 저장소로 보관한다. 화면은 `kr.roadcanvas.app.drawing`의 `CompletedDrawingRepository`와 `InProgressDrawingRepository`만 `AppContainer`에서 받아 쓰고, 실패는 예외 대신 `StorageResult.Failure`로 받는다.
 - 점수 세부 지표는 점수 계산 모델에 의존하지 않도록 이름과 값(`Map<String, Double>`)으로 저장한다.
-- 완료 기록 이름(`name`, DB 버전 3)은 `kr.roadcanvas.app.drawing.validateDrawingName`으로 앞뒤 공백을 제거하고 1~20자만 받는다. `DrawingMode.nameRequired`가 false인 모드(동그라미)는 비워 두면 이름 없이 저장한다. 이름 입력은 SDG `SDGSimpleTextInput`을 차량 크기로 감싼 `CarTextInput`을 쓰고, 키보드가 열리면 입력창과 저장 버튼이 보이도록 나머지 버튼을 숨긴다.
-- 내 그림 목록 썸네일은 저장할 때 함께 저장한 축약 경로(`completed_thumbnail_point`, DB 버전 4, `routeThumbnail`로 최대 64개 남짓)로 그려 목록 조회에서 전체 경로를 읽지 않는다. 위치가 부족하거나 움직이지 않아 0점인 도전(`ChallengeResult.savable`이 false)은 결과 화면에 저장하지 않는다고 안내하고 완료 기록으로 저장하지 않는다.
+- 완료 기록 이름(`name`, DB 버전 3)은 `kr.roadcanvas.app.drawing.validateDrawingName`으로 앞뒤 공백을 제거하고 1~20자만 받는다. 이름은 자유그림(`DrawingMode.nameRequired`)에만 쓴다. 동그라미·땅따먹기는 결과 화면과 내 그림 상세에 이름 입력·이름 붙이기를 두지 않고, 이전에 저장된 이름이 있어도 목록·상세에 보여주지 않는다(데이터는 지우지 않는다, #129). 이름 입력은 SDG `SDGSimpleTextInput`을 차량 크기로 감싼 `CarTextInput`을 쓰고, 키보드가 열리면 입력창과 저장 버튼이 보이도록 나머지 버튼을 숨긴다.
+- 내 그림 목록 썸네일은 저장할 때 함께 저장한 축약 경로(`completed_thumbnail_point`, DB 버전 4, `routeThumbnail`로 최대 64개 남짓)로 그려 목록 조회에서 전체 경로를 읽지 않는다. 위치가 부족하거나 움직이지 않아 0점인 도전과 닫힌 원을 그리지 않은 동그라미 도전(`ChallengeResult.savable`이 false)은 결과 화면에 저장하지 않는다고 안내하고 완료 기록으로 저장하지 않는다. 그래서 순위·업로드 대상에도 들어가지 않는다.
+
+## 동그라미 점수
+
+- 점수 계산은 `kr.roadcanvas.app.score.CircleScoreCalculator`이고 규칙과 상수 근거는 [동그라미 챌린지 점수 계산](docs/circle-score.md)에 있다.
+- 닫힌 원만 점수를 받는다(#129). 끝점이 출발점에서 `CIRCLE_CLOSURE_TOLERANCE_METERS`(땅따먹기 닫힘 기준과 같은 50m) 안이어야 하고(`NOT_CLOSED`), 맞춘 원 중심 기준 누적 회전각이 `CIRCLE_MIN_ROTATION_DEGREES`(330°) 이상이어야 한다(`INCOMPLETE_TURN`). 아니면 0점이며 결과 화면에 "원이 닫히지 않았어요(출발점까지 N m)" 또는 "원을 한 바퀴 다 돌지 않았어요(약 N°)"를 보여 주고 저장하지 않는다. 진행 화면의 종료 안내(`LAP_TURN_DEGREES`)도 같은 330°를 쓴다. 이미 저장된 기록과 서버 순위는 바꾸지 않았다.
 - 이름 붙인 자유그림의 작품 공개는 `AppContainer.artworkPublisher`(`kr.roadcanvas.app.artwork`)를 쓴다. 서버는 `ArtworkStore`, 작성자는 `ArtworkAuthorProvider` 뒤에 두고, 작품 ID와 공개 상태는 `artwork_publication`(DB 버전 5)에 보관한다. 흐름과 제약은 [작품 공개](docs/artwork-publish.md)에 있다.
 - 스키마를 바꾸면 `DrawingDatabase.VERSION`을 올리고 `MIGRATIONS`에 마이그레이션을 추가한다. 빌드가 `app/schemas/`에 버전별 스키마를 기록하므로 함께 커밋한다. androidTest는 이 스키마로 마이그레이션을 검증한다.
 - debug 빌드에서 `adb shell am start -n kr.roadcanvas.app/.debug.SeedDrawingsActivity`로 모의 원·찌그러진 원 경로의 동그라미 챌린지 기록 두 건과 직선 왕복 경로의 자유그림 기록 한 건을 저장해 내 그림 화면을 확인한다. 실행할 때마다 추가되며 지우려면 앱 데이터를 삭제한다.

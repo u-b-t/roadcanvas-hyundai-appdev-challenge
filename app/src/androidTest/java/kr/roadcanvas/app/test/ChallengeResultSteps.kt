@@ -42,6 +42,13 @@ class ChallengeResultSteps(
         progressSteps.finishSavedChallenge(TestPaths.semicircle(radius.toDouble()).toRoutePoints())
     }
 
+    @Given("반지름 {int}m 원을 돌다가 출발점 {int}m 앞에서 종료했다")
+    fun finishOpenCircle(radius: Int, gap: Int) {
+        progressSteps.finishSavedChallenge(
+            TestPaths.openCircle(radius.toDouble(), gap.toDouble()).toRoutePoints()
+        )
+    }
+
     @Given("점수 {int}점인 완료 기록이 있다")
     fun savePreviousRecord(score: Int) {
         runBlocking {

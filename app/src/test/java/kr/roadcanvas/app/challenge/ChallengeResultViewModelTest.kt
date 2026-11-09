@@ -437,9 +437,9 @@ class ChallengeResultViewModelTest {
     @Test
     fun `이전 최고 점수보다 낮으면 차이를 표시하고 다시 만들어져도 같은 비교를 보여준다`() = runTest(dispatcher) {
         saveCompleted(100)
-        // 반원은 출발점으로 돌아오지 않아 만점보다 낮다.
+        // 출발점 40m 앞에서 끝낸 원은 출발·도착 근접도가 낮아 만점보다 낮다.
         saveInProgress(
-            TestPaths.semicircle(50.0).mapIndexed { i, it ->
+            TestPaths.openCircle(100.0, gapMeters = 40.0).mapIndexed { i, it ->
                 RoutePoint(it.latitude, it.longitude, START + i * 1_000L)
             }
         )

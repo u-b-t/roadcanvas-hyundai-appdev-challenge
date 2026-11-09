@@ -68,6 +68,16 @@ class LapProgressTest {
     }
 
     @Test
+    fun `출발점 근처여도 점수가 인정하는 회전각보다 덜 돌았으면 종료 안내 대상이 아니다`() {
+        // 반지름 20m 원을 약 306도 돌면 출발점까지 20m 안이지만 330도에 못 미친다.
+        val lap = lapProgressOf(circle(radius = 20.0, turns = 0.85))
+
+        assertTrue(lap.nearStart)
+        assertFalse(lap.completedLap)
+        assertFalse(lap.readyToFinish)
+    }
+
+    @Test
     fun `한 바퀴를 넘게 돌아도 회전 진행률은 100%에서 멈춘다`() {
         val lap = lapProgressOf(circle(radius = 50.0, turns = 1.5))
 

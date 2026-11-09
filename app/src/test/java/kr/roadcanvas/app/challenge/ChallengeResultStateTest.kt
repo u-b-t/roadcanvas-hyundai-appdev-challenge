@@ -10,6 +10,8 @@ import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.TerritoryResult
 import kr.roadcanvas.app.score.TestPaths
 import kr.roadcanvas.app.score.ZeroScoreReason
+import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteGenerator
+import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -128,6 +130,46 @@ class ChallengeResultStateTest {
     }
 
     @Test
+    fun `닫히지 않은 원은 0점과 이유를 보여주고 저장하지 않는다`() {
+        val semicircle = challengeResultOf(
+            DrawingMode.CIRCLE,
+            path(TestPaths.semicircle(50.0)),
+            START,
+            START + 90_000
+        )
+        val threeQuarter = challengeResultOf(
+            DrawingMode.CIRCLE,
+            path(TestPaths.circle(20.0, turns = 0.75)),
+            START,
+            START + 90_000
+        )
+
+        assertEquals(0, semicircle.score!!.score)
+        assertEquals("원이 닫히지 않았어요(출발점까지 100m)", semicircle.zeroReasonText)
+        assertFalse(semicircle.savable)
+        assertEquals("원을 한 바퀴 다 돌지 않았어요(약 270°)", threeQuarter.zeroReasonText)
+        assertFalse(threeQuarter.savable)
+        assertTrue(semicircle.scoreComponents.isEmpty())
+    }
+
+    @Test
+    fun `모의 원과 찌그러진 원 경로는 닫힌 원으로 저장한다`() {
+        for (type in listOf(SimulatedRouteType.CIRCLE, SimulatedRouteType.SQUISHED_CIRCLE)) {
+            val result = challengeResultOf(
+                DrawingMode.CIRCLE,
+                SimulatedRouteGenerator.generate(type).mapIndexed { i, it ->
+                    RoutePoint(it.latitude, it.longitude, START + i * 1_000L)
+                },
+                START,
+                START + 90_000
+            )
+
+            assertNull("$type ${result.zeroReasonText}", result.score!!.zeroReason)
+            assertTrue(result.savable)
+        }
+    }
+
+    @Test
     fun `점수 구성은 원형도, 출발·도착 근접도, 회전 완성도 순서다`() {
         val result = challengeResultOf(
             DrawingMode.CIRCLE,
@@ -145,10 +187,10 @@ class ChallengeResultStateTest {
     }
 
     @Test
-    fun `반원은 출발점으로 돌아오지 않아 가장 낮은 항목의 고칠 점을 안내한다`() {
+    fun `출발점 조금 앞에서 끝내면 가장 낮은 항목의 고칠 점을 안내한다`() {
         val result = challengeResultOf(
             DrawingMode.CIRCLE,
-            path(TestPaths.semicircle(50.0)),
+            path(TestPaths.openCircle(100.0, gapMeters = 40.0)),
             START,
             START + 90_000
         )
