@@ -30,6 +30,7 @@ import kr.roadcanvas.app.gallery.PublicArtworkDetailRoute
 import kr.roadcanvas.app.gallery.PublicGalleryRoute
 import kr.roadcanvas.app.map.RoutePoint
 import kr.roadcanvas.app.modeselect.ModeSelectScreen
+import kr.roadcanvas.app.modeselect.rememberModeRecordSummary
 import kr.roadcanvas.app.mydrawings.MyDrawingsRoute
 import kr.roadcanvas.app.splash.SPLASH_DURATION_MILLIS
 import kr.roadcanvas.app.splash.SplashScreen
@@ -180,7 +181,8 @@ fun RoadCanvasNavHost(
                 onTerritoryClick = { navController.navigate(Routes.TERRITORY_READY) },
                 onMyDrawingsClick = { navController.navigate(Routes.MY_DRAWINGS) },
                 onGalleryClick = { navController.navigate(Routes.GALLERY) },
-                onTerritoryMapClick = { navController.navigate(Routes.territoryMap()) }
+                onTerritoryMapClick = { navController.navigate(Routes.territoryMap()) },
+                recordSummary = rememberModeRecordSummary().value
             )
         }
         DrawingMode.entries.forEach { mode ->
