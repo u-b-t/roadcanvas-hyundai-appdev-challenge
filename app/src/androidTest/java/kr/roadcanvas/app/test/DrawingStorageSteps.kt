@@ -18,6 +18,8 @@ import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
 import kr.roadcanvas.app.drawing.room.DrawingDatabase
 import kr.roadcanvas.app.drawing.room.toStorage
+import kr.roadcanvas.app.territory.CaptureSyncStatus
+import kr.roadcanvas.app.territory.StoredTerritoryCapture
 import kr.roadcanvas.app.vehicle.fake.FakeAppContainer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -347,6 +349,20 @@ class DrawingStorageSteps {
             DrawingDatabase.VERSION,
             checkNotNull(database).openHelper.readableDatabase.version
         )
+    }
+
+    @Then("올린 저장소에 서버에 반영하지 못한 땅따먹기 획득을 저장하고 다시 불러온다")
+    fun assertMigratedTerritoryCapture() {
+        openStorage()
+        val capture = StoredTerritoryCapture(
+            captureId = "capture-1",
+            drawingId = 1,
+            cells = listOf("wydm9qy"),
+            createdAtMillis = MINUTE,
+            status = CaptureSyncStatus.PENDING
+        )
+        runBlocking { storage.territoryCaptures.save(capture) }.value()
+        assertEquals(listOf(capture), runBlocking { storage.territoryCaptures.pending() }.value())
     }
 
     @Then("올린 DB에서 완료 기록 목록이 비어 있다")

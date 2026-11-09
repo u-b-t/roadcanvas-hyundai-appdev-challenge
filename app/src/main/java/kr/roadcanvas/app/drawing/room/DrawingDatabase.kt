@@ -23,7 +23,8 @@ import kr.roadcanvas.app.drawing.ROUTE_THUMBNAIL_MAX_POINTS
         CompletedThumbnailPointEntity::class,
         InProgressDrawingEntity::class,
         InProgressRoutePointEntity::class,
-        ArtworkPublicationEntity::class
+        ArtworkPublicationEntity::class,
+        TerritoryCaptureEntity::class
     ],
     version = DrawingDatabase.VERSION,
     exportSchema = true
@@ -35,8 +36,10 @@ abstract class DrawingDatabase : RoomDatabase() {
 
     abstract fun artworkPublicationDao(): ArtworkPublicationDao
 
+    abstract fun territoryCaptureDao(): TerritoryCaptureDao
+
     companion object {
-        const val VERSION = 5
+        const val VERSION = 6
         const val NAME = "drawings.db"
 
         /** 진행 중 기록에 종료 시각을 추가한다. 기존 진행 중 기록은 종료하지 않은 도전으로 남는다. */
@@ -93,8 +96,29 @@ abstract class DrawingDatabase : RoomDatabase() {
             }
         }
 
+        /** 땅따먹기 획득 기록을 추가한다. 기존 완료 기록은 서버에 제출한 적이 없는 기록으로 남는다. */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `territory_capture` (" +
+                        "`capture_id` TEXT NOT NULL, `drawing_id` INTEGER NOT NULL, " +
+                        "`cells` TEXT NOT NULL, `created_at` INTEGER NOT NULL, " +
+                        "`status` TEXT NOT NULL, `new_cells` INTEGER, `stolen_cells` INTEGER, " +
+                        "`own_cells` INTEGER, PRIMARY KEY(`capture_id`))"
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_territory_capture_drawing_id` " +
+                        "ON `territory_capture` (`drawing_id`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_territory_capture_status_created_at` " +
+                        "ON `territory_capture` (`status`, `created_at`)"
+                )
+            }
+        }
+
         val MIGRATIONS: Array<Migration> =
-            arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
 
         fun create(context: Context, name: String = NAME): DrawingDatabase =
             Room.databaseBuilder(context, DrawingDatabase::class.java, name)
@@ -109,5 +133,6 @@ abstract class DrawingDatabase : RoomDatabase() {
 fun DrawingDatabase.toStorage() = DrawingStorage(
     completed = RoomCompletedDrawingRepository(completedDrawingDao()),
     inProgress = RoomInProgressDrawingRepository(inProgressDrawingDao()),
-    publications = RoomArtworkPublicationRepository(artworkPublicationDao())
+    publications = RoomArtworkPublicationRepository(artworkPublicationDao()),
+    territoryCaptures = RoomTerritoryCaptureRepository(territoryCaptureDao())
 )
