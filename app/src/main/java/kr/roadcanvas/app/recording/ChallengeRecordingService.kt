@@ -35,6 +35,7 @@ private const val EXTRA_MODE = "mode"
 const val RECORDING_CHANNEL_NAME = "도전 기록"
 const val RECORDING_NOTIFICATION_TITLE = "동그라미 챌린지 기록 중"
 const val FREE_DRAWING_NOTIFICATION_TITLE = "자유그림 기록 중"
+const val TERRITORY_NOTIFICATION_TITLE = "땅따먹기 기록 중"
 const val RESUMED_NOTIFICATION_TITLE = "주행 경로 기록 중"
 const val RECORDING_NOTIFICATION_TEXT = "정차한 뒤 앱에서 종료하거나 포기할 수 있어요"
 
@@ -124,6 +125,7 @@ class ChallengeRecordingService : Service() {
                 when (mode) {
                     DrawingMode.CIRCLE -> RECORDING_NOTIFICATION_TITLE
                     DrawingMode.FREE_DRAWING -> FREE_DRAWING_NOTIFICATION_TITLE
+                    DrawingMode.TERRITORY -> TERRITORY_NOTIFICATION_TITLE
                     null -> RESUMED_NOTIFICATION_TITLE
                 }
             )

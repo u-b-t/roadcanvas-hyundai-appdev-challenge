@@ -57,8 +57,10 @@ import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 
 const val CIRCLE_READY_TITLE = "동그라미 챌린지 준비"
 const val FREE_DRAWING_READY_TITLE = "자유그림 준비"
+const val TERRITORY_READY_TITLE = "땅따먹기 준비"
 const val CHALLENGE_GOAL = "원을 그리고 출발점으로 돌아와요"
 const val FREE_DRAWING_GOAL = "달린 길이 그대로 그림이 돼요"
+const val TERRITORY_GOAL = "한 바퀴 돌아 출발점으로 오면 둘러싼 땅을 차지해요"
 const val CHALLENGE_RULE_START_STOP = "정차한 뒤 시작하고 끝내요"
 const val CHALLENGE_RULE_NO_PAUSE = "도중에 일시정지할 수 없어요"
 
@@ -78,6 +80,7 @@ private fun readyGuidesOf(mode: DrawingMode) = listOf(
     when (mode) {
         DrawingMode.CIRCLE -> SdgR.drawable.ic_retry to CHALLENGE_GOAL
         DrawingMode.FREE_DRAWING -> SdgR.drawable.ic_common_edit to FREE_DRAWING_GOAL
+        DrawingMode.TERRITORY -> SdgR.drawable.ic_retry to TERRITORY_GOAL
     },
     SdgR.drawable.ic_common_play to CHALLENGE_RULE_START_STOP,
     SdgR.drawable.ic_ban to CHALLENGE_RULE_NO_PAUSE
@@ -88,6 +91,7 @@ const val READY_STATUS_LOCATING = "위치 확인 중"
 const val READY_STATUS_WAITING_FOR_STOP = "정차한 뒤 시작할 수 있어요"
 const val READY_STATUS_UNSUPPORTED = "이 차량에서는 동그라미 챌린지를 사용할 수 없어요"
 const val FREE_DRAWING_STATUS_UNSUPPORTED = "이 차량에서는 자유그림을 사용할 수 없어요"
+const val TERRITORY_STATUS_UNSUPPORTED = "이 차량에서는 땅따먹기를 사용할 수 없어요"
 const val READY_STATUS_PERMISSION_REQUIRED = "위치 권한이 필요해요"
 const val READY_STATUS_PERMISSION_IN_SETTINGS = "설정에서 위치 권한을 허용해 주세요"
 const val READY_STATUS_BLOCKED = "위치 접근이 차단되어 있어요"
@@ -304,6 +308,7 @@ private fun StartCard(
 fun readyTitleOf(mode: DrawingMode): String = when (mode) {
     DrawingMode.CIRCLE -> CIRCLE_READY_TITLE
     DrawingMode.FREE_DRAWING -> FREE_DRAWING_READY_TITLE
+    DrawingMode.TERRITORY -> TERRITORY_READY_TITLE
 }
 
 private fun ChallengeReadyStatus.messageFor(mode: DrawingMode): String = when (this) {
@@ -313,6 +318,7 @@ private fun ChallengeReadyStatus.messageFor(mode: DrawingMode): String = when (t
     ChallengeReadyStatus.Unsupported -> when (mode) {
         DrawingMode.CIRCLE -> READY_STATUS_UNSUPPORTED
         DrawingMode.FREE_DRAWING -> FREE_DRAWING_STATUS_UNSUPPORTED
+        DrawingMode.TERRITORY -> TERRITORY_STATUS_UNSUPPORTED
     }
     is ChallengeReadyStatus.PermissionRequired -> if (permanentlyDenied) {
         READY_STATUS_PERMISSION_IN_SETTINGS

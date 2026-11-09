@@ -107,7 +107,8 @@ fun ChallengeResultRoute(
             onMyDrawings = onMyDrawings,
             modifier = modifier
         )
-        DrawingMode.FREE_DRAWING -> FreeDrawingResultScreen(
+        // 땅따먹기 결과 화면은 별도 이슈에서 만든다. 그때까지 점수 없는 자유그림 결과 화면을 쓴다.
+        DrawingMode.FREE_DRAWING, DrawingMode.TERRITORY -> FreeDrawingResultScreen(
             state = state,
             onRetrySave = viewModel::retrySave,
             onSaveName = viewModel::saveName,

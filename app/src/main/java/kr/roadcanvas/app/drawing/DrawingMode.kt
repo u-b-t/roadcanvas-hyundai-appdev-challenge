@@ -9,7 +9,10 @@ enum class DrawingMode(val key: String, val scored: Boolean, val nameRequired: B
     CIRCLE("circle", scored = true, nameRequired = false),
 
     /** 점수 없이 주행 경로 자체를 그림으로 남긴다. 무엇을 그렸는지 이름을 붙여야 한다. */
-    FREE_DRAWING("free_drawing", scored = false, nameRequired = true);
+    FREE_DRAWING("free_drawing", scored = false, nameRequired = true),
+
+    /** 주행으로 둘러싼 영역을 차지한다. 점수 대신 면적을 판정한다(`kr.roadcanvas.app.score.TerritoryCalculator`). */
+    TERRITORY("territory", scored = false, nameRequired = false);
 
     companion object {
         fun fromKey(key: String): DrawingMode = entries.firstOrNull { it.key == key }

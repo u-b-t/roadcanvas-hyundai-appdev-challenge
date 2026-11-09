@@ -44,6 +44,7 @@ import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 
 const val CIRCLE_PROGRESS_TITLE = "동그라미 챌린지 진행"
 const val FREE_DRAWING_PROGRESS_TITLE = "자유그림 진행"
+const val TERRITORY_PROGRESS_TITLE = "땅따먹기 진행"
 const val ELAPSED_LABEL = "경과 시간"
 const val DISTANCE_LABEL = "이동 거리"
 const val DISTANCE_TO_START_LABEL = "출발점까지"
@@ -253,6 +254,7 @@ fun ChallengeProgressScreen(
 fun progressTitleOf(mode: DrawingMode): String = when (mode) {
     DrawingMode.CIRCLE -> CIRCLE_PROGRESS_TITLE
     DrawingMode.FREE_DRAWING -> FREE_DRAWING_PROGRESS_TITLE
+    DrawingMode.TERRITORY -> TERRITORY_PROGRESS_TITLE
 }
 
 @Composable

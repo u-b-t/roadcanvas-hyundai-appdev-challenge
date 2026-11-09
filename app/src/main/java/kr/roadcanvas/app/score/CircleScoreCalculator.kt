@@ -3,8 +3,6 @@ package kr.roadcanvas.app.score
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -75,43 +73,13 @@ class CircleScoreCalculator(val config: CircleScoreConfig = CircleScoreConfig())
 
     private fun zero(reason: ZeroScoreReason) = CircleScoreResult(0, null, reason)
 
-    private data class Point(val x: Double, val y: Double) {
-        fun distanceTo(other: Point) = hypot(x - other.x, y - other.y)
-    }
-
-    private data class Circle(val center: Point, val radius: Double)
-
-    private fun GeoPoint.isValid() = latitude.isFinite() &&
-        longitude.isFinite() &&
-        latitude in -90.0..90.0 &&
-        longitude in -180.0..180.0
-
-    /** 출발점 기준 등장방형 근사로 동쪽 x, 북쪽 y(m)를 구한다. */
-    private fun toLocalMeters(points: List<GeoPoint>): List<Point> {
-        val origin = points.first()
-        val cosLat = cos(Math.toRadians(origin.latitude))
-        return points.map {
-            Point(
-                x = EARTH_RADIUS_METERS * Math.toRadians(it.longitude - origin.longitude) * cosLat,
-                y = EARTH_RADIUS_METERS * Math.toRadians(it.latitude - origin.latitude)
-            )
-        }
-    }
-
-    /** [toLocalMeters]의 역변환. [origin]은 같은 출발점이다. */
-    private fun toGeoPoint(point: Point, origin: GeoPoint): GeoPoint {
-        val cosLat = cos(Math.toRadians(origin.latitude))
-        return GeoPoint(
-            latitude = origin.latitude + Math.toDegrees(point.y / EARTH_RADIUS_METERS),
-            longitude = origin.longitude + Math.toDegrees(point.x / (EARTH_RADIUS_METERS * cosLat))
-        )
-    }
+    private data class Circle(val center: LocalPoint, val radius: Double)
 
     /**
      * 대수적 최소제곱(Kåsa) 원 맞춤. 무게중심으로 옮기고 RMS 거리로 나눈 좌표에서
      * 풀어 크기와 무관하게 수치가 안정되도록 한다. 점들이 직선 위에 있으면 null이다.
      */
-    private fun fitCircle(points: List<Point>): Circle? {
+    private fun fitCircle(points: List<LocalPoint>): Circle? {
         val n = points.size
         val meanX = points.sumOf { it.x } / n
         val meanY = points.sumOf { it.y } / n
@@ -145,11 +113,11 @@ class CircleScoreCalculator(val config: CircleScoreConfig = CircleScoreConfig())
         val a = -d / 2
         val b = -e / 2
         val r = sqrt(a * a + b * b - f)
-        return Circle(Point(meanX + a * scale, meanY + b * scale), r * scale)
+        return Circle(LocalPoint(meanX + a * scale, meanY + b * scale), r * scale)
     }
 
     /** 중심 기준 각도 변화를 -π~π로 감아 누적한다. 반시계가 양수다. */
-    private fun cumulativeRotation(points: List<Point>, center: Point): Double {
+    private fun cumulativeRotation(points: List<LocalPoint>, center: LocalPoint): Double {
         val angles = points.map { atan2(it.y - center.y, it.x - center.x) }
         return angles.zipWithNext { a, b ->
             var delta = b - a
@@ -162,7 +130,6 @@ class CircleScoreCalculator(val config: CircleScoreConfig = CircleScoreConfig())
     private fun Double.squared() = this * this
 
     private companion object {
-        const val EARTH_RADIUS_METERS = 6_371_000.0
         const val FULL_TURN = 2 * PI
         const val DEGENERATE_DETERMINANT = 1e-12
     }

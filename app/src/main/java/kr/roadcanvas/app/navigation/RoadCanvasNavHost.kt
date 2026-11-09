@@ -40,6 +40,7 @@ object Routes {
 
     const val CIRCLE_READY = "circleReady"
     const val FREE_READY = "freeReady"
+    const val TERRITORY_READY = "territoryReady"
 
     /**
      * 모든 모드가 함께 쓰는 진행 화면. 주행 중에도 보여주는 화면이 하나로 유지되도록 경로를 나누지 않는다.
@@ -61,6 +62,7 @@ object Routes {
     const val ARG_ENDED_AT = "endedAtMillis"
     const val CIRCLE_RESULT = "circleResult/{$ARG_STARTED_AT}/{$ARG_ENDED_AT}"
     const val FREE_RESULT = "freeResult/{$ARG_STARTED_AT}/{$ARG_ENDED_AT}"
+    const val TERRITORY_RESULT = "territoryResult/{$ARG_STARTED_AT}/{$ARG_ENDED_AT}"
 
     fun circleResult(startedAtMillis: Long, endedAtMillis: Long) =
         "circleResult/$startedAtMillis/$endedAtMillis"
@@ -68,22 +70,28 @@ object Routes {
     fun freeResult(startedAtMillis: Long, endedAtMillis: Long) =
         "freeResult/$startedAtMillis/$endedAtMillis"
 
+    fun territoryResult(startedAtMillis: Long, endedAtMillis: Long) =
+        "territoryResult/$startedAtMillis/$endedAtMillis"
+
     /** [mode]의 준비 화면 */
     fun ready(mode: DrawingMode) = when (mode) {
         DrawingMode.CIRCLE -> CIRCLE_READY
         DrawingMode.FREE_DRAWING -> FREE_READY
+        DrawingMode.TERRITORY -> TERRITORY_READY
     }
 
     /** [mode]의 결과 화면 경로 형식 */
     fun resultPattern(mode: DrawingMode) = when (mode) {
         DrawingMode.CIRCLE -> CIRCLE_RESULT
         DrawingMode.FREE_DRAWING -> FREE_RESULT
+        DrawingMode.TERRITORY -> TERRITORY_RESULT
     }
 
     /** [mode]의 결과 화면 */
     fun result(mode: DrawingMode, startedAtMillis: Long, endedAtMillis: Long) = when (mode) {
         DrawingMode.CIRCLE -> circleResult(startedAtMillis, endedAtMillis)
         DrawingMode.FREE_DRAWING -> freeResult(startedAtMillis, endedAtMillis)
+        DrawingMode.TERRITORY -> territoryResult(startedAtMillis, endedAtMillis)
     }
 
     const val MY_DRAWINGS = "myDrawings"

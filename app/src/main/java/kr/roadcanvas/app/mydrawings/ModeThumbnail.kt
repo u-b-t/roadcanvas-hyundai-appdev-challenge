@@ -10,6 +10,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -18,7 +19,8 @@ import com.shopl.sdg_common.foundation.SDGCornerRadius
 import kr.roadcanvas.app.drawing.DrawingMode
 
 /**
- * 도전 모드를 나타내는 그림. 동그라미 모드는 원 경로와 출발점을, 자유그림은 구불구불한 경로와 끝점을 그린다.
+ * 도전 모드를 나타내는 그림. 동그라미 모드는 원 경로와 출발점을, 자유그림은 구불구불한 경로와 끝점을,
+ * 땅따먹기는 칠한 다각형 영역을 그린다.
  * [backgroundColor]가 있으면 SDG 썸네일처럼 모서리를 둥글린 정사각형 위에 그린다.
  */
 @Composable
@@ -65,6 +67,23 @@ fun ModeThumbnail(
                     color = lineColor,
                     radius = strokeWidth * 1.4f,
                     center = Offset(w * 0.8f, h * 0.3f)
+                )
+            }
+            DrawingMode.TERRITORY -> {
+                val w = this.size.width
+                val h = this.size.height
+                val area = Path().apply {
+                    moveTo(w * 0.25f, h * 0.3f)
+                    lineTo(w * 0.7f, h * 0.2f)
+                    lineTo(w * 0.8f, h * 0.65f)
+                    lineTo(w * 0.4f, h * 0.8f)
+                    close()
+                }
+                drawPath(path = area, color = lineColor.copy(alpha = 0.3f), style = Fill)
+                drawPath(
+                    path = area,
+                    color = lineColor,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
                 )
             }
         }
