@@ -74,11 +74,13 @@ class PublicGalleryViewModelTest {
 
     @Test
     fun `표 수를 읽지 못하면 그 항목만 실패로 표시한다`() {
-        store.put(testServerArtwork("a"))
+        store.put(testServerArtwork("a", createdAtMillis = 1_000L))
+        store.put(testServerArtwork("b", createdAtMillis = 2_000L))
         val viewModel = PublicGalleryViewModel(gallery)
         store.networkFailure = true
 
-        viewModel.onItemVisible(viewModel.state.value.loaded.items.single())
+        // 맨 위 작품(b)은 처음 열 때 경로를 읽으므로 아직 읽지 않은 작품으로 확인한다.
+        viewModel.onItemVisible(viewModel.state.value.loaded.items.last())
 
         val extras = viewModel.state.value.extras.getValue("a")
         assertTrue(extras.votesFailed)
@@ -128,5 +130,49 @@ class PublicGalleryViewModelTest {
         assertEquals(1L, viewModel.state.value.extras.getValue("a").votes)
         // 투표 직후 한 번만 다시 센다.
         assertEquals(countRequests + 1, store.voteCountRequests.size)
+    }
+
+    @Test
+    fun `처음 열면 맨 위 작품을 골라 경로를 읽고 썸네일과 같은 요청을 함께 쓴다`() {
+        store.put(testServerArtwork("a", createdAtMillis = 1_000L))
+        store.put(testServerArtwork("b", createdAtMillis = 2_000L))
+        val viewModel = PublicGalleryViewModel(gallery)
+
+        val selected = viewModel.state.value.selected!!
+        assertEquals("b", selected.id)
+        assertTrue(selected.route!!.size >= 2)
+        viewModel.onItemVisible(viewModel.state.value.loaded.items.first())
+        assertEquals(listOf("chunks:b"), store.requests.filter { it.startsWith("chunks:") })
+        assertTrue(viewModel.state.value.extras.getValue("b").thumbnail!!.size >= 2)
+    }
+
+    @Test
+    fun `다른 작품을 고르면 그 경로로 바꾸고 읽지 못하면 이유를 남긴다`() {
+        store.put(testServerArtwork("a", createdAtMillis = 1_000L))
+        store.put(testServerArtwork("b", createdAtMillis = 2_000L))
+        val viewModel = PublicGalleryViewModel(gallery)
+        val older = viewModel.state.value.loaded.items.last()
+        store.networkFailure = true
+
+        viewModel.select(older)
+        assertEquals(
+            SelectedArtwork("a", failure = GalleryFailure.NETWORK),
+            viewModel.state.value.selected
+        )
+
+        // 실패한 경로는 다시 고를 때 다시 요청한다.
+        store.networkFailure = false
+        viewModel.select(viewModel.state.value.loaded.items.first())
+        viewModel.select(older)
+        assertEquals("a", viewModel.state.value.selected!!.id)
+        assertTrue(viewModel.state.value.selected!!.route!!.size >= 2)
+    }
+
+    @Test
+    fun `목록을 불러오지 못하면 고른 작품이 없다`() {
+        store.put(testServerArtwork("a"))
+        store.networkFailure = true
+
+        assertNull(PublicGalleryViewModel(gallery).state.value.selected)
     }
 }

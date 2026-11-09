@@ -22,6 +22,9 @@ import kr.roadcanvas.app.RoadCanvasApplication
 import kr.roadcanvas.app.gallery.ARTWORK_DETAIL_OVERLAY_TAG
 import kr.roadcanvas.app.gallery.GALLERY_ITEM_VOTES_TAG
 import kr.roadcanvas.app.gallery.GALLERY_LIST_TAG
+import kr.roadcanvas.app.gallery.GALLERY_OPEN_LABEL
+import kr.roadcanvas.app.gallery.GALLERY_OVERLAY_TAG
+import kr.roadcanvas.app.gallery.GALLERY_SELECTED_ITEM_TAG
 import kr.roadcanvas.app.gallery.GALLERY_TITLE
 import kr.roadcanvas.app.gallery.GALLERY_VOTES_LOADING
 import kr.roadcanvas.app.gallery.fake.testServerArtwork
@@ -29,6 +32,7 @@ import kr.roadcanvas.app.modeselect.GALLERY_LABEL
 import kr.roadcanvas.app.mydrawings.ROUTE_THUMBNAIL_DESCRIPTION
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
 import kr.roadcanvas.app.vehicle.fake.FakeAppContainer
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 
 private const val WAIT_TIMEOUT_MILLIS = 5_000L
@@ -117,11 +121,36 @@ class PublicGallerySteps(private val ruleHolder: ComposeRuleHolder) {
         composeRule.waitForIdle()
     }
 
-    @When("목록에서 {string} 작품을 누른다")
-    fun openArtwork(title: String) {
+    @When("목록에서 {string} 작품을 고른다")
+    fun selectArtwork(title: String) {
         val item = listItem(title)
         waitFor(item, useUnmergedTree = true)
         composeRule.onNode(item, useUnmergedTree = true).performClick()
+    }
+
+    /** 항목을 골라 그 항목의 작품 보기 버튼으로 상세에 들어간다. */
+    @When("목록에서 {string} 작품을 연다")
+    fun openArtwork(title: String) {
+        selectArtwork(title)
+        val open = hasText(GALLERY_OPEN_LABEL) and hasClickAction() and
+            hasAnyAncestor(selectedItem(title))
+        waitFor(open, useUnmergedTree = true)
+        composeRule.onNode(open, useUnmergedTree = true).performClick()
+    }
+
+    @Then("목록에서 {string} 작품이 골라져 있다")
+    fun assertSelected(title: String) {
+        waitFor(selectedItem(title), useUnmergedTree = true)
+        assertEquals(
+            1,
+            composeRule.onAllNodes(hasTestTag(GALLERY_SELECTED_ITEM_TAG), useUnmergedTree = true)
+                .fetchSemanticsNodes().size
+        )
+    }
+
+    @Then("공개 작품 목록은 화면 왼쪽에 있고 경로 지도는 목록 오른쪽에 그려진다")
+    fun assertListLayout() {
+        assertLeftOverlayWithMap(GALLERY_OVERLAY_TAG)
     }
 
     @Then("목록의 {string} 작품에 {string}가 표시된다")
@@ -190,10 +219,14 @@ class PublicGallerySteps(private val ruleHolder: ComposeRuleHolder) {
 
     @Then("작품 오버레이는 화면 왼쪽에 있고 경로 지도는 오버레이 오른쪽에 그려진다")
     fun assertOverlayLayout() {
+        assertLeftOverlayWithMap(ARTWORK_DETAIL_OVERLAY_TAG)
+    }
+
+    private fun assertLeftOverlayWithMap(overlayTag: String) {
         val map = hasText(FAKE_MAP_PREFIX, substring = true)
         waitFor(map)
         val root = composeRule.onRoot().getUnclippedBoundsInRoot()
-        val overlay = composeRule.onNodeWithTag(ARTWORK_DETAIL_OVERLAY_TAG)
+        val overlay = composeRule.onNodeWithTag(overlayTag)
             .getUnclippedBoundsInRoot()
         val notice = composeRule.onNode(map).getUnclippedBoundsInRoot()
         assertTrue("오버레이 $overlay, 화면 $root", overlay.right <= (root.left + root.right) / 2)
@@ -219,6 +252,9 @@ class PublicGallerySteps(private val ruleHolder: ComposeRuleHolder) {
             hasClickAction() and inList and hasAnyDescendant(hasTestTag(GALLERY_ITEM_VOTES_TAG))
         return if (title.isEmpty()) item else item and hasAnyDescendant(hasText(title))
     }
+
+    private fun selectedItem(title: String): SemanticsMatcher =
+        hasTestTag(GALLERY_SELECTED_ITEM_TAG) and hasAnyDescendant(hasText(title))
 
     private fun waitFor(matcher: SemanticsMatcher, useUnmergedTree: Boolean = false) {
         composeRule.waitUntil(WAIT_TIMEOUT_MILLIS) {
