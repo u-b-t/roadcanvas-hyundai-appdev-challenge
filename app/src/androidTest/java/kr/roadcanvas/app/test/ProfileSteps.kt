@@ -51,7 +51,6 @@ class ProfileSteps(private val ruleHolder: ComposeRuleHolder) {
     }
 
     @Given("메인 화면에서 프로필 화면을 연다")
-    @When("메인 화면에서 프로필 화면을 연다")
     fun openProfile() {
         composeRule.mainClock.autoAdvance = true
         TestScreens.launchContent {
