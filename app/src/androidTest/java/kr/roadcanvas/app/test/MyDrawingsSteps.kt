@@ -3,10 +3,12 @@ package kr.roadcanvas.app.test
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -28,11 +30,14 @@ import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
 import kr.roadcanvas.app.modeselect.MY_DRAWINGS_LABEL
+import kr.roadcanvas.app.mydrawings.DRAWING_DELETE_BUTTON_TAG
 import kr.roadcanvas.app.mydrawings.DRAWING_DETAIL_OVERLAY_TAG
 import kr.roadcanvas.app.mydrawings.DRAWING_DETAIL_TAG
+import kr.roadcanvas.app.mydrawings.MODE_THUMBNAIL_DESCRIPTION
 import kr.roadcanvas.app.mydrawings.MY_DRAWINGS_ITEM_SCORE_TAG
 import kr.roadcanvas.app.mydrawings.MY_DRAWINGS_LIST_TAG
 import kr.roadcanvas.app.mydrawings.MY_DRAWINGS_TITLE
+import kr.roadcanvas.app.mydrawings.ROUTE_THUMBNAIL_DESCRIPTION
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
 import kr.roadcanvas.app.vehicle.fake.FakeAppContainer
 import org.junit.Assert.assertEquals
@@ -137,11 +142,45 @@ class MyDrawingsSteps(private val ruleHolder: ComposeRuleHolder) {
         composeRule.onNode(item).assertIsDisplayed()
     }
 
-    @Then("상세 지도 위 왼쪽 오버레이에 {string}과 {string} 버튼이 표시된다")
-    fun assertDetailOverlay(score: String, button: String) {
+    @Then("목록의 {string} 항목에 경로 썸네일이 표시된다")
+    fun assertRouteThumbnail(date: String) {
+        val item = hasText(date) and hasClickAction() and inList
+        waitFor(item and hasContentDescription(ROUTE_THUMBNAIL_DESCRIPTION))
+        composeRule.onNode(item).assert(!hasContentDescription(MODE_THUMBNAIL_DESCRIPTION))
+    }
+
+    @Then("목록의 {string} 항목에는 경로 썸네일 대신 모드 그림이 표시된다")
+    fun assertModeThumbnail(date: String) {
+        val item = hasText(date) and hasClickAction() and inList
+        waitFor(item and hasContentDescription(MODE_THUMBNAIL_DESCRIPTION))
+        composeRule.onNode(item).assert(!hasContentDescription(ROUTE_THUMBNAIL_DESCRIPTION))
+    }
+
+    @Then("{string} 버튼은 점수 카드 밖 상세 왼쪽 아래에 있다")
+    fun assertDeleteButtonPlacement(label: String) {
+        val node = hasTestTag(DRAWING_DELETE_BUTTON_TAG) and hasText(label) and hasClickAction()
+        waitFor(node)
+        val button = composeRule.onNode(node).getUnclippedBoundsInRoot()
+        val overlay = composeRule.onNodeWithTag(
+            DRAWING_DETAIL_OVERLAY_TAG
+        ).getUnclippedBoundsInRoot()
+        val detail = composeRule.onNodeWithTag(DRAWING_DETAIL_TAG).getUnclippedBoundsInRoot()
+        assertTrue("버튼 $button, 점수 카드 $overlay", button.top >= overlay.bottom)
+        assertTrue("버튼 $button, 상세 $detail", button.left >= detail.left)
+        assertTrue(
+            "버튼 $button, 상세 $detail",
+            button.right <= (detail.left + detail.right) / 2
+        )
+        assertTrue(
+            "버튼 $button, 상세 $detail",
+            button.top >= (detail.top + detail.bottom) / 2
+        )
+    }
+
+    @Then("상세 지도 위 왼쪽 오버레이에 {string}이 표시된다")
+    fun assertDetailOverlay(score: String) {
         val inOverlay = hasAnyAncestor(hasTestTag(DRAWING_DETAIL_OVERLAY_TAG))
         waitFor(hasText(score) and inOverlay, useUnmergedTree = true)
-        waitFor(hasText(button) and hasClickAction() and inOverlay)
         val overlay = composeRule.onNodeWithTag(
             DRAWING_DETAIL_OVERLAY_TAG
         ).getUnclippedBoundsInRoot()

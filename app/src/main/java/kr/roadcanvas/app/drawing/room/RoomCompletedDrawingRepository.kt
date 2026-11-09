@@ -6,6 +6,7 @@ import kr.roadcanvas.app.drawing.CompletedDrawingSummary
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
+import kr.roadcanvas.app.drawing.routeThumbnail
 import kr.roadcanvas.app.drawing.storageResultOf
 
 class RoomCompletedDrawingRepository(private val dao: CompletedDrawingDao) :
@@ -33,6 +34,17 @@ class RoomCompletedDrawingRepository(private val dao: CompletedDrawingDao) :
             },
             metrics = { id ->
                 drawing.metrics.map { (name, value) -> CompletedMetricEntity(id, name, value) }
+            },
+            thumbnail = { id ->
+                routeThumbnail(drawing.path).mapIndexed { index, point ->
+                    CompletedThumbnailPointEntity(
+                        id,
+                        index,
+                        point.latitude,
+                        point.longitude,
+                        point.timeMillis
+                    )
+                }
             }
         )
     }
@@ -69,13 +81,15 @@ class RoomCompletedDrawingRepository(private val dao: CompletedDrawingDao) :
     override suspend fun bestScore(mode: DrawingMode): StorageResult<Int?> =
         storageResultOf { dao.bestScore(mode.key) }
 
-    private fun CompletedDrawingEntity.toSummary() = CompletedDrawingSummary(
-        id = id,
-        mode = DrawingMode.fromKey(mode),
-        completedAtMillis = completedAtMillis,
-        score = score,
-        distanceMeters = distanceMeters,
-        durationMillis = durationMillis,
-        name = name
+    private fun CompletedDrawingWithThumbnail.toSummary() = CompletedDrawingSummary(
+        id = drawing.id,
+        mode = DrawingMode.fromKey(drawing.mode),
+        completedAtMillis = drawing.completedAtMillis,
+        score = drawing.score,
+        distanceMeters = drawing.distanceMeters,
+        durationMillis = drawing.durationMillis,
+        name = drawing.name,
+        thumbnail = thumbnail.sortedBy { it.seq }
+            .map { RoutePoint(it.latitude, it.longitude, it.timeMillis) }
     )
 }

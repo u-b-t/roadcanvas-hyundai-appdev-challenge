@@ -6,6 +6,7 @@ Feature: 그림 기기 저장
   - [#16 완료한 그림의 기기 저장 기능 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/16)
   - [#38 종료 후 저장 전 프로세스 종료 시 결과 화면으로 복원](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/38)
   - [#78 완료한 그림에 이름 붙이기](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/78)
+  - [#61 내 그림 목록에 경로 썸네일 표시와 이동 없는 기록 정리](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/61)
 
   Scenario: 완료한 그림을 저장하고 다시 불러온다
     Given 기기 저장소가 비어 있다
@@ -24,6 +25,11 @@ Feature: 그림 기기 저장
     Given 기기 저장소가 비어 있다
     When 없는 그림의 이름을 바꾼다
     Then 이름 변경은 실패 결과를 받는다
+
+  Scenario: 완료 기록 목록에는 저장할 때 줄인 썸네일용 축약 경로가 들어 있다
+    Given 기기 저장소가 비어 있다
+    When 점수 87점, 경로 점 200개인 동그라미 그림을 저장한다
+    Then 완료 기록 목록의 축약 경로는 경로 점 200개 중 첫 점부터 4개 간격으로 고르고 마지막 점을 더한 51개다
 
   Scenario: 완료 기록 목록은 최신순으로 정렬된다
     Given 기기 저장소가 비어 있다
@@ -128,3 +134,8 @@ Feature: 그림 기기 저장
     And 올린 저장소에서 완료 기록 목록을 조회한다
     Then 완료 기록 목록의 점수는 "87" 순서다
     And 완료 기록 목록의 이름은 모두 없다
+
+  Scenario: 이전 버전 저장소의 완료 기록은 올린 뒤 저장된 경로로 썸네일용 축약 경로를 채운다
+    Given 버전 3 스키마로 만든 저장소 DB에 경로 점 200개인 완료 기록이 있다
+    When 등록된 마이그레이션으로 현재 버전까지 올린다
+    Then 완료 기록 목록의 축약 경로는 경로 점 200개 중 첫 점부터 4개 간격으로 고르고 마지막 점을 더한 51개다

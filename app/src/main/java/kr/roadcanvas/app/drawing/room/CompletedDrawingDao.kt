@@ -16,21 +16,27 @@ abstract class CompletedDrawingDao {
     @Insert
     abstract suspend fun insertMetrics(metrics: List<CompletedMetricEntity>)
 
-    /** 기록과 경로, 세부 지표를 한 트랜잭션으로 저장한다. */
+    @Insert
+    abstract suspend fun insertThumbnail(points: List<CompletedThumbnailPointEntity>)
+
+    /** 기록과 경로, 세부 지표, 썸네일용 축약 경로를 한 트랜잭션으로 저장한다. */
     @Transaction
     open suspend fun insert(
         drawing: CompletedDrawingEntity,
         points: (drawingId: Long) -> List<CompletedRoutePointEntity>,
-        metrics: (drawingId: Long) -> List<CompletedMetricEntity>
+        metrics: (drawingId: Long) -> List<CompletedMetricEntity>,
+        thumbnail: (drawingId: Long) -> List<CompletedThumbnailPointEntity>
     ): Long {
         val id = insertDrawing(drawing)
         insertPoints(points(id))
         insertMetrics(metrics(id))
+        insertThumbnail(thumbnail(id))
         return id
     }
 
+    @Transaction
     @Query("SELECT * FROM completed_drawing ORDER BY completed_at DESC, id DESC")
-    abstract suspend fun summaries(): List<CompletedDrawingEntity>
+    abstract suspend fun summaries(): List<CompletedDrawingWithThumbnail>
 
     @Transaction
     @Query("SELECT * FROM completed_drawing WHERE id = :id")

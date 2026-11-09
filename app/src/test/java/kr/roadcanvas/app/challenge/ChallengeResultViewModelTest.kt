@@ -144,15 +144,30 @@ class ChallengeResultViewModelTest {
     }
 
     @Test
-    fun `이동하지 않은 0점 도전도 사유와 함께 저장한다`() = runTest(dispatcher) {
+    fun `위치가 부족한 0점 도전은 결과만 보여주고 저장하지 않으며 진행 중 기록을 지운다`() = runTest(dispatcher) {
         saveInProgress(listOf(RoutePoint(37.5665, 126.978, START)))
 
         val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
 
         assertEquals(0, state.result.score!!.score)
         assertEquals(ZeroScoreReason.INSUFFICIENT_POINTS, state.result.score!!.zeroReason)
+        assertEquals(ResultSaveStatus.NOT_SAVED, state.saveStatus)
+        assertTrue(savedSummaries().isEmpty())
+        assertNull(inProgressDrawing())
+    }
+
+    @Test
+    fun `움직였지만 원이 아닌 0점 도전은 저장한다`() = runTest(dispatcher) {
+        saveInProgress(
+            TestPaths.straightOutAndBack(100.0).mapIndexed { i, it ->
+                RoutePoint(it.latitude, it.longitude, START + i * 1_000L)
+            }
+        )
+
+        val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
+
         assertEquals(ResultSaveStatus.SAVED, state.saveStatus)
-        assertEquals(listOf(0), savedSummaries().map { it.score })
+        assertEquals(listOf(state.result.score!!.score), savedSummaries().map { it.score })
     }
 
     @Test
@@ -443,13 +458,23 @@ class ChallengeResultViewModelTest {
     }
 
     @Test
-    fun `이동하지 않은 동그라미 챌린지는 0점으로 저장한다`() = runTest(dispatcher) {
-        saveInProgress(stationaryPath())
+    fun `한 자리에 머문 동그라미 챌린지는 저장하지 않고 화면이 다시 만들어져도 저장하지 않는다`() = runTest(dispatcher) {
+        saveInProgress(
+            TestPaths.stationary(30).mapIndexed { i, it ->
+                RoutePoint(it.latitude, it.longitude, START + i * 1_000L)
+            }
+        )
+        val handle = SavedStateHandle()
 
-        val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
+        val state = viewModel(handle).uiState.value as ChallengeResultUiState.Calculated
+        val recreated = viewModel(handle).uiState.value as ChallengeResultUiState.Calculated
 
-        assertEquals(ResultSaveStatus.SAVED, state.saveStatus)
-        assertEquals(listOf(0), savedSummaries().map { it.score })
+        assertEquals(ZeroScoreReason.NO_MOVEMENT, state.result.score!!.zeroReason)
+        assertEquals(ResultSaveStatus.NOT_SAVED, state.saveStatus)
+        assertEquals(ResultSaveStatus.NOT_SAVED, recreated.saveStatus)
+        assertEquals(DrawingMode.CIRCLE, recreated.result.mode)
+        assertTrue(savedSummaries().isEmpty())
+        assertNull(inProgressDrawing())
     }
 
     @Test

@@ -31,9 +31,18 @@ data class ChallengeResult(
     /** 0점 사유 안내. 점수를 계산한 설정의 기준값을 넣는다. 0점이 아니거나 점수가 없으면 null이다. */
     val zeroReasonText: String?
 ) {
-    /** 완료 기록으로 저장할지. 점수가 없는 모드는 이동하지 않았으면 저장하지 않는다. */
+    /**
+     * 완료 기록으로 저장할지. 그림이 없는 도전은 저장하지 않는다.
+     * 점수를 매기는 모드는 위치가 부족하거나 거의 움직이지 않아 0점이면 저장하지 않고, 움직였지만 원이 아니거나 작아 0점이면 저장한다.
+     * 점수가 없는 모드는 이동 거리가 [FREE_DRAWING_MIN_DISTANCE_METERS]보다 짧으면 저장하지 않는다.
+     */
     val savable: Boolean
-        get() = mode.scored || distanceMeters >= FREE_DRAWING_MIN_DISTANCE_METERS
+        get() = if (mode.scored) {
+            score?.zeroReason != ZeroScoreReason.INSUFFICIENT_POINTS &&
+                score?.zeroReason != ZeroScoreReason.NO_MOVEMENT
+        } else {
+            distanceMeters >= FREE_DRAWING_MIN_DISTANCE_METERS
+        }
 
     /** 완료 기록으로 저장할 값. 0점이거나 점수가 없는 모드는 세부 지표 없이 점수 0으로 저장한다. */
     fun toCompletedDrawing() = CompletedDrawing(
@@ -189,7 +198,7 @@ enum class ResultSaveStatus {
     SAVED,
     FAILED,
 
-    /** 이동하지 않은 자유그림이라 저장하지 않고 진행 중 기록만 지웠다. */
+    /** 이동하지 않은 도전이라 저장하지 않고 진행 중 기록만 지웠다([ChallengeResult.savable]). */
     NOT_SAVED
 }
 

@@ -5,6 +5,7 @@ import kr.roadcanvas.app.drawing.CompletedDrawingRepository
 import kr.roadcanvas.app.drawing.CompletedDrawingSummary
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.StorageResult
+import kr.roadcanvas.app.drawing.routeThumbnail
 
 /** 메모리에 보관하는 완료 기록 저장소. [failure]를 지정하면 모든 요청이 그 오류로 실패한다. */
 class FakeCompletedDrawingRepository : CompletedDrawingRepository {
@@ -34,7 +35,8 @@ class FakeCompletedDrawingRepository : CompletedDrawingRepository {
                     it.score,
                     it.distanceMeters,
                     it.durationMillis,
-                    it.name
+                    it.name,
+                    routeThumbnail(it.path)
                 )
             }
     }

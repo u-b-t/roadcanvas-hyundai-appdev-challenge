@@ -291,6 +291,38 @@ class DrawingStorageSteps {
         summaries = runBlocking { storage.completed.summaries() }.value()
     }
 
+    @Given("버전 {int} 스키마로 만든 저장소 DB에 경로 점 {int}개인 완료 기록이 있다")
+    fun createDatabaseWithCompletedPath(version: Int, count: Int) {
+        application.deleteDatabase(TEST_DATABASE)
+        migrationHelper.createDatabase(TEST_DATABASE, version).use { db ->
+            // 이전 버전 스키마에는 엔티티 클래스를 쓸 수 없으므로 SQL로 넣는다.
+            db.execSQL(
+                "INSERT INTO completed_drawing " +
+                    "(id, mode, completed_at, score, distance_meters, duration_millis) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                arrayOf(1, DrawingMode.CIRCLE.key, MINUTE, 87, 314.2, 63_000)
+            )
+            routePoints(count).forEachIndexed { seq, it ->
+                db.execSQL(
+                    "INSERT INTO completed_route_point " +
+                        "(drawing_id, seq, latitude, longitude, time_millis) VALUES (?, ?, ?, ?, ?)",
+                    arrayOf(1, seq, it.latitude, it.longitude, it.timeMillis)
+                )
+            }
+        }
+    }
+
+    @Then("완료 기록 목록의 축약 경로는 경로 점 {int}개 중 첫 점부터 {int}개 간격으로 고르고 마지막 점을 더한 {int}개다")
+    fun assertThumbnail(pointCount: Int, step: Int, thumbnailCount: Int) {
+        if (database == null) openStorage()
+        val summary = runBlocking { storage.completed.summaries() }.value().single()
+        val path = routePoints(pointCount)
+        val indices = (0 until pointCount step step).toList()
+            .let { if (it.last() == pointCount - 1) it else it + (pointCount - 1) }
+        assertEquals(thumbnailCount, summary.thumbnail.size)
+        assertEquals(indices.map { path[it] }, summary.thumbnail)
+    }
+
     @When("올린 저장소에서 진행 중인 도전을 불러온다")
     fun loadMigratedInProgress() {
         openStorage()
