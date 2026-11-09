@@ -1,4 +1,4 @@
-// 운영 규칙(firebase/firestore.rules)의 서버 땅따먹기 규칙을 Firebase Local Emulator Suite에서 시험한다.
+// 운영 규칙(firebase/firestore.rules)의 서버 땅따먹기 규칙과 동그라미 순위 기록 공개 범위를 Firebase Local Emulator Suite에서 시험한다.
 // 실행: npm run test:rules (firebase emulators:exec가 demo- 프로젝트로 에뮬레이터를 띄운 뒤 이 파일을 실행한다).
 // 획득 트랜잭션은 앱의 FirestoreTerritoryStore.submit과 같은 순서로 읽고 쓴다.
 import { initializeApp } from 'firebase/app';
@@ -228,6 +228,24 @@ check('400칸 획득 트랜잭션 반영', large.ok && large.outcome.newCells ==
 const drawing = { mode: 'TERRITORY', startedAt: new Date(1000), finishedAt: new Date(2000), distanceMeters: 400, durationMillis: 60000, pointChunkCount: 1 };
 check('TERRITORY 그림 기록 허용', !(await denied(setDoc(doc(a.db, 'users', a.uid, 'drawings', 't1'), drawing))));
 check('점수가 있는 TERRITORY 그림 기록 거부', await denied(setDoc(doc(a.db, 'users', a.uid, 'drawings', 't2'), { ...drawing, score: 10, algorithmVersion: 'x' })));
+
+// 동그라미 순위 기록 상세: 순위 항목이 가리키는 그림과 청크만 다른 사용자가 읽는다.
+const circle = { mode: 'CIRCLE', startedAt: new Date(1000), finishedAt: new Date(2000), distanceMeters: 300, durationMillis: 60000, pointChunkCount: 1, score: 80, algorithmVersion: '1' };
+const circleChunk = { index: 0, pointsJson: '[{"latitude":37.5,"longitude":127.0,"recordedAtMillis":1000}]' };
+for (const id of ['c-best', 'c-other']) {
+  await setDoc(doc(a.db, 'users', a.uid, 'drawings', id, 'chunks', '0'), circleChunk);
+  await setDoc(doc(a.db, 'users', a.uid, 'drawings', id), circle);
+}
+await setDoc(doc(a.db, 'leaderboards', 'circle', 'entries', a.uid), { nickname: a.nickname, score: 80, achievedAt: new Date(2000), drawingId: 'c-best', algorithmVersion: '1' });
+check('순위 기록 그림 다른 사용자 읽기 허용', !(await denied(getDoc(doc(b.db, 'users', a.uid, 'drawings', 'c-best')))));
+check('순위 기록 청크 다른 사용자 목록 읽기 허용', !(await denied(getDocs(collection(b.db, 'users', a.uid, 'drawings', 'c-best', 'chunks')))));
+check('순위에 없는 그림 다른 사용자 읽기 거부', await denied(getDoc(doc(b.db, 'users', a.uid, 'drawings', 'c-other'))));
+check('순위에 없는 그림 청크 다른 사용자 읽기 거부', await denied(getDocs(collection(b.db, 'users', a.uid, 'drawings', 'c-other', 'chunks'))));
+check('순위 항목이 없는 사용자 그림 읽기 거부', await denied(getDoc(doc(a.db, 'users', b.uid, 'drawings', 'c-best'))));
+check('인증 없이 순위 기록 그림 읽기 거부', await denied(getDoc(doc(anonymous.db, 'users', a.uid, 'drawings', 'c-best'))));
+check('순위 기록 그림 다른 사용자 수정 거부', await denied(setDoc(doc(b.db, 'users', a.uid, 'drawings', 'c-best'), circle)));
+check('순위 기록 청크 다른 사용자 삭제 거부', await denied(writeBatch(b.db).delete(doc(b.db, 'users', a.uid, 'drawings', 'c-best', 'chunks', '0')).commit()));
+check('다른 사용자 그림 목록 읽기 거부', await denied(getDocs(collection(b.db, 'users', a.uid, 'drawings'))));
 
 const failed = checks.filter((c) => !c.ok);
 console.log(`\n${checks.length - failed.length}/${checks.length} 통과`);

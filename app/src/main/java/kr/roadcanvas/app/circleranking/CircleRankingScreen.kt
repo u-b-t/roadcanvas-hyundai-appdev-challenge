@@ -1,6 +1,7 @@
 package kr.roadcanvas.app.circleranking
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,6 +42,7 @@ import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.DriverSideLayout
 import kr.roadcanvas.app.ui.components.OverlayCard
+import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 
 const val CIRCLE_RANKING_LABEL = "순위"
 const val CIRCLE_RANKING_TITLE = "동그라미 챌린지 순위"
@@ -72,11 +74,17 @@ val CircleRankingFailure.text: String
         CircleRankingFailure.NETWORK -> "네트워크에 연결하지 못했어요"
         CircleRankingFailure.AUTH -> "로그인(익명 인증)에 실패했어요"
         CircleRankingFailure.UNKNOWN -> "순위를 불러오지 못했어요"
+        CircleRankingFailure.NOT_FOUND -> "순위 기록을 찾지 못했어요"
+        CircleRankingFailure.INVALID_ROUTE -> "경로를 불러오지 못했어요"
     }
 
-/** 순위 화면에 서버 순위를 연결한다. */
+/** 순위 화면에 서버 순위를 연결한다. 순위 줄을 누르면 [onOpenRecord]로 그 사용자 UID의 기록 상세를 연다. */
 @Composable
-fun CircleRankingRoute(onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun CircleRankingRoute(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    onOpenRecord: (String) -> Unit = {}
+) {
     val context = LocalContext.current
     val viewModel: CircleRankingViewModel = viewModel(
         factory = viewModelFactory {
@@ -88,20 +96,22 @@ fun CircleRankingRoute(onBack: () -> Unit, modifier: Modifier = Modifier) {
         state = state,
         onRefresh = viewModel::refresh,
         onBack = onBack,
-        modifier = modifier
+        modifier = modifier,
+        onOpenRecord = onOpenRecord
     )
 }
 
 /**
  * 왼쪽 조작 영역에 제목, 내 순위·최고 점수와 버튼을 두고, 오른쪽에 상위 10명을 보여준다.
- * 내 기록이 10위 밖이면 순위표 아래에 구분선을 두고 따로 보여준다.
+ * 내 기록이 10위 밖이면 순위표 아래에 구분선을 두고 따로 보여준다. 순위 줄을 누르면 [onOpenRecord]로 UID를 넘긴다.
  */
 @Composable
 fun CircleRankingScreen(
     state: CircleRankingUiState,
     onRefresh: () -> Unit,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenRecord: (String) -> Unit = {}
 ) {
     DriverSideLayout(
         controls = {
@@ -136,7 +146,7 @@ fun CircleRankingScreen(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    RankingList(state)
+                    RankingList(state, onOpenRecord)
                 }
             }
         },
@@ -202,7 +212,7 @@ private fun MyRecord(state: CircleRankingUiState) {
 }
 
 @Composable
-private fun RankingList(state: CircleRankingUiState) {
+private fun RankingList(state: CircleRankingUiState, onOpenRecord: (String) -> Unit) {
     when (state) {
         CircleRankingUiState.Loading -> Message(CIRCLE_RANKING_LOADING)
         is CircleRankingUiState.Failed -> Message("-")
@@ -216,7 +226,8 @@ private fun RankingList(state: CircleRankingUiState) {
                     score = it.score,
                     achievedAtMillis = it.achievedAtMillis,
                     mine = it.mine,
-                    tag = if (it.mine) MY_CIRCLE_RANKING_ROW_TAG else CIRCLE_RANKING_ROW_TAG
+                    tag = if (it.mine) MY_CIRCLE_RANKING_ROW_TAG else CIRCLE_RANKING_ROW_TAG,
+                    onClick = { onOpenRecord(it.uid) }
                 )
             }
             val mine = board.mine
@@ -228,14 +239,15 @@ private fun RankingList(state: CircleRankingUiState) {
                     score = mine.score,
                     achievedAtMillis = mine.achievedAtMillis,
                     mine = true,
-                    tag = MY_CIRCLE_OUTSIDE_ROW_TAG
+                    tag = MY_CIRCLE_OUTSIDE_ROW_TAG,
+                    onClick = { onOpenRecord(mine.uid) }
                 )
             }
         }
     }
 }
 
-/** 순위 한 줄. 내 순위는 강조 배경과 "나" 표시로 구분한다. 순위를 모르면 "-"다. */
+/** 순위 한 줄. 내 순위는 강조 배경과 "나" 표시로 구분한다. 순위를 모르면 "-"다. 누르면 기록 상세를 연다. */
 @Composable
 private fun RankRow(
     rank: Int?,
@@ -243,15 +255,17 @@ private fun RankRow(
     score: Int,
     achievedAtMillis: Long,
     mine: Boolean,
-    tag: String
+    tag: String,
+    onClick: () -> Unit
 ) {
     val color = if (mine) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 56.dp)
+            .heightIn(min = MIN_TOUCH_TARGET)
             .clip(SDGCornerRadius.BoxRadius.Radius12)
             .background(if (mine) SDGColor.Primary50 else SDGColor.Neutral0)
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .semantics(mergeDescendants = true) {}
             .testTag(tag),

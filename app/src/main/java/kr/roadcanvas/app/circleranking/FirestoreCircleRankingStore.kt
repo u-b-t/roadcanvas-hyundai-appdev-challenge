@@ -9,6 +9,7 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
+import kr.roadcanvas.app.artwork.ArtworkChunk
 
 /** Firestore 요청 하나를 기다리는 최대 시간. 응답이 없으면 연결 실패로 본다. */
 private const val REQUEST_TIMEOUT_MILLIS = 20_000L
@@ -45,6 +46,31 @@ class FirestoreCircleRankingStore(
             .count
     }
 
+    override suspend fun drawing(uid: String, drawingId: String): CircleRecordDrawing? = request {
+        drawingDocument(uid, drawingId).get(Source.SERVER).awaitResult().toDrawing()
+    }
+
+    override suspend fun chunks(uid: String, drawingId: String): List<ArtworkChunk> = request {
+        drawingDocument(uid, drawingId).collection("chunks")
+            .get(Source.SERVER)
+            .awaitResult()
+            .documents
+            .map { chunk ->
+                ArtworkChunk(
+                    index = chunk.getLong("index")?.toInt() ?: invalidChunk(chunk),
+                    pointsJson = chunk.getString("pointsJson") ?: invalidChunk(chunk)
+                )
+            }
+    }
+
+    private fun drawingDocument(uid: String, drawingId: String) =
+        db().collection("users").document(uid).collection("drawings").document(drawingId)
+
+    private fun invalidChunk(chunk: DocumentSnapshot): Nothing = throw CircleRankingStoreException(
+        CircleRankingFailure.INVALID_ROUTE,
+        "경로 청크 ${chunk.id}의 형식이 올바르지 않습니다."
+    )
+
     /** Firestore 오류를 조회 실패 이유로 바꾼다. */
     private suspend fun <T> request(block: suspend () -> T): T = try {
         block()
@@ -55,6 +81,7 @@ class FirestoreCircleRankingStore(
             FirebaseFirestoreException.Code.ABORTED -> CircleRankingFailure.NETWORK
             FirebaseFirestoreException.Code.UNAUTHENTICATED,
             FirebaseFirestoreException.Code.PERMISSION_DENIED -> CircleRankingFailure.AUTH
+            FirebaseFirestoreException.Code.NOT_FOUND -> CircleRankingFailure.NOT_FOUND
             else -> CircleRankingFailure.UNKNOWN
         }
         throw CircleRankingStoreException(failure, "Firestore 요청 실패: ${e.code}", e)
@@ -74,6 +101,17 @@ private fun DocumentSnapshot.toEntry(): CircleRankingEntry? {
         uid = id,
         nickname = getString("nickname") ?: return null,
         score = getLong("score")?.toInt() ?: return null,
-        achievedAtMillis = getTimestamp("achievedAt")?.toDate()?.time ?: return null
+        achievedAtMillis = getTimestamp("achievedAt")?.toDate()?.time ?: return null,
+        drawingId = getString("drawingId")
+    )
+}
+
+private fun DocumentSnapshot.toDrawing(): CircleRecordDrawing? {
+    if (!exists()) return null
+    return CircleRecordDrawing(
+        finishedAtMillis = getTimestamp("finishedAt")?.toDate()?.time ?: return null,
+        distanceMeters = getDouble("distanceMeters") ?: return null,
+        durationMillis = getLong("durationMillis") ?: return null,
+        pointChunkCount = getLong("pointChunkCount")?.toInt() ?: return null
     )
 }

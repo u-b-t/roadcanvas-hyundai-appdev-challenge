@@ -33,14 +33,21 @@ service cloud.firestore {
         drawing.data.mode == 'CIRCLE' && drawing.data.score == data.score &&
         drawing.data.algorithmVersion == data.algorithmVersion;
     }
+    // 동그라미 순위 항목이 가리키는 그림. 다른 사용자는 순위에 오른 최고 기록 하나만 읽을 수 있다.
+    function rankedDrawing(uid, drawingId) {
+      let entry = /databases/$(database)/documents/leaderboards/circle/entries/$(uid);
+      return signedIn() && exists(entry) && get(entry).data.drawingId == drawingId;
+    }
     match /users/{uid} {
       allow read, delete: if owner(uid);
       allow create, update: if owner(uid) && validProfile(request.resource.data);
       match /drawings/{drawingId} {
-        allow read, delete: if owner(uid);
+        allow read: if owner(uid) || rankedDrawing(uid, drawingId);
+        allow delete: if owner(uid);
         allow create, update: if owner(uid) && validDrawing(request.resource.data);
         match /chunks/{chunkId} {
-          allow read, delete: if owner(uid);
+          allow read: if owner(uid) || rankedDrawing(uid, drawingId);
+          allow delete: if owner(uid);
           allow create, update: if owner(uid) &&
             request.resource.data.keys().hasOnly(['index', 'pointsJson']) &&
             request.resource.data.keys().hasAll(['index', 'pointsJson']) &&
