@@ -23,9 +23,24 @@ data class CompletedDrawing(
     }
 }
 
+/** 땅따먹기 완료 기록이 차지한 영역의 면적(m²)을 저장하는 세부 지표 이름. 저장된 기록을 읽을 때 쓰므로 바꾸지 않는다. */
+const val TERRITORY_AREA_METRIC = "territoryAreaSquareMeters"
+
+/** 땅따먹기 완료 기록이 차지한 영역의 둘레(m)를 저장하는 세부 지표 이름 */
+const val TERRITORY_PERIMETER_METRIC = "territoryPerimeterMeters"
+
+/** 땅따먹기 기록이 차지한 영역의 면적(m²). 땅따먹기가 아니거나 저장하지 않았으면 null이다. */
+val CompletedDrawing.territoryAreaSquareMeters: Double?
+    get() = metrics[TERRITORY_AREA_METRIC]
+
+/** 땅따먹기 기록이 차지한 영역의 둘레(m). 땅따먹기가 아니거나 저장하지 않았으면 null이다. */
+val CompletedDrawing.territoryPerimeterMeters: Double?
+    get() = metrics[TERRITORY_PERIMETER_METRIC]
+
 /**
  * 목록에 보여줄 완료 기록 요약. 전체 경로와 세부 지표 대신 썸네일용 축약 경로([routeThumbnail])를 담는다.
  * 경로 점이 없는 기록은 [thumbnail]이 비어 있다.
+ * [territoryAreaSquareMeters]는 땅따먹기 기록이 차지한 면적(m²)이며 다른 모드는 null이다.
  */
 data class CompletedDrawingSummary(
     val id: Long,
@@ -35,7 +50,8 @@ data class CompletedDrawingSummary(
     val distanceMeters: Double,
     val durationMillis: Long,
     val name: String? = null,
-    val thumbnail: List<RoutePoint> = emptyList()
+    val thumbnail: List<RoutePoint> = emptyList(),
+    val territoryAreaSquareMeters: Double? = null
 )
 
 /**

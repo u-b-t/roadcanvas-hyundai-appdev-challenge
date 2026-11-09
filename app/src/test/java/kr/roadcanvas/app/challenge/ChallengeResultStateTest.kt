@@ -2,9 +2,12 @@ package kr.roadcanvas.app.challenge
 
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
+import kr.roadcanvas.app.drawing.territoryAreaSquareMeters
+import kr.roadcanvas.app.drawing.territoryPerimeterMeters
 import kr.roadcanvas.app.score.CircleScoreCalculator
 import kr.roadcanvas.app.score.CircleScoreConfig
 import kr.roadcanvas.app.score.GeoPoint
+import kr.roadcanvas.app.score.TerritoryResult
 import kr.roadcanvas.app.score.TestPaths
 import kr.roadcanvas.app.score.ZeroScoreReason
 import org.junit.Assert.assertEquals
@@ -270,6 +273,90 @@ class ChallengeResultStateTest {
         assertTrue(result.scoreComponents.isEmpty())
         assertNull(result.improvementTip)
         assertNull(result.fitCircle)
+    }
+
+    @Test
+    fun `땅따먹기는 닫힌 경로의 면적과 둘레를 판정하고 세부 지표로 저장한다`() {
+        val result = challengeResultOf(
+            DrawingMode.TERRITORY,
+            path(TestPaths.circle(50.0)),
+            START,
+            START + 90_000
+        )
+
+        val claimed = result.territory as TerritoryResult.Claimed
+        assertTrue(result.savable)
+        assertNull(result.score)
+        // 반지름 50m 원의 넓이와 둘레
+        assertEquals(7854.0, claimed.areaSquareMeters, 80.0)
+        val drawing = result.toCompletedDrawing()
+        assertEquals(0, drawing.score)
+        assertEquals(claimed.areaSquareMeters, drawing.territoryAreaSquareMeters!!, 0.0)
+        assertEquals(claimed.perimeterMeters, drawing.territoryPerimeterMeters!!, 0.0)
+        assertEquals(314.0, drawing.territoryPerimeterMeters!!, 3.0)
+    }
+
+    @Test
+    fun `저장한 땅따먹기 기록은 같은 경로로 영역 경계를 다시 구한다`() {
+        val result = challengeResultOf(
+            DrawingMode.TERRITORY,
+            path(TestPaths.circle(50.0)),
+            START,
+            START + 90_000
+        )
+
+        val boundary = territoryBoundaryOf(result.toCompletedDrawing())
+
+        assertEquals((result.territory as TerritoryResult.Claimed).boundary, boundary)
+        assertNull(
+            territoryBoundaryOf(result.copy(mode = DrawingMode.FREE_DRAWING).toCompletedDrawing())
+        )
+    }
+
+    @Test
+    fun `영역을 차지하지 못한 땅따먹기는 이동했어도 저장하지 않는다`() {
+        val notClosed = challengeResultOf(
+            DrawingMode.TERRITORY,
+            path(TestPaths.openCircle(60.0, 55.0)),
+            START,
+            START + 90_000
+        )
+        val tooSmall = challengeResultOf(
+            DrawingMode.TERRITORY,
+            path(TestPaths.straightOutAndBack(200.0)),
+            START,
+            START + 90_000
+        )
+        val insufficient = challengeResultOf(
+            DrawingMode.TERRITORY,
+            path(TestPaths.stationary(30)),
+            START,
+            START + 30_000
+        )
+
+        assertTrue(notClosed.territory is TerritoryResult.NotClosed)
+        assertTrue(tooSmall.territory is TerritoryResult.TooSmall)
+        assertEquals(TerritoryResult.InsufficientPoints, insufficient.territory)
+        assertTrue(notClosed.distanceMeters > FREE_DRAWING_MIN_DISTANCE_METERS)
+        assertFalse(notClosed.savable)
+        assertFalse(tooSmall.savable)
+        assertFalse(insufficient.savable)
+    }
+
+    @Test
+    fun `땅따먹기가 아닌 모드는 영역을 판정하지 않는다`() {
+        val circle =
+            challengeResultOf(DrawingMode.CIRCLE, path(TestPaths.circle(50.0)), START, START)
+        val free = challengeResultOf(
+            DrawingMode.FREE_DRAWING,
+            path(TestPaths.circle(50.0)),
+            START,
+            START
+        )
+
+        assertNull(circle.territory)
+        assertNull(free.territory)
+        assertNull(free.toCompletedDrawing().territoryAreaSquareMeters)
     }
 
     private companion object {

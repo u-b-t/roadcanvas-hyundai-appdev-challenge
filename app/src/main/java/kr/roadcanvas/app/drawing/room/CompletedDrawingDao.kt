@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
+import kr.roadcanvas.app.drawing.TERRITORY_AREA_METRIC
 
 @Dao
 abstract class CompletedDrawingDao {
@@ -34,8 +35,15 @@ abstract class CompletedDrawingDao {
         return id
     }
 
+    /** 목록 요약. 땅따먹기 면적은 세부 지표 하나만 함께 읽고 나머지 지표와 전체 경로는 읽지 않는다. */
     @Transaction
-    @Query("SELECT * FROM completed_drawing ORDER BY completed_at DESC, id DESC")
+    @Query(
+        "SELECT completed_drawing.*, completed_metric.value AS territory_area " +
+            "FROM completed_drawing LEFT JOIN completed_metric " +
+            "ON completed_metric.drawing_id = completed_drawing.id " +
+            "AND completed_metric.name = '$TERRITORY_AREA_METRIC' " +
+            "ORDER BY completed_at DESC, id DESC"
+    )
     abstract suspend fun summaries(): List<CompletedDrawingWithThumbnail>
 
     @Transaction

@@ -6,6 +6,8 @@ import kr.roadcanvas.app.drawing.CompletedDrawing
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
+import kr.roadcanvas.app.drawing.TERRITORY_AREA_METRIC
+import kr.roadcanvas.app.drawing.TERRITORY_PERIMETER_METRIC
 import kr.roadcanvas.app.drawing.routeThumbnail
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -189,6 +191,26 @@ class RoomCompletedDrawingRepositoryTest {
     private fun childDrawingIds(table: String): List<Long> = database.openHelper.readableDatabase
         .query("SELECT DISTINCT drawing_id FROM $table ORDER BY drawing_id")
         .use { cursor -> List(cursor.count) { cursor.moveToNext().let { cursor.getLong(0) } } }
+
+    @Test
+    fun `목록 요약은 땅따먹기 기록에만 차지한 면적을 담는다`() = runTest {
+        repository.save(drawing(completedAtMillis = 1, score = 70))
+        repository.save(
+            drawing(completedAtMillis = 2, score = 0).copy(
+                mode = DrawingMode.TERRITORY,
+                metrics = mapOf(
+                    TERRITORY_AREA_METRIC to 7_854.0,
+                    TERRITORY_PERIMETER_METRIC to 314.0
+                )
+            )
+        )
+
+        val summaries = repository.summaries().value()
+
+        assertEquals(listOf(DrawingMode.TERRITORY, DrawingMode.CIRCLE), summaries.map { it.mode })
+        assertEquals(listOf(7_854.0, null), summaries.map { it.territoryAreaSquareMeters })
+        assertEquals(2, summaries.size)
+    }
 
     private fun drawing(completedAtMillis: Long, score: Int) = CompletedDrawing(
         mode = DrawingMode.CIRCLE,

@@ -90,6 +90,7 @@ class RoomCompletedDrawingRepository(private val dao: CompletedDrawingDao) :
         durationMillis = drawing.durationMillis,
         name = drawing.name,
         thumbnail = thumbnail.sortedBy { it.seq }
-            .map { RoutePoint(it.latitude, it.longitude, it.timeMillis) }
+            .map { RoutePoint(it.latitude, it.longitude, it.timeMillis) },
+        territoryAreaSquareMeters = territoryArea
     )
 }
