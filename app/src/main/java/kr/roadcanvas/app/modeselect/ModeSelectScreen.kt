@@ -41,6 +41,7 @@ const val CIRCLE_CHALLENGE_DESCRIPTION = "원을 그리며 달리고 점수를 �
 const val FREE_DRAW_NAME = "자유그림"
 const val FREE_DRAW_DESCRIPTION = "도로 위에 자유롭게 그려요"
 const val MY_DRAWINGS_LABEL = "내 그림"
+const val GALLERY_LABEL = "공개 작품"
 const val MODE_SELECT_COVER_TAG = "modeSelectCover"
 const val MODE_SELECT_LIST_TAG = "modeSelectList"
 
@@ -75,7 +76,8 @@ fun ModeSelectScreen(
     onCircleChallengeClick: () -> Unit,
     onFreeDrawingClick: () -> Unit,
     onMyDrawingsClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onGalleryClick: () -> Unit = {}
 ) {
     DriverSideOverlay(
         modifier = modifier,
@@ -109,11 +111,22 @@ fun ModeSelectScreen(
                         modifier = Modifier.weight(SECONDARY_ITEM_WEIGHT)
                     )
                 }
-                SecondaryCoverButton(
-                    text = MY_DRAWINGS_LABEL,
-                    onClick = onMyDrawingsClick,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // 보조 동작인 내 그림과 공개 작품은 아래 끝에 나란히 둔다.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(CONTROL_SPACING)
+                ) {
+                    SecondaryCoverButton(
+                        text = MY_DRAWINGS_LABEL,
+                        onClick = onMyDrawingsClick,
+                        modifier = Modifier.weight(1f)
+                    )
+                    SecondaryCoverButton(
+                        text = GALLERY_LABEL,
+                        onClick = onGalleryClick,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     )

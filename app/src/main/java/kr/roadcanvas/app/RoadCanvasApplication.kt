@@ -19,6 +19,8 @@ import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.di.DefaultAppContainer
 import kr.roadcanvas.app.drawing.room.DrawingDatabase
 import kr.roadcanvas.app.drawing.room.toStorage
+import kr.roadcanvas.app.gallery.FirestorePublicArtworkStore
+import kr.roadcanvas.app.gallery.UnavailablePublicArtworkStore
 import kr.roadcanvas.app.map.MapAuth
 import kr.roadcanvas.app.map.naver.NaverMapSetup
 import kr.roadcanvas.app.recording.ServiceRecordingRunner
@@ -102,7 +104,14 @@ open class RoadCanvasApplication : Application() {
             artworkStore = if (firebase) FirestoreArtworkStore() else UnavailableArtworkStore,
             artworkAuthorProvider = {
                 if (firebase) AccountArtworkAuthorProvider(it) else UnavailableArtworkAuthorProvider
-            }
+            },
+            // 공개 작품 목록은 같은 조건에서 항상 연결 실패로 안내한다.
+            publicArtworkStore = if (firebase) {
+                FirestorePublicArtworkStore()
+            } else {
+                UnavailablePublicArtworkStore
+            },
+            onGalleryFailure = { Log.w(TAG, "공개 작품 요청에 실패했습니다.", it) }
         )
     }
 }

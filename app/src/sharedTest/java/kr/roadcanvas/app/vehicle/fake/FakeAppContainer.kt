@@ -9,6 +9,8 @@ import kr.roadcanvas.app.artwork.fake.FakeArtworkStore
 import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.drawing.fake.FakeCompletedDrawingRepository
 import kr.roadcanvas.app.drawing.fake.FakeInProgressDrawingRepository
+import kr.roadcanvas.app.gallery.PublicGallery
+import kr.roadcanvas.app.gallery.fake.FakePublicArtworkStore
 import kr.roadcanvas.app.map.fake.FakeRouteMapComponent
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.fake.FakeRecordingRunner
@@ -44,6 +46,11 @@ class FakeAppContainer : AppContainer {
         newArtworkId = { "artwork-${++artworkCount}" }
     )
 
+    /** 공개 작품 서버 저장소와 투표하는 사용자 UID. UID가 null이면 인증 전이다. */
+    val publicArtworkStore = FakePublicArtworkStore()
+    var voterUid: String? = DEFAULT_VOTER_UID
+    override val publicGallery = PublicGallery(publicArtworkStore, currentUid = { voterUid })
+
     /** 시나리오 사이에 상태가 이어지지 않도록 초기 상태로 되돌린다. */
     fun reset() {
         recordingRunner.reset()
@@ -55,6 +62,8 @@ class FakeAppContainer : AppContainer {
         artworkStore.reset()
         artworkAuthorProvider.reset()
         artworkCount = 0
+        publicArtworkStore.reset()
+        voterUid = DEFAULT_VOTER_UID
         challengeRecorder = newRecorder()
     }
 
@@ -68,4 +77,8 @@ class FakeAppContainer : AppContainer {
     }
 
     private fun newRecorder() = ChallengeRecorder(locationProvider, inProgressDrawingRepository)
+
+    companion object {
+        const val DEFAULT_VOTER_UID = "test"
+    }
 }

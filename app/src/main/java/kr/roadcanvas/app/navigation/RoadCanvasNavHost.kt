@@ -1,5 +1,6 @@
 package kr.roadcanvas.app.navigation
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
@@ -25,6 +26,8 @@ import kr.roadcanvas.app.challenge.ChallengeReadyRoute
 import kr.roadcanvas.app.challenge.ChallengeResultRoute
 import kr.roadcanvas.app.challenge.rememberChallengeStarter
 import kr.roadcanvas.app.drawing.DrawingMode
+import kr.roadcanvas.app.gallery.PublicArtworkDetailRoute
+import kr.roadcanvas.app.gallery.PublicGalleryRoute
 import kr.roadcanvas.app.modeselect.ModeSelectScreen
 import kr.roadcanvas.app.mydrawings.MyDrawingsRoute
 import kr.roadcanvas.app.splash.SPLASH_DURATION_MILLIS
@@ -84,6 +87,13 @@ object Routes {
     }
 
     const val MY_DRAWINGS = "myDrawings"
+
+    /** 공개 작품 목록과 [ARG_ARTWORK_ID] 작품의 상세 */
+    const val GALLERY = "gallery"
+    const val ARG_ARTWORK_ID = "artworkId"
+    const val GALLERY_ARTWORK = "gallery/{$ARG_ARTWORK_ID}"
+
+    fun galleryArtwork(artworkId: String) = "gallery/${Uri.encode(artworkId)}"
 }
 
 @Composable
@@ -144,7 +154,8 @@ fun RoadCanvasNavHost(
             ModeSelectScreen(
                 onCircleChallengeClick = { navController.navigate(Routes.CIRCLE_READY) },
                 onFreeDrawingClick = { navController.navigate(Routes.FREE_READY) },
-                onMyDrawingsClick = { navController.navigate(Routes.MY_DRAWINGS) }
+                onMyDrawingsClick = { navController.navigate(Routes.MY_DRAWINGS) },
+                onGalleryClick = { navController.navigate(Routes.GALLERY) }
             )
         }
         DrawingMode.entries.forEach { mode ->
@@ -217,6 +228,21 @@ fun RoadCanvasNavHost(
                         popUpTo(Routes.MY_DRAWINGS) { inclusive = true }
                     }
                 },
+                onBack = { navController.popBackStack() }
+            )
+        }
+        screen(Routes.GALLERY) {
+            PublicGalleryRoute(
+                onOpenArtwork = { navController.navigate(Routes.galleryArtwork(it)) },
+                onBack = { navController.popBackStack() }
+            )
+        }
+        screen(
+            Routes.GALLERY_ARTWORK,
+            arguments = listOf(navArgument(Routes.ARG_ARTWORK_ID) { type = NavType.StringType })
+        ) { entry ->
+            PublicArtworkDetailRoute(
+                artworkId = requireNotNull(entry.arguments?.getString(Routes.ARG_ARTWORK_ID)),
                 onBack = { navController.popBackStack() }
             )
         }
