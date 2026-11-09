@@ -27,8 +27,6 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.shopl.sdg_common.enums.Keyboard
-import com.shopl.sdg_common.util.keyboardAsState
 import kr.roadcanvas.app.appContainer
 import kr.roadcanvas.app.artwork.ArtworkPublishActions
 import kr.roadcanvas.app.circleranking.CIRCLE_RANKING_LABEL
@@ -60,6 +58,7 @@ const val RESULT_SAVING = "결과를 저장하고 있어요"
 const val RESULT_SAVED = "결과를 저장했어요"
 const val RESULT_SAVE_FAILED = "결과를 저장하지 못했어요"
 const val RESULT_NOT_SAVED = "이동한 경로가 없어 저장하지 않았어요"
+const val RESULT_NOT_CLOSED_NOT_SAVED = "닫힌 원이 아니라 저장하지 않았어요"
 const val RETRY_SAVE_LABEL = "다시 저장"
 const val TRY_AGAIN_LABEL = "다시 도전"
 const val FIT_CIRCLE_LEGEND = "지도의 주황 원은 점수를 계산한 맞춤 원이에요"
@@ -110,7 +109,6 @@ fun ChallengeResultRoute(
         DrawingMode.CIRCLE -> ChallengeResultScreen(
             state = state,
             onRetrySave = viewModel::retrySave,
-            onSaveName = viewModel::saveName,
             onTryAgain = onTryAgain,
             onModeSelect = onModeSelect,
             onMyDrawings = onMyDrawings,
@@ -157,11 +155,8 @@ fun ChallengeResultScreen(
     onModeSelect: () -> Unit,
     onMyDrawings: () -> Unit,
     modifier: Modifier = Modifier,
-    onSaveName: (String) -> Unit = {},
     onCircleRanking: () -> Unit = {}
 ) {
-    // 키보드가 열리면 이동 버튼을 숨겨 이름 입력창과 이름 저장 버튼이 남은 높이에 보이게 한다.
-    val keyboardOpen = keyboardAsState().value == Keyboard.Opened
     val result = (state as? ChallengeResultUiState.Calculated)?.result
     DriverSideOverlay(
         background = {
@@ -191,41 +186,47 @@ fun ChallengeResultScreen(
                         ChallengeResultUiState.Unavailable -> StatusText(RESULT_UNAVAILABLE)
                         is ChallengeResultUiState.Calculated -> {
                             ResultSummary(state.result, state.bestComparison)
-                            SaveStatus(state.saveStatus, onRetrySave)
-                            if (state.saveStatus == ResultSaveStatus.SAVED) {
-                                ResultNameEditor(state, onSaveName)
-                            }
+                            // 이름은 자유그림에만 쓰므로 동그라미 결과에는 이름 입력을 두지 않는다.
+                            SaveStatus(
+                                state.saveStatus,
+                                onRetrySave,
+                                notSavedText = if (
+                                    state.result.score?.zeroReason?.notClosedCircle == true
+                                ) {
+                                    RESULT_NOT_CLOSED_NOT_SAVED
+                                } else {
+                                    RESULT_NOT_SAVED
+                                }
+                            )
                         }
                     }
                 }
             }
-            if (!keyboardOpen) {
+            CarButton(
+                text = TRY_AGAIN_LABEL,
+                onClick = onTryAgain,
+                modifier = Modifier.fillMaxWidth()
+            )
+            CarButton(
+                text = BACK_TO_MODE_SELECT_LABEL,
+                onClick = onModeSelect,
+                style = CarButtonStyle.Neutral,
+                modifier = Modifier.fillMaxWidth()
+            )
+            // 내 그림과 순위는 보조 이동이라 한 줄에 나란히 둔다.
+            Row(horizontalArrangement = Arrangement.spacedBy(CONTROL_SPACING)) {
                 CarButton(
-                    text = TRY_AGAIN_LABEL,
-                    onClick = onTryAgain,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                CarButton(
-                    text = BACK_TO_MODE_SELECT_LABEL,
-                    onClick = onModeSelect,
+                    text = MY_DRAWINGS_LABEL,
+                    onClick = onMyDrawings,
                     style = CarButtonStyle.Neutral,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.weight(1f)
                 )
-                // 내 그림과 순위는 보조 이동이라 한 줄에 나란히 둔다.
-                Row(horizontalArrangement = Arrangement.spacedBy(CONTROL_SPACING)) {
-                    CarButton(
-                        text = MY_DRAWINGS_LABEL,
-                        onClick = onMyDrawings,
-                        style = CarButtonStyle.Neutral,
-                        modifier = Modifier.weight(1f)
-                    )
-                    CarButton(
-                        text = CIRCLE_RANKING_LABEL,
-                        onClick = onCircleRanking,
-                        style = CarButtonStyle.Neutral,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                CarButton(
+                    text = CIRCLE_RANKING_LABEL,
+                    onClick = onCircleRanking,
+                    style = CarButtonStyle.Neutral,
+                    modifier = Modifier.weight(1f)
+                )
             }
         },
         modifier = modifier
@@ -309,11 +310,15 @@ private fun ScoreComponentRow(component: ScoreComponent) {
 }
 
 @Composable
-internal fun SaveStatus(status: ResultSaveStatus, onRetrySave: () -> Unit) {
+internal fun SaveStatus(
+    status: ResultSaveStatus,
+    onRetrySave: () -> Unit,
+    notSavedText: String = RESULT_NOT_SAVED
+) {
     when (status) {
         ResultSaveStatus.SAVING -> StatusText(RESULT_SAVING)
         ResultSaveStatus.SAVED -> StatusText(RESULT_SAVED)
-        ResultSaveStatus.NOT_SAVED -> StatusText(RESULT_NOT_SAVED)
+        ResultSaveStatus.NOT_SAVED -> StatusText(notSavedText)
         ResultSaveStatus.FAILED -> {
             Text(
                 text = RESULT_SAVE_FAILED,

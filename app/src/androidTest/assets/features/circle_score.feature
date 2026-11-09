@@ -1,8 +1,10 @@
 Feature: 동그라미 챌린지 점수
   완료한 주행 경로가 얼마나 동그란지 0~100점으로 확인할 수 있다.
+  닫힌 원만 점수를 받는다. 끝점이 출발점에서 50m 안에 있고 맞춘 원의 중심을 330° 이상 돌아야 한다.
 
   Issues:
   - [#15 동그라미 챌린지 점수 계산 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/15)
+  - [#129 동그라미 챌린지는 닫힌 원을 그렸을 때만 점수 인정](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/129)
 
   Scenario: 완전한 원은 크기와 관계없이 높은 점수를 받는다
     Given 반지름 20m인 원을 1바퀴 주행했다
@@ -16,10 +18,25 @@ Feature: 동그라미 챌린지 점수
     When 경로 점수를 계산한다
     Then 점수는 85점 이상이다
 
-  Scenario: 반원만 주행하면 점수가 낮다
+  Scenario: 반원만 주행하면 한 바퀴를 돌지 않아 0점이다
     Given 반지름 20m인 반원을 주행했다
     When 경로 점수를 계산한다
-    Then 점수는 60점 이하다
+    Then 점수는 0점이고 사유는 "한 바퀴 미완성"이다
+
+  Scenario: 원을 3/4만 주행하면 0점이다
+    Given 반지름 20m인 원을 0.75바퀴만큼 주행했다
+    When 경로 점수를 계산한다
+    Then 점수는 0점이고 사유는 "한 바퀴 미완성"이다
+
+  Scenario: 끝점이 출발점에서 멀면 원이 닫히지 않아 0점이다
+    Given 반지름 100m인 원을 돌다가 출발점 60m 앞에서 멈췄다
+    When 경로 점수를 계산한다
+    Then 점수는 0점이고 사유는 "닫히지 않음"이다
+
+  Scenario: 원을 두 바퀴 돌아도 높은 점수를 받는다
+    Given 반지름 20m인 원을 2바퀴만큼 주행했다
+    When 경로 점수를 계산한다
+    Then 점수는 95점 이상이다
 
   Scenario: 직선을 왕복하면 점수가 매우 낮다
     Given 100m 직선을 왕복했다

@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import androidx.test.core.app.ApplicationProvider
+import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
 import kotlinx.coroutines.runBlocking
@@ -46,6 +47,19 @@ class DrawingNameSteps(private val ruleHolder: ComposeRuleHolder) {
             .container as FakeAppContainer
 
     private val nameField = hasSetTextAction() and hasAnyAncestor(hasTestTag(CAR_TEXT_INPUT_TAG))
+
+    /** 이름을 쓰지 않는 모드에도 이전에 저장된 이름이 남아 있는 상황을 만든다. */
+    @Given("저장된 완료 기록에 모두 이름 {string}를 붙여 두었다")
+    @Given("저장된 완료 기록에 모두 이름 {string}을 붙여 두었다")
+    fun nameAllSaved(name: String) = runBlocking {
+        val repository = fakeContainer.completedDrawingRepository
+        val summaries = repository.summaries()
+        assertTrue("저장 결과: $summaries", summaries is StorageResult.Success)
+        (summaries as StorageResult.Success).value.forEach {
+            val result = repository.rename(it.id, name)
+            assertTrue("이름 변경 결과: $result", result is StorageResult.Success)
+        }
+    }
 
     @When("이름 입력창에 {string}를 입력한다")
     @When("이름 입력창에 {string}을 입력한다")
@@ -113,12 +127,6 @@ class DrawingNameSteps(private val ruleHolder: ComposeRuleHolder) {
             hasAnyAncestor(hasTestTag(MY_DRAWINGS_LIST_TAG))
         waitFor(item)
         composeRule.onNode(item).assertIsDisplayed()
-    }
-
-    @Then("상세의 {string} 버튼은 상세 오버레이 너비의 절반보다 좁다")
-    fun assertCompactDetailButton(label: String) {
-        val (button, overlay) = detailButtonAndOverlayWidths(label)
-        assertTrue("버튼 $button, 오버레이 $overlay", button < overlay / 2)
     }
 
     @Then("상세의 {string} 버튼은 상세 오버레이 너비를 채운다")

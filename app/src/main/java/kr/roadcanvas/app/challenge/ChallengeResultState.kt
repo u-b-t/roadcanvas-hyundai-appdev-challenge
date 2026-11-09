@@ -40,7 +40,8 @@ data class ChallengeResult(
 ) {
     /**
      * 완료 기록으로 저장할지. 그림이 없는 도전은 저장하지 않는다.
-     * 점수를 매기는 모드는 위치가 부족하거나 거의 움직이지 않아 0점이면 저장하지 않고, 움직였지만 원이 아니거나 작아 0점이면 저장한다.
+     * 점수를 매기는 모드는 위치가 부족하거나 거의 움직이지 않거나 닫힌 원을 그리지 않아 0점이면 저장하지 않고,
+     * 움직였지만 원이 아니거나 작아 0점이면 저장한다.
      * 땅따먹기는 영역을 차지했을 때만 저장한다.
      * 그 밖의 점수가 없는 모드는 이동 거리가 [FREE_DRAWING_MIN_DISTANCE_METERS]보다 짧으면 저장하지 않는다.
      */
@@ -48,7 +49,8 @@ data class ChallengeResult(
         get() = when {
             mode.scored ->
                 score?.zeroReason != ZeroScoreReason.INSUFFICIENT_POINTS &&
-                    score?.zeroReason != ZeroScoreReason.NO_MOVEMENT
+                    score?.zeroReason != ZeroScoreReason.NO_MOVEMENT &&
+                    score?.zeroReason?.notClosedCircle != true
             mode == DrawingMode.TERRITORY -> territory is TerritoryResult.Claimed
             else -> distanceMeters >= FREE_DRAWING_MIN_DISTANCE_METERS
         }
@@ -125,7 +127,14 @@ private fun scoredResult(
         durationMillis = durationMillis,
         distanceMeters = distanceMeters,
         score = score,
-        zeroReasonText = score?.zeroReason?.let { zeroScoreReasonText(it, calculator.config) },
+        zeroReasonText = score?.zeroReason?.let {
+            zeroScoreReasonText(
+                it,
+                calculator.config,
+                score.closureDistanceMeters,
+                score.rotationDegrees
+            )
+        },
         territory = territory
     )
 }
@@ -158,14 +167,27 @@ fun CircleScoreMetrics.toNamedValues(): Map<String, Double> = mapOf(
     "pathLengthMeters" to pathLengthMeters
 )
 
-/** 0점 사유 안내. 기준값은 [config]에서 가져온다. */
-fun zeroScoreReasonText(reason: ZeroScoreReason, config: CircleScoreConfig): String =
-    when (reason) {
-        ZeroScoreReason.INSUFFICIENT_POINTS -> "기록한 위치가 ${config.minValidPoints}개보다 적어요"
-        ZeroScoreReason.NO_MOVEMENT -> "이동 거리가 ${config.minPathLengthMeters.toInt()}m보다 짧아요"
-        ZeroScoreReason.NOT_CIRCULAR -> "경로가 직선에 가까워 원으로 볼 수 없어요"
-        ZeroScoreReason.TOO_SMALL -> "원의 지름이 ${config.minDiameterMeters.toInt()}m보다 작아요"
-    }
+/**
+ * 0점 사유 안내. 기준값은 [config]에서 가져온다.
+ * 닫히지 않은 원은 출발점까지 거리 [closureDistanceMeters], 덜 돈 원은 돈 각도 [rotationDegrees]를 함께 보여준다.
+ */
+fun zeroScoreReasonText(
+    reason: ZeroScoreReason,
+    config: CircleScoreConfig,
+    closureDistanceMeters: Double? = null,
+    rotationDegrees: Double? = null
+): String = when (reason) {
+    ZeroScoreReason.INSUFFICIENT_POINTS -> "기록한 위치가 ${config.minValidPoints}개보다 적어요"
+    ZeroScoreReason.NO_MOVEMENT -> "이동 거리가 ${config.minPathLengthMeters.toInt()}m보다 짧아요"
+    ZeroScoreReason.NOT_CIRCULAR -> "경로가 직선에 가까워 원으로 볼 수 없어요"
+    ZeroScoreReason.TOO_SMALL -> "원의 지름이 ${config.minDiameterMeters.toInt()}m보다 작아요"
+    ZeroScoreReason.NOT_CLOSED -> closureDistanceMeters?.let {
+        "원이 닫히지 않았어요(출발점까지 ${it.roundToInt()}m)"
+    } ?: "원이 닫히지 않았어요"
+    ZeroScoreReason.INCOMPLETE_TURN -> rotationDegrees?.let {
+        "원을 한 바퀴 다 돌지 않았어요(약 ${it.roundToInt()}°)"
+    } ?: "원을 한 바퀴 다 돌지 않았어요"
+}
 
 /** 점수 구성 항목. [ratio]는 0~1이고 [tip]은 이 항목이 가장 낮을 때 다음 도전에서 고칠 점이다. */
 data class ScoreComponent(val label: String, val ratio: Double, val tip: String) {
@@ -235,7 +257,7 @@ enum class ResultSaveStatus {
     SAVED,
     FAILED,
 
-    /** 이동하지 않은 도전이라 저장하지 않고 진행 중 기록만 지웠다([ChallengeResult.savable]). */
+    /** 이동하지 않았거나 닫힌 원을 그리지 않은 도전이라 저장하지 않고 진행 중 기록만 지웠다([ChallengeResult.savable]). */
     NOT_SAVED
 }
 

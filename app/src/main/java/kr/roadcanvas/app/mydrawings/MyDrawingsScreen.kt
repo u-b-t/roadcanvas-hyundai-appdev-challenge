@@ -395,10 +395,11 @@ private fun DrawingList(
 
 /**
  * 목록 항목의 두 줄 글자. 이름이 있으면 이름과 날짜를, 없으면 날짜와 거리·소요 시간을 보여준다.
+ * 이름은 자유그림에만 쓰므로 다른 모드에 저장된 이름은 보여주지 않는다.
  */
 fun listItemTexts(summary: CompletedDrawingSummary): Pair<String, String> {
     val date = formatDateTime(summary.completedAtMillis)
-    val name = summary.name
+    val name = summary.name?.takeIf { summary.mode.nameRequired }
     return if (name != null) {
         name to date
     } else {
@@ -566,10 +567,10 @@ private fun ColumnScope.DetailOverlayContent(
             )
         } else {
             ScoreCard(drawing = detail.drawing)
-            val nameLabel = if (detail.drawing.name == null) ADD_NAME_LABEL else RENAME_LABEL
+            // 이름은 자유그림에만 쓰므로 다른 모드는 이름 붙이기를 두지 않는다.
             if (detail.drawing.mode.nameRequired) {
                 CarButton(
-                    text = nameLabel,
+                    text = if (detail.drawing.name == null) ADD_NAME_LABEL else RENAME_LABEL,
                     onClick = onStartRename,
                     enabled = !state.deleting,
                     style = CarButtonStyle.Line,
@@ -578,15 +579,6 @@ private fun ColumnScope.DetailOverlayContent(
             }
             publishState?.let { ArtworkPublishPanel(it, publishActions) }
             territoryState?.let { TerritorySyncSection(it, onSubmitTerritory) }
-            // 이름이 필요 없는 모드는 이름 붙이기를 다른 정보 아래 작은 보조 버튼으로 둔다.
-            if (!detail.drawing.mode.nameRequired) {
-                CarButton(
-                    text = nameLabel,
-                    onClick = onStartRename,
-                    enabled = !state.deleting,
-                    style = CarButtonStyle.Line
-                )
-            }
             if (state.deleteFailed) {
                 Text(
                     text = DELETE_FAILED,
@@ -713,7 +705,7 @@ private fun DeleteDrawingButton(
 }
 
 /**
- * 모드, 이름, 날짜, 큰 점수와 거리·소요 시간을 한 카드에 보여준다. 점수가 없는 자유그림은 점수를 뺀다.
+ * 모드, 이름(자유그림만), 날짜, 큰 점수와 거리·소요 시간을 한 카드에 보여준다. 점수가 없는 자유그림은 점수를 뺀다.
  * 땅따먹기는 점수 대신 차지한 면적을 크게 보여주고 둘레를 거리 앞에 둔다.
  */
 @Composable
@@ -723,7 +715,7 @@ private fun ScoreCard(drawing: CompletedDrawing) {
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.primary
     )
-    drawing.name?.let {
+    drawing.name?.takeIf { drawing.mode.nameRequired }?.let {
         Text(
             text = it,
             style = MaterialTheme.typography.headlineSmall,
