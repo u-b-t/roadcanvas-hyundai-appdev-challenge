@@ -7,6 +7,7 @@ Feature: 그림 기기 저장
   - [#38 종료 후 저장 전 프로세스 종료 시 결과 화면으로 복원](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/38)
   - [#78 완료한 그림에 이름 붙이기](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/78)
   - [#61 내 그림 목록에 경로 썸네일 표시와 이동 없는 기록 정리](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/61)
+  - [#103 서버 땅따먹기 칸 변환, 저장소와 Firestore 규칙 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/103)
 
   Scenario: 완료한 그림을 저장하고 다시 불러온다
     Given 기기 저장소가 비어 있다
@@ -139,3 +140,8 @@ Feature: 그림 기기 저장
     Given 버전 3 스키마로 만든 저장소 DB에 경로 점 200개인 완료 기록이 있다
     When 등록된 마이그레이션으로 현재 버전까지 올린다
     Then 완료 기록 목록의 축약 경로는 경로 점 200개 중 첫 점부터 4개 간격으로 고르고 마지막 점을 더한 51개다
+
+  Scenario: 이전 버전 저장소를 올린 뒤 서버에 반영하지 못한 땅따먹기 획득을 보관한다
+    Given 버전 5 스키마로 만든 저장소 DB에 점수 87점인 완료 기록이 있다
+    When 등록된 마이그레이션으로 현재 버전까지 올린다
+    Then 올린 저장소에 서버에 반영하지 못한 땅따먹기 획득을 저장하고 다시 불러온다
