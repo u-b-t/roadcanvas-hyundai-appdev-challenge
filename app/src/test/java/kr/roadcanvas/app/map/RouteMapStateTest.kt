@@ -160,4 +160,41 @@ class RouteMapStateTest {
         assertNull(tooFew.area)
         assertNull(none.area)
     }
+
+    @Test
+    fun `둘러보기는 경로가 없을 때 그 위치에서 칸을 그리고 꼭짓점이 부족한 칸은 뺀다`() {
+        val center = RoutePoint(37.5665, 126.9780)
+        val mine = MapCell(route.take(3), mine = true)
+        val broken = MapCell(route.take(2), mine = false)
+        val state = RouteMapState.of(
+            emptyList(),
+            RouteMapOptions(
+                cells = listOf(mine, broken),
+                explore = MapExplore(center, zoom = 16.0)
+            ),
+            MapAuthState.Configured
+        )
+
+        assertEquals(RouteMapState.Explore(center, 16.0, listOf(mine)), state)
+        assertNull(state.notice)
+    }
+
+    @Test
+    fun `둘러보기 위치가 있어도 경로가 있으면 경로와 함께 칸을 그린다`() {
+        val cell = MapCell(route.take(3), mine = false)
+        val state = RouteMapState.of(
+            route,
+            RouteMapOptions(cells = listOf(cell), explore = MapExplore(route.first())),
+            MapAuthState.Configured
+        ) as RouteMapState.Route
+
+        assertEquals(listOf(cell), state.cells)
+    }
+
+    @Test
+    fun `둘러보기 위치가 없고 경로도 없으면 위치가 부족하다고 안내한다`() {
+        val state = RouteMapState.of(emptyList(), RouteMapOptions(), MapAuthState.Configured)
+
+        assertEquals(RouteMapState.NotEnoughPoints(null), state)
+    }
 }
