@@ -121,3 +121,24 @@ data class InProgressRoutePointEntity(
     val longitude: Double,
     @ColumnInfo(name = "time_millis") val timeMillis: Long
 )
+
+/**
+ * 완료 기록의 작품 공개 기록. 완료 기록 하나에 하나이며 완료 기록을 지우면 함께 지워진다. 버전 5에서 추가했다.
+ * [artworkId]는 처음 공개를 시도할 때 만든 UUID이고 [status]는 마지막 공개 상태 키다.
+ */
+@Entity(
+    tableName = "artwork_publication",
+    foreignKeys = [
+        ForeignKey(
+            entity = CompletedDrawingEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["drawing_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
+data class ArtworkPublicationEntity(
+    @PrimaryKey @ColumnInfo(name = "drawing_id") val drawingId: Long,
+    @ColumnInfo(name = "artwork_id") val artworkId: String,
+    val status: String
+)

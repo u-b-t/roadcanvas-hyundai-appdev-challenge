@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kr.roadcanvas.app.artwork.ArtworkPublishController
+import kr.roadcanvas.app.artwork.ArtworkPublishUiState
+import kr.roadcanvas.app.artwork.ArtworkPublisher
 import kr.roadcanvas.app.drawing.CompletedDrawingRepository
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.DrawingNameValidation
@@ -32,6 +35,8 @@ import kr.roadcanvas.app.score.CircleScoreCalculator
  * 이동하지 않은 도전([ChallengeResult.savable]이 false)은 결과만 보여주고 저장하지 않으며 진행 중 기록을 지운다.
  *
  * 이름을 선택 입력하는 모드는 완료 기록을 저장한 뒤 [saveName]으로 이름을 붙인다.
+ *
+ * [artworkPublisher]가 있으면 저장한 자유그림의 공개 상태를 [publishState]로 보여주고 공개·비공개로 바꾼다.
  */
 class ChallengeResultViewModel(
     private val startedAtMillis: Long,
@@ -41,12 +46,40 @@ class ChallengeResultViewModel(
     private val inProgressRepository: InProgressDrawingRepository,
     private val completedRepository: CompletedDrawingRepository,
     private val calculator: CircleScoreCalculator = CircleScoreCalculator(),
-    private val onStorageFailure: (Throwable) -> Unit = {}
+    private val onStorageFailure: (Throwable) -> Unit = {},
+    artworkPublisher: ArtworkPublisher? = null
 ) : ViewModel() {
     private val mutableState =
         MutableStateFlow<ChallengeResultUiState>(ChallengeResultUiState.Calculating)
 
     val uiState: StateFlow<ChallengeResultUiState> = mutableState.asStateFlow()
+
+    private val publishController =
+        artworkPublisher?.let { ArtworkPublishController(it, viewModelScope) }
+
+    /** 저장한 자유그림의 공개 상태. 공개 대상이 아니면 null이다. */
+    val publishState: StateFlow<ArtworkPublishUiState?> =
+        publishController?.state ?: MutableStateFlow(null)
+
+    fun requestPublish() {
+        publishController?.requestPublish()
+    }
+
+    fun cancelPublishConsent() {
+        publishController?.cancelConsent()
+    }
+
+    fun confirmPublish() {
+        publishController?.confirmPublish()
+    }
+
+    fun retryPublish() {
+        publishController?.retry()
+    }
+
+    fun unpublish() {
+        publishController?.unpublish()
+    }
 
     init {
         viewModelScope.launch { load() }
@@ -75,6 +108,7 @@ class ChallengeResultViewModel(
         viewModelScope.launch {
             val renamed = withContext(NonCancellable) { completedRepository.rename(id, name) }
             if (renamed is StorageResult.Failure) onStorageFailure(renamed.cause)
+            if (renamed is StorageResult.Success) publishController?.onRenamed(name)
             mutableState.update {
                 val calculated = it as? ChallengeResultUiState.Calculated ?: return@update it
                 when (renamed) {
@@ -124,6 +158,7 @@ class ChallengeResultViewModel(
 
     private suspend fun showSaved(id: Long) {
         val drawing = (completedRepository.find(id) as? StorageResult.Success)?.value
+        publishController?.show(drawing)
         mutableState.value = if (drawing == null) {
             ChallengeResultUiState.Unavailable
         } else {
@@ -204,6 +239,7 @@ class ChallengeResultViewModel(
             is StorageResult.Success -> {
                 savedStateHandle[KEY_SAVED_ID] = saved.value
                 clearInProgress()
+                publishController?.show(result.toCompletedDrawing().copy(id = saved.value))
                 ResultSaveStatus.SAVED
             }
             is StorageResult.Failure -> {

@@ -2,6 +2,10 @@ package kr.roadcanvas.app.vehicle.fake
 
 import kr.roadcanvas.app.account.AccountRegistration
 import kr.roadcanvas.app.account.AnonymousAccount
+import kr.roadcanvas.app.artwork.ArtworkPublisher
+import kr.roadcanvas.app.artwork.fake.FakeArtworkAuthorProvider
+import kr.roadcanvas.app.artwork.fake.FakeArtworkPublicationRepository
+import kr.roadcanvas.app.artwork.fake.FakeArtworkStore
 import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.drawing.fake.FakeCompletedDrawingRepository
 import kr.roadcanvas.app.drawing.fake.FakeInProgressDrawingRepository
@@ -27,6 +31,19 @@ class FakeAppContainer : AppContainer {
         private set
     override val recordingRunner = FakeRecordingRunner(recorder = { challengeRecorder })
 
+    val artworkPublicationRepository = FakeArtworkPublicationRepository()
+    val artworkStore = FakeArtworkStore()
+    val artworkAuthorProvider = FakeArtworkAuthorProvider()
+
+    /** 작품 ID는 만든 순서대로 artwork-1, artwork-2...이다. */
+    private var artworkCount = 0
+    override val artworkPublisher = ArtworkPublisher(
+        artworkPublicationRepository,
+        artworkStore,
+        artworkAuthorProvider,
+        newArtworkId = { "artwork-${++artworkCount}" }
+    )
+
     /** 시나리오 사이에 상태가 이어지지 않도록 초기 상태로 되돌린다. */
     fun reset() {
         recordingRunner.reset()
@@ -34,6 +51,10 @@ class FakeAppContainer : AppContainer {
         drivingRestrictionProvider.reset()
         completedDrawingRepository.reset()
         inProgressDrawingRepository.reset()
+        artworkPublicationRepository.reset()
+        artworkStore.reset()
+        artworkAuthorProvider.reset()
+        artworkCount = 0
         challengeRecorder = newRecorder()
     }
 
