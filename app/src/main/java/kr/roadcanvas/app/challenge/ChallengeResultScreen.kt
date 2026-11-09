@@ -30,6 +30,7 @@ import com.shopl.sdg_common.enums.Keyboard
 import com.shopl.sdg_common.util.keyboardAsState
 import kr.roadcanvas.app.appContainer
 import kr.roadcanvas.app.artwork.ArtworkPublishActions
+import kr.roadcanvas.app.circleranking.CIRCLE_RANKING_LABEL
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.DrawingNameValidation
 import kr.roadcanvas.app.drawing.normalizeDrawingName
@@ -48,6 +49,7 @@ import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
 import kr.roadcanvas.app.ui.components.OverlayCard
 import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
+import kr.roadcanvas.app.ui.theme.CONTROL_SPACING
 
 const val CIRCLE_RESULT_TITLE = "동그라미 챌린지 결과"
 const val DURATION_LABEL = "소요 시간"
@@ -72,7 +74,8 @@ fun ChallengeResultRoute(
     onMyDrawings: () -> Unit,
     modifier: Modifier = Modifier,
     mode: DrawingMode = DrawingMode.CIRCLE,
-    onTerritoryMap: (center: RoutePoint?) -> Unit = {}
+    onTerritoryMap: (center: RoutePoint?) -> Unit = {},
+    onCircleRanking: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val viewModel: ChallengeResultViewModel = viewModel(
@@ -108,7 +111,8 @@ fun ChallengeResultRoute(
             onTryAgain = onTryAgain,
             onModeSelect = onModeSelect,
             onMyDrawings = onMyDrawings,
-            modifier = modifier
+            modifier = modifier,
+            onCircleRanking = onCircleRanking
         )
         DrawingMode.TERRITORY -> TerritoryResultScreen(
             state = state,
@@ -150,7 +154,8 @@ fun ChallengeResultScreen(
     onModeSelect: () -> Unit,
     onMyDrawings: () -> Unit,
     modifier: Modifier = Modifier,
-    onSaveName: (String) -> Unit = {}
+    onSaveName: (String) -> Unit = {},
+    onCircleRanking: () -> Unit = {}
 ) {
     // 키보드가 열리면 이동 버튼을 숨겨 이름 입력창과 이름 저장 버튼이 남은 높이에 보이게 한다.
     val keyboardOpen = keyboardAsState().value == Keyboard.Opened
@@ -202,12 +207,21 @@ fun ChallengeResultScreen(
                     style = CarButtonStyle.Neutral,
                     modifier = Modifier.fillMaxWidth()
                 )
-                CarButton(
-                    text = MY_DRAWINGS_LABEL,
-                    onClick = onMyDrawings,
-                    style = CarButtonStyle.Neutral,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // 내 그림과 순위는 보조 이동이라 한 줄에 나란히 둔다.
+                Row(horizontalArrangement = Arrangement.spacedBy(CONTROL_SPACING)) {
+                    CarButton(
+                        text = MY_DRAWINGS_LABEL,
+                        onClick = onMyDrawings,
+                        style = CarButtonStyle.Neutral,
+                        modifier = Modifier.weight(1f)
+                    )
+                    CarButton(
+                        text = CIRCLE_RANKING_LABEL,
+                        onClick = onCircleRanking,
+                        style = CarButtonStyle.Neutral,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         },
         modifier = modifier

@@ -29,6 +29,7 @@ import com.shopl.sdg_common.foundation.SDGColor
 import com.shopl.sdg_common.foundation.SDGCornerRadius
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.mydrawings.ModeThumbnail
+import kr.roadcanvas.app.circleranking.CIRCLE_RANKING_LABEL
 import kr.roadcanvas.app.territorymap.TERRITORY_MAP_LABEL
 import kr.roadcanvas.app.ui.components.COVER_BACKGROUND_COLOR
 import kr.roadcanvas.app.ui.components.CarButton
@@ -89,7 +90,8 @@ fun ModeSelectScreen(
     onGalleryClick: () -> Unit = {},
     onTerritoryClick: () -> Unit = {},
     onTerritoryMapClick: () -> Unit = {},
-    recordSummary: ModeRecordSummary? = null
+    recordSummary: ModeRecordSummary? = null,
+    onCircleRankingClick: () -> Unit = {}
 ) {
     DriverSideOverlay(
         modifier = modifier,
@@ -133,7 +135,7 @@ fun ModeSelectScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
-                // 보조 동작인 내 그림, 공개 작품과 영토 지도는 아래 끝에 나란히 둔다.
+                // 보조 동작인 내 그림, 공개 작품, 영토 지도와 동그라미 순위는 아래 끝에 나란히 둔다.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(CONTROL_SPACING)
@@ -152,6 +154,11 @@ fun ModeSelectScreen(
                         text = TERRITORY_MAP_LABEL,
                         onClick = onTerritoryMapClick,
                         modifier = Modifier.weight(1f)
+                    )
+                    // 글자가 짧아 남는 너비를 다른 버튼에 준다.
+                    SecondaryCoverButton(
+                        text = CIRCLE_RANKING_LABEL,
+                        onClick = onCircleRankingClick
                     )
                 }
             }

@@ -25,6 +25,7 @@ import kr.roadcanvas.app.challenge.ChallengeProgressRoute
 import kr.roadcanvas.app.challenge.ChallengeReadyRoute
 import kr.roadcanvas.app.challenge.ChallengeResultRoute
 import kr.roadcanvas.app.challenge.rememberChallengeStarter
+import kr.roadcanvas.app.circleranking.CircleRankingRoute
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.gallery.PublicArtworkDetailRoute
 import kr.roadcanvas.app.gallery.PublicGalleryRoute
@@ -98,6 +99,9 @@ object Routes {
     }
 
     const val MY_DRAWINGS = "myDrawings"
+
+    /** 동그라미 챌린지 순위 */
+    const val CIRCLE_RANKING = "circleRanking"
 
     /** 공개 작품 목록과 [ARG_ARTWORK_ID] 작품의 상세 */
     const val GALLERY = "gallery"
@@ -182,7 +186,8 @@ fun RoadCanvasNavHost(
                 onMyDrawingsClick = { navController.navigate(Routes.MY_DRAWINGS) },
                 onGalleryClick = { navController.navigate(Routes.GALLERY) },
                 onTerritoryMapClick = { navController.navigate(Routes.territoryMap()) },
-                recordSummary = rememberModeRecordSummary().value
+                recordSummary = rememberModeRecordSummary().value,
+                onCircleRankingClick = { navController.navigate(Routes.CIRCLE_RANKING) }
             )
         }
         DrawingMode.entries.forEach { mode ->
@@ -245,7 +250,8 @@ fun RoadCanvasNavHost(
                         navController.popBackStack(Routes.MODE_SELECT, inclusive = false)
                     },
                     onMyDrawings = { leaveTo(Routes.MY_DRAWINGS) },
-                    onTerritoryMap = { leaveTo(Routes.territoryMap(it)) }
+                    onTerritoryMap = { leaveTo(Routes.territoryMap(it)) },
+                    onCircleRanking = { leaveTo(Routes.CIRCLE_RANKING) }
                 )
             }
         }
@@ -279,6 +285,9 @@ fun RoadCanvasNavHost(
                 },
                 onBack = { navController.popBackStack() }
             )
+        }
+        screen(Routes.CIRCLE_RANKING) {
+            CircleRankingRoute(onBack = { navController.popBackStack() })
         }
         screen(Routes.GALLERY) {
             PublicGalleryRoute(
