@@ -3,6 +3,13 @@ package kr.roadcanvas.app
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import com.google.firebase.FirebaseApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kr.roadcanvas.app.account.AccountState
 import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.di.DefaultAppContainer
 import kr.roadcanvas.app.drawing.room.DrawingDatabase
@@ -15,10 +22,13 @@ import kr.roadcanvas.app.vehicle.aaos.AndroidCarUxRestrictionsClient
 import kr.roadcanvas.app.vehicle.pleos.PleosLocationProvider
 
 private const val TAG = "RoadCanvas"
+private const val ACCOUNT_RETRY_DELAY_MILLIS = 30_000L
 
 open class RoadCanvasApplication : Application() {
     lateinit var container: AppContainer
         private set
+
+    private val accountScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** 빌드에 넣은 네이버 지도 키 ID와 SDK가 알린 인증 실패 상태 */
     val mapAuth = MapAuth(BuildConfig.NAVER_MAP_CLIENT_ID)
@@ -27,6 +37,24 @@ open class RoadCanvasApplication : Application() {
         super.onCreate()
         NaverMapSetup.configure(this, mapAuth)
         container = createContainer()
+        if (container is DefaultAppContainer) {
+            if (FirebaseApp.getApps(this).isEmpty()) {
+                // google-services.json 없이 빌드하면 Firebase 없이 기기 저장만 쓴다.
+                Log.i(TAG, "Firebase 설정이 없어 익명 인증을 건너뜁니다.")
+            } else {
+                accountScope.launch { registerAccount() }
+            }
+        }
+    }
+
+    /** 인증에 실패하면 앱이 실행 중인 동안 일정 간격으로 다시 시도한다. */
+    private suspend fun registerAccount() {
+        val registration = container.accountRegistration
+        registration.register()
+        while (registration.state.value is AccountState.Failed) {
+            delay(ACCOUNT_RETRY_DELAY_MILLIS)
+            registration.register()
+        }
     }
 
     /** 테스트용 Application은 이 함수를 바꿔 대체 구현을 주입한다. */

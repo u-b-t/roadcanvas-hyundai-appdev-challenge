@@ -1,5 +1,7 @@
 package kr.roadcanvas.app.di
 
+import kr.roadcanvas.app.account.AccountRegistration
+import kr.roadcanvas.app.account.FirebaseAccountProvider
 import kr.roadcanvas.app.drawing.CompletedDrawingRepository
 import kr.roadcanvas.app.drawing.DrawingStorage
 import kr.roadcanvas.app.drawing.InProgressDrawingRepository
@@ -37,6 +39,8 @@ class DefaultAppContainer(
     recordingRunner: () -> RecordingRunner = { error("기록 실행기가 주어지지 않았습니다.") },
     onRecordingStorageFailure: (Throwable) -> Unit = {}
 ) : AppContainer {
+    override val accountRegistration = AccountRegistration(FirebaseAccountProvider())
+
     override val vehicleIntegrationInfo: VehicleIntegrationInfo = selection.resolve()
 
     override val locationProvider: LocationProvider =

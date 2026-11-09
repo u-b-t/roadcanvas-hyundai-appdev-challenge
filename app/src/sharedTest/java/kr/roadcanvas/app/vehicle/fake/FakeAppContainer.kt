@@ -1,5 +1,7 @@
 package kr.roadcanvas.app.vehicle.fake
 
+import kr.roadcanvas.app.account.AccountRegistration
+import kr.roadcanvas.app.account.AnonymousAccount
 import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.drawing.fake.FakeCompletedDrawingRepository
 import kr.roadcanvas.app.drawing.fake.FakeInProgressDrawingRepository
@@ -11,6 +13,7 @@ import kr.roadcanvas.app.vehicle.VehicleIntegrationInfo
 
 /** 테스트용 대체 구현을 담은 컨테이너 */
 class FakeAppContainer : AppContainer {
+    override val accountRegistration = AccountRegistration { AnonymousAccount("test", "드라이버-test") }
     override val locationProvider = FakeLocationProvider()
     override val drivingRestrictionProvider = FakeDrivingRestrictionProvider()
     override val vehicleIntegrationInfo =

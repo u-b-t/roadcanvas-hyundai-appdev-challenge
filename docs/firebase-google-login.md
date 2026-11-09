@@ -7,3 +7,5 @@ Android 앱 `kr.roadcanvas.app`에 이 개발 환경의 debug 서명 SHA-1을 �
 클라이언트는 Firebase Authentication과 Google ID 토큰을 사용해야 하며, 정차 상태에서 로그인과 로그아웃을 제공하고 실패 및 미지원 상태를 안내해야 한다. Google의 Android 문서는 Credential Manager와 Google 로그인 제공자를 안내한다. 실제 구현 전에 대상 Pleos 환경에서 사용 가능한 인증 수단과 플랫폼 제한을 확인한다. 로컬 Pleos Connect Emulator v2.1.0에서는 `com.google.android.gms`, `com.google.android.gsf`, `com.android.vending` 패키지가 검색되지 않았다. 따라서 Google Play 서비스 기반 로그인 동작은 확인되지 않았으며 이 설정만으로 차량 로그인이나 실제 Google 계정 인증이 동작한다고 볼 수 없다. Play 서비스가 없는 환경은 미지원 안내나 별도 인증 방식을 설계해야 한다.
 
 참고: https://firebase.google.com/docs/auth/android/google-signin
+
+현재 앱은 Google 로그인 대신 Firebase 익명 인증을 사용한다. 익명 사용자는 앱 데이터 삭제나 기기 변경 시 복구되지 않을 수 있다. 연결 오류 시 기기 기록은 유지하고 앱 실행 중 재시도한다.

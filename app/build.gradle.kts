@@ -10,6 +10,11 @@ plugins {
     jacoco
 }
 
+// 설정 파일이 없는 CI에서도 기존 기능을 빌드한다.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "kr.roadcanvas.app"
     compileSdk = 35
@@ -118,6 +123,10 @@ fun VariantDimension.naverMapFields() {
 }
 
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:34.7.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
     implementation(platform("androidx.compose:compose-bom:2025.05.01"))
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.compose.foundation:foundation")

@@ -89,6 +89,12 @@
 - 키가 없으면 빈 값으로 빌드되고 지도 영역에 키 없음 안내를 표시한다. CI는 키 없이 빌드하고 테스트한다. 인증 실패(401, 429, 800 등)는 `RoadCanvasApplication`이 설정한 리스너가 로그(`NaverMapSetup` 태그)를 남기고 지도 영역에 오류 코드와 함께 안내한다.
 - debug 빌드에서 `adb shell am start -n kr.roadcanvas.app/.debug.RouteMapPreviewActivity`로 모의 원 경로를 지도에 그린 미리보기를 연다. 앱 화면 흐름에는 포함되지 않는다.
 
+## Firebase
+
+- 앱은 Firebase 익명 인증으로 사용자를 만들고 `users/{uid}`에 자동 닉네임(`드라이버-<UID 앞 8자>`)을 저장한다. 인증은 `AppContainer.accountRegistration`(`kr.roadcanvas.app.account`)이 맡고, 실패하면 앱 실행 중 30초 간격으로 다시 시도한다. 앱 데이터를 지우거나 기기를 바꾸면 익명 계정은 복구할 수 없다.
+- Firebase 콘솔에서 받은 `app/google-services.json`은 각 환경에 두고 커밋하지 않는다(`.gitignore`). 파일이 없으면 Google Services 플러그인을 적용하지 않고 빌드하며 앱은 인증을 건너뛰고 기기 저장만 쓴다. CI는 파일 없이 빌드하고 테스트한다. androidTest는 `FakeAppContainer`의 대체 인증을 쓴다.
+- 서버 데이터 구조와 규칙은 [Firebase 클라이언트 계약](docs/firebase-client.md), Google 로그인 설정과 Pleos 제약은 [Firebase Google 로그인 설정](docs/firebase-google-login.md)을 따른다. 인증 제공자는 루트 `firebase.json`에서 함께 관리한다.
+
 ## Pleos Connect Emulator
 
 - Pleos Connect Emulator **v2.1.0**, Android API 34를 사용한다. AVD는 Cold Boot와 RAM 4GB로 설정한다. AVD 이름과 이미지 아키텍처는 각 환경에서 확인한다.

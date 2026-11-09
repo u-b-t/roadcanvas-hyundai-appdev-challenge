@@ -2,7 +2,7 @@
 
 ## 구성
 
-`firebase.json`은 Firestore 규칙과 인덱스의 위치를 지정한다. 실제 규칙과 인덱스는 `firebase/`에 둔다. Android의 `app/google-services.json`은 각 환경에서 준비한다. 앱 Firebase SDK 연동은 별도 작업이다. Functions는 사용하지 않는다.
+`firebase.json`은 Firestore 규칙과 인덱스의 위치와 인증 제공자를 지정한다. 실제 규칙과 인덱스는 `firebase/`에 둔다. Android의 `app/google-services.json`은 각 환경에서 준비하며 커밋하지 않는다. 파일이 없으면 Google Services 플러그인을 적용하지 않고 빌드하며, 앱은 Firebase 없이 기기 저장만 사용한다. 앱은 실행 시 익명 인증과 프로필 생성(`kr.roadcanvas.app.account`)을 시도하고 실패하면 실행 중 30초 간격으로 재시도한다. Functions는 사용하지 않는다.
 
 Firebase Authentication은 익명 인증을 사용한다. 기기 삭제·변경 시 익명 계정을 복구할 수 없으므로 계정 연결 전 백업으로 간주하지 않는다. `roadcanvas-f9f2a`의 기본 Firestore 데이터베이스는 서울(`asia-northeast3`)에 생성되어 있다. 다른 환경에 배포하기 전 프로젝트와 데이터베이스 위치를 확인한다.
 
