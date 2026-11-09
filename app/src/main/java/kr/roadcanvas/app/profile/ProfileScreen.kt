@@ -39,6 +39,7 @@ import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.CarTextInput
 import kr.roadcanvas.app.ui.components.DriverSideLayout
+import kr.roadcanvas.app.ui.components.NavigationIcon
 import kr.roadcanvas.app.ui.components.OverlayCard
 import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 
@@ -59,7 +60,6 @@ const val PROFILE_CIRCLE_BEST_LABEL = "동그라미 최고 점수"
 const val PROFILE_TERRITORY_LABEL = "내 땅"
 const val PROFILE_ARTWORK_LABEL = "공개 작품"
 const val PROFILE_LOADING = "불러오는 중"
-const val PROFILE_REFRESH_LABEL = "새로고침"
 const val PROFILE_ANONYMOUS_NOTICE =
     "익명 계정이라 앱 데이터를 지우거나 기기를 바꾸면 닉네임과 서버 기록을 복구할 수 없어요"
 const val PROFILE_SUMMARY_ROW_TAG = "profileSummaryRow"
@@ -109,7 +109,6 @@ fun ProfileRoute(onBack: () -> Unit, modifier: Modifier = Modifier) {
         state = state,
         onInputChange = viewModel::onInputChange,
         onSave = viewModel::save,
-        onRefresh = viewModel::refresh,
         onBack = onBack,
         modifier = modifier
     )
@@ -125,7 +124,6 @@ fun ProfileScreen(
     state: ProfileUiState,
     onInputChange: (String) -> Unit,
     onSave: () -> Unit,
-    onRefresh: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -176,6 +174,7 @@ fun ProfileScreen(
             )
             CarButton(
                 text = BACK_TO_MODE_SELECT_LABEL,
+                icon = NavigationIcon.Home,
                 onClick = onBack,
                 style = CarButtonStyle.Neutral,
                 modifier = Modifier.fillMaxWidth()
@@ -191,7 +190,7 @@ fun ProfileScreen(
                         text = PROFILE_SUMMARY_TITLE,
                         style = MaterialTheme.typography.titleLarge
                     )
-                    Summary(state.summary, onRefresh)
+                    Summary(state.summary)
                     Text(
                         text = PROFILE_ANONYMOUS_NOTICE,
                         style = MaterialTheme.typography.bodyLarge,
@@ -226,9 +225,9 @@ private fun SaveMessage(save: NicknameSaveState) {
     }
 }
 
-/** 동그라미 최고 점수, 내 땅 칸 수와 공개 작품 수. 실패하면 이유와 새로고침 버튼을 보여준다. */
+/** 동그라미 최고 점수, 내 땅 칸 수와 공개 작품 수. 실패하면 이유와 재진입 안내를 보여준다. */
 @Composable
-private fun Summary(summary: ProfileSummaryState, onRefresh: () -> Unit) {
+private fun Summary(summary: ProfileSummaryState) {
     when (summary) {
         ProfileSummaryState.Loading -> Text(
             text = PROFILE_LOADING,
@@ -241,11 +240,7 @@ private fun Summary(summary: ProfileSummaryState, onRefresh: () -> Unit) {
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.error
             )
-            CarButton(
-                text = PROFILE_REFRESH_LABEL,
-                onClick = onRefresh,
-                style = CarButtonStyle.Line
-            )
+            Text("홈으로 돌아간 뒤 다시 열어 주세요", style = MaterialTheme.typography.bodyLarge)
         }
         is ProfileSummaryState.Loaded -> {
             val value = summary.summary

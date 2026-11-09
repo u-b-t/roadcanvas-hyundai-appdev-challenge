@@ -41,6 +41,7 @@ import kr.roadcanvas.app.mydrawings.formatScore
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.DriverSideLayout
+import kr.roadcanvas.app.ui.components.NavigationIcon
 import kr.roadcanvas.app.ui.components.OverlayCard
 import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 
@@ -48,13 +49,12 @@ const val CIRCLE_RANKING_LABEL = "순위"
 const val CIRCLE_RANKING_TITLE = "동그라미 챌린지 순위"
 const val CIRCLE_RANKING_SUBTITLE = "최고 점수 상위 10명"
 const val MY_CIRCLE_RECORD_TITLE = "내 최고 기록"
-const val CIRCLE_RANKING_REFRESH_LABEL = "새로고침"
 const val CIRCLE_RANKING_LOADING = "불러오는 중"
 const val CIRCLE_RANKING_EMPTY = "아직 순위에 오른 사용자가 없어요"
 const val MY_CIRCLE_RECORD_EMPTY = "아직 순위에 오른 기록이 없어요"
 const val MY_CIRCLE_RECORD_EMPTY_BODY = "동그라미 챌린지를 끝내면 최고 점수가 순위에 올라가요"
 const val MY_CIRCLE_RANK_UNKNOWN = "순위를 확인하지 못했어요"
-const val CIRCLE_RANKING_RETRY_HINT = "새로고침해 다시 불러와 주세요"
+const val CIRCLE_RANKING_RETRY_HINT = "홈으로 돌아간 뒤 다시 열어 주세요"
 const val CIRCLE_RANKING_MINE_LABEL = "나"
 const val CIRCLE_RANKING_ROW_TAG = "circleRankingRow"
 const val MY_CIRCLE_RANKING_ROW_TAG = "myCircleRankingRow"
@@ -94,7 +94,6 @@ fun CircleRankingRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     CircleRankingScreen(
         state = state,
-        onRefresh = viewModel::refresh,
         onBack = onBack,
         modifier = modifier,
         onOpenRecord = onOpenRecord
@@ -108,7 +107,6 @@ fun CircleRankingRoute(
 @Composable
 fun CircleRankingScreen(
     state: CircleRankingUiState,
-    onRefresh: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenRecord: (String) -> Unit = {}
@@ -128,12 +126,8 @@ fun CircleRankingScreen(
                 }
             }
             CarButton(
-                text = CIRCLE_RANKING_REFRESH_LABEL,
-                onClick = onRefresh,
-                modifier = Modifier.fillMaxWidth()
-            )
-            CarButton(
                 text = BACK_TO_MODE_SELECT_LABEL,
+                icon = NavigationIcon.Home,
                 onClick = onBack,
                 style = CarButtonStyle.Neutral,
                 modifier = Modifier.fillMaxWidth()

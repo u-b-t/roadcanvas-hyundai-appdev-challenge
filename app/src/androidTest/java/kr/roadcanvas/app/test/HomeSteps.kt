@@ -64,6 +64,11 @@ class HomeSteps(private val ruleHolder: ComposeRuleHolder) {
         composeRule.waitForHome()
     }
 
+    @Then("{string} 버튼 아이콘이 표시된다")
+    fun assertButtonIcon(icon: String) {
+        composeRule.onNodeWithTag("buttonIcon$icon", useUnmergedTree = true).assertIsDisplayed()
+    }
+
     @Then("메인 화면이 표시된다")
     fun assertHomeShown() {
         composeRule.mainClock.autoAdvance = true

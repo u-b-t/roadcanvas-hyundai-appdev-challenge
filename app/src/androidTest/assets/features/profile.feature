@@ -6,6 +6,7 @@ Feature: 프로필
   메인 화면 제목 줄의 "프로필"로 들어오고, 정차 중에만 보인다.
 
   Issues:
+  - [#143 홈 이동 버튼과 보조 버튼 아이콘 통일 및 새로고침 제거](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/143)
   - [#126 feat: 프로필 화면과 닉네임 변경 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/126)
 
   Scenario: 메인 화면에서 프로필을 열면 닉네임, 내 기록 요약과 익명 계정 안내를 보여준다

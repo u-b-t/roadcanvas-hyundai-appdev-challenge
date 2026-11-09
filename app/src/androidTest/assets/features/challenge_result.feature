@@ -7,6 +7,7 @@ Feature: 동그라미 챌린지 결과
   점수 구성과 가장 낮은 항목의 고칠 점, 내 최고 기록과의 비교를 보여 주고, 점수 계산에 쓴 맞춤 원을 경로와 함께 지도에 그린다.
 
   Issues:
+  - [#143 홈 이동 버튼과 보조 버튼 아이콘 통일 및 새로고침 제거](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/143)
   - [#19 동그라미 챌린지 결과 화면 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/19)
   - [#38 종료 후 저장 전 프로세스 종료 시 결과 화면으로 복원](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/38)
   - [#49 준비·진행·결과 화면을 전체 지도와 왼쪽 오버레이로 개편](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/49)
@@ -31,7 +32,7 @@ Feature: 동그라미 챌린지 결과
     And "이동 거리"가 화면 왼쪽 조작 영역에 표시된다
     And "소요 시간"이 화면 왼쪽 조작 영역에 표시된다
     And "다시 도전" 버튼이 화면 왼쪽 조작 영역에 있다
-    And "모드 선택으로" 버튼이 화면 왼쪽 조작 영역에 있다
+    And "홈으로" 버튼이 화면 왼쪽 조작 영역에 있다
     And "내 그림" 버튼이 화면 왼쪽 조작 영역에 있다
 
   Scenario: 원을 그리고 종료하면 점수 구성과 맞춤 원 안내를 표시한다
@@ -169,7 +170,7 @@ Feature: 동그라미 챌린지 결과
     Examples:
       | 버튼      | 화면          |
       | 다시 도전   | 동그라미 챌린지 준비 |
-      | 모드 선택으로 | RoadCanvas       |
+      | 홈으로 | RoadCanvas       |
       | 내 그림    | 내 그림 목록     |
 
   Scenario: 결과 화면에서 뒤로 가면 진행 화면이 아니라 메인 화면으로 간다

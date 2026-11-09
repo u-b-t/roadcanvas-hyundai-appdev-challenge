@@ -79,6 +79,7 @@ import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.CarEmptyState
 import kr.roadcanvas.app.ui.components.DriverSideLayout
+import kr.roadcanvas.app.ui.components.NavigationIcon
 import kr.roadcanvas.app.ui.components.OVERLAY_CARD_COLOR
 import kr.roadcanvas.app.ui.components.OVERLAY_CARD_ELEVATION
 import kr.roadcanvas.app.ui.components.OverlayCard
@@ -324,7 +325,12 @@ private fun ListAndDetail(
 
 @Composable
 private fun Header(onBack: () -> Unit) {
-    CarButton(text = BACK_TO_MODE_SELECT_LABEL, onClick = onBack, style = CarButtonStyle.Line)
+    CarButton(
+        text = BACK_TO_MODE_SELECT_LABEL,
+        icon = NavigationIcon.Home,
+        onClick = onBack,
+        style = CarButtonStyle.Line
+    )
     Text(
         text = MY_DRAWINGS_TITLE,
         style = MaterialTheme.typography.headlineMedium,

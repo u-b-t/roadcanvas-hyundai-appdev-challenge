@@ -11,6 +11,7 @@ Feature: 땅따먹기
   출발점을 떠났다가 200m, 50m 안으로 돌아오면 거리를 강조하고 음성으로 한 번씩 안내한다. 음성 안내는 준비 화면에서 끌 수 있다.
 
   Issues:
+  - [#143 홈 이동 버튼과 보조 버튼 아이콘 통일 및 새로고침 제거](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/143)
   - [#98 땅따먹기 닫힌 경로 판정과 면적 계산 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/98)
   - [#99 땅따먹기 모드 화면과 기록 흐름 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/99)
   - [#109 땅따먹기 주변 영토 표시와 주행 중 예상 면적](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/109)
@@ -203,7 +204,7 @@ Feature: 땅따먹기
     Examples:
       | 버튼      | 화면      |
       | 다시 도전   | 땅따먹기 준비 |
-      | 모드 선택으로 | RoadCanvas   |
+      | 홈으로 | RoadCanvas   |
       | 내 그림    | 내 그림 목록  |
 
   Scenario: 내 그림 목록과 상세는 땅따먹기 기록에 점수 대신 면적을 표시한다

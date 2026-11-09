@@ -6,6 +6,7 @@ Feature: 메인 화면
   제목, 섹션과 버튼은 운전석에 가까운 화면 왼쪽, 커버 이미지의 어두운 영역 위에 두고 섹션 영역은 세로로 스크롤한다.
 
   Issues:
+  - [#143 홈 이동 버튼과 보조 버튼 아이콘 통일 및 새로고침 제거](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/143)
   - [#11 모드 선택 화면 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/11)
   - [#48 모드 선택 화면을 커버 이미지 배경과 목록 오버레이로 개편](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/48)
   - [#59 모드 선택 화면의 강조 순서와 크기 다듬기](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/59)
@@ -64,6 +65,11 @@ Feature: 메인 화면
       | 영토 지도    |
       | 자유그림 그리기 |
       | 공개 작품    |
+
+  Scenario: 홈의 보조 버튼에는 아이콘이 있다
+    Given 메인 화면을 연다
+    Then "Drawings" 버튼 아이콘이 표시된다
+    And "Profile" 버튼 아이콘이 표시된다
 
   Scenario: 내 그림은 섹션 밖 제목 줄에 둔다
     Given 메인 화면을 연다
