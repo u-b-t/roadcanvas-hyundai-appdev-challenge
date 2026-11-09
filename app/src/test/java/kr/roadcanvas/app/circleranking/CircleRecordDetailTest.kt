@@ -34,7 +34,7 @@ class CircleRecordDetailTest {
     @Test
     fun `다른 사용자의 순위 기록 경로와 순위·점수를 읽고 점수 구성과 맞춤 원을 계산한다`() = runTest {
         store.putRecord(entry("a", 95), circle)
-        store.putRecord(entry("b", 80), circle.take(30))
+        store.putRecord(entry("b", 80), circle)
 
         val detail = detail("b")
 
@@ -42,8 +42,8 @@ class CircleRecordDetailTest {
         assertEquals(2, detail.rank)
         assertEquals(80, detail.score)
         assertFalse(detail.mine)
-        assertEquals(circle.take(30), detail.result.path)
-        assertEquals(29_000L, detail.result.durationMillis)
+        assertEquals(circle, detail.result.path)
+        assertEquals((circle.size - 1) * 1_000L, detail.result.durationMillis)
         assertEquals(3, detail.result.scoreComponents.size)
         assertNotNull(detail.result.fitCircle)
     }
