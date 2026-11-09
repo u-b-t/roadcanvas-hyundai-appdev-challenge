@@ -13,6 +13,7 @@ import kotlinx.coroutines.withContext
 import kr.roadcanvas.app.artwork.ArtworkPublishController
 import kr.roadcanvas.app.artwork.ArtworkPublishUiState
 import kr.roadcanvas.app.artwork.ArtworkPublisher
+import kr.roadcanvas.app.drawing.CompletedDrawing
 import kr.roadcanvas.app.drawing.CompletedDrawingRepository
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.DrawingNameValidation
@@ -22,6 +23,9 @@ import kr.roadcanvas.app.drawing.validateDrawingName
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingState
 import kr.roadcanvas.app.score.CircleScoreCalculator
+import kr.roadcanvas.app.territory.TerritoryCaptureController
+import kr.roadcanvas.app.territory.TerritoryGame
+import kr.roadcanvas.app.territory.TerritorySyncUiState
 
 /**
  * [startedAtMillis]에 시작해 [endedAtMillis]에 종료한 도전의 결과를 만들고 완료 기록으로 저장한다.
@@ -37,6 +41,9 @@ import kr.roadcanvas.app.score.CircleScoreCalculator
  * 이름을 선택 입력하는 모드는 완료 기록을 저장한 뒤 [saveName]으로 이름을 붙인다.
  *
  * [artworkPublisher]가 있으면 저장한 자유그림의 공개 상태를 [publishState]로 보여주고 공개·비공개로 바꾼다.
+ *
+ * [territoryGame]이 있으면 저장한 땅따먹기 기록의 획득을 서버에 제출하고 [territoryState]로 반영 상태를 보여준다.
+ * 이 기록을 제출한 뒤에는 반영하지 못한 다른 획득도 다시 제출한다.
  */
 class ChallengeResultViewModel(
     private val startedAtMillis: Long,
@@ -47,7 +54,8 @@ class ChallengeResultViewModel(
     private val completedRepository: CompletedDrawingRepository,
     private val calculator: CircleScoreCalculator = CircleScoreCalculator(),
     private val onStorageFailure: (Throwable) -> Unit = {},
-    artworkPublisher: ArtworkPublisher? = null
+    artworkPublisher: ArtworkPublisher? = null,
+    private val territoryGame: TerritoryGame? = null
 ) : ViewModel() {
     private val mutableState =
         MutableStateFlow<ChallengeResultUiState>(ChallengeResultUiState.Calculating)
@@ -81,8 +89,26 @@ class ChallengeResultViewModel(
         publishController?.unpublish()
     }
 
+    private val territoryController =
+        territoryGame?.let { TerritoryCaptureController(it, viewModelScope) }
+
+    /** 저장한 땅따먹기 기록의 서버 반영 상태. 차지한 땅따먹기 기록이 아니면 null이다. */
+    val territoryState: StateFlow<TerritorySyncUiState?> =
+        territoryController?.state ?: MutableStateFlow(null)
+
+    /** 반영하지 못한 획득을 다시 제출한다. */
+    fun submitTerritory() {
+        territoryController?.submit()
+    }
+
+    /** 저장했거나 이미 저장되어 있던 완료 기록 */
+    private var savedDrawing: CompletedDrawing? = null
+
     init {
-        viewModelScope.launch { load() }
+        viewModelScope.launch {
+            load()
+            syncTerritory()
+        }
     }
 
     /** 저장에 실패했을 때만 다시 저장한다. */
@@ -90,7 +116,10 @@ class ChallengeResultViewModel(
         val current = mutableState.value as? ChallengeResultUiState.Calculated ?: return
         if (current.saveStatus != ResultSaveStatus.FAILED) return
         mutableState.value = current.copy(saveStatus = ResultSaveStatus.SAVING)
-        viewModelScope.launch { save(current.result) }
+        viewModelScope.launch {
+            save(current.result)
+            if (savedDrawing != null) syncTerritory()
+        }
     }
 
     /**
@@ -158,6 +187,7 @@ class ChallengeResultViewModel(
 
     private suspend fun showSaved(id: Long) {
         val drawing = (completedRepository.find(id) as? StorageResult.Success)?.value
+        savedDrawing = drawing
         publishController?.show(drawing)
         mutableState.value = if (drawing == null) {
             ChallengeResultUiState.Unavailable
@@ -241,7 +271,9 @@ class ChallengeResultViewModel(
             is StorageResult.Success -> {
                 savedStateHandle[KEY_SAVED_ID] = saved.value
                 clearInProgress()
-                publishController?.show(result.toCompletedDrawing().copy(id = saved.value))
+                val drawing = result.toCompletedDrawing().copy(id = saved.value)
+                savedDrawing = drawing
+                publishController?.show(drawing)
                 ResultSaveStatus.SAVED
             }
             is StorageResult.Failure -> {
@@ -257,6 +289,17 @@ class ChallengeResultViewModel(
             (it as? ChallengeResultUiState.Calculated)
                 ?.copy(saveStatus = status, bestComparison = comparison) ?: it
         }
+    }
+
+    /**
+     * 저장한 땅따먹기 기록의 획득을 제출하고 끝나면 반영하지 못한 다른 획득을 다시 제출한다.
+     * 같은 획득을 함께 제출하지 않도록 이 기록을 먼저 끝낸다.
+     */
+    private suspend fun syncTerritory() {
+        val game = territoryGame ?: return
+        territoryController?.show(savedDrawing)
+        territoryController?.submit()?.join()
+        game.resubmitPending()
     }
 
     /** 이 도전의 진행 중 기록만 지운다. 지우지 못해도 완료 기록은 저장되었으므로 결과는 저장됨이다. */

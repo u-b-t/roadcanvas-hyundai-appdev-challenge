@@ -73,6 +73,8 @@ import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RoutePoint
 import kr.roadcanvas.app.modeselect.displayName
+import kr.roadcanvas.app.territory.TerritorySyncSection
+import kr.roadcanvas.app.territory.TerritorySyncUiState
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.CarEmptyState
@@ -133,13 +135,15 @@ fun MyDrawingsRoute(
                 val container = context.appContainer
                 MyDrawingsViewModel(
                     container.completedDrawingRepository,
-                    container.artworkPublisher
+                    container.artworkPublisher,
+                    container.territoryGame
                 )
             }
         }
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val publishState by viewModel.publishState.collectAsStateWithLifecycle()
+    val territoryState by viewModel.territoryState.collectAsStateWithLifecycle()
 
     MyDrawingsScreen(
         state = state,
@@ -162,7 +166,9 @@ fun MyDrawingsRoute(
             onCancelConsent = viewModel::cancelPublishConsent,
             onRetry = viewModel::retryPublish,
             onUnpublish = viewModel::unpublish
-        )
+        ),
+        territoryState = territoryState,
+        onSubmitTerritory = viewModel::submitTerritory
     )
 }
 
@@ -186,7 +192,9 @@ fun MyDrawingsScreen(
     onCancelRename: () -> Unit = {},
     onSaveName: (String) -> Unit = {},
     publishState: ArtworkPublishUiState? = null,
-    publishActions: ArtworkPublishActions = ArtworkPublishActions()
+    publishActions: ArtworkPublishActions = ArtworkPublishActions(),
+    territoryState: TerritorySyncUiState? = null,
+    onSubmitTerritory: () -> Unit = {}
 ) {
     when (val list = state.list) {
         is DrawingListState.Loaded -> ListAndDetail(
@@ -204,6 +212,8 @@ fun MyDrawingsScreen(
                     state = state,
                     publishState = publishState,
                     publishActions = publishActions,
+                    territoryState = territoryState,
+                    onSubmitTerritory = onSubmitTerritory,
                     onRetryDetail = onRetryDetail,
                     onRequestDelete = onRequestDelete,
                     onStartRename = onStartRename,
@@ -474,6 +484,8 @@ private fun DrawingDetail(
     state: MyDrawingsUiState,
     publishState: ArtworkPublishUiState?,
     publishActions: ArtworkPublishActions,
+    territoryState: TerritorySyncUiState?,
+    onSubmitTerritory: () -> Unit,
     onRetryDetail: () -> Unit,
     onRequestDelete: () -> Unit,
     onStartRename: () -> Unit,
@@ -507,6 +519,8 @@ private fun DrawingDetail(
                             state = state,
                             publishState = publishState,
                             publishActions = publishActions,
+                            territoryState = territoryState,
+                            onSubmitTerritory = onSubmitTerritory,
                             onRetryDetail = onRetryDetail,
                             onStartRename = onStartRename,
                             onCancelRename = onCancelRename,
@@ -535,6 +549,8 @@ private fun ColumnScope.DetailOverlayContent(
     state: MyDrawingsUiState,
     publishState: ArtworkPublishUiState?,
     publishActions: ArtworkPublishActions,
+    territoryState: TerritorySyncUiState?,
+    onSubmitTerritory: () -> Unit,
     onRetryDetail: () -> Unit,
     onStartRename: () -> Unit,
     onCancelRename: () -> Unit,
@@ -558,6 +574,7 @@ private fun ColumnScope.DetailOverlayContent(
                 modifier = Modifier.fillMaxWidth()
             )
             publishState?.let { ArtworkPublishPanel(it, publishActions) }
+            territoryState?.let { TerritorySyncSection(it, onSubmitTerritory) }
             if (state.deleteFailed) {
                 Text(
                     text = DELETE_FAILED,

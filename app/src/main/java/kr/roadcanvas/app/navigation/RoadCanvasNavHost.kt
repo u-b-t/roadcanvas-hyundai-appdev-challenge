@@ -28,10 +28,12 @@ import kr.roadcanvas.app.challenge.rememberChallengeStarter
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.gallery.PublicArtworkDetailRoute
 import kr.roadcanvas.app.gallery.PublicGalleryRoute
+import kr.roadcanvas.app.map.RoutePoint
 import kr.roadcanvas.app.modeselect.ModeSelectScreen
 import kr.roadcanvas.app.mydrawings.MyDrawingsRoute
 import kr.roadcanvas.app.splash.SPLASH_DURATION_MILLIS
 import kr.roadcanvas.app.splash.SplashScreen
+import kr.roadcanvas.app.territorymap.TerritoryMapRoute
 import kr.roadcanvas.app.vehicle.DrivingRestriction
 
 object Routes {
@@ -102,6 +104,19 @@ object Routes {
     const val GALLERY_ARTWORK = "gallery/{$ARG_ARTWORK_ID}"
 
     fun galleryArtwork(artworkId: String) = "gallery/${Uri.encode(artworkId)}"
+
+    /** 영토 지도와 순위. [ARG_LATITUDE]·[ARG_LONGITUDE]가 있으면 그 위치에서 지도를 연다. */
+    const val ARG_LATITUDE = "lat"
+    const val ARG_LONGITUDE = "lon"
+    private const val TERRITORY_MAP_BASE = "territoryMap"
+    const val TERRITORY_MAP =
+        "$TERRITORY_MAP_BASE?$ARG_LATITUDE={$ARG_LATITUDE}&$ARG_LONGITUDE={$ARG_LONGITUDE}"
+
+    fun territoryMap(center: RoutePoint? = null) = if (center == null) {
+        TERRITORY_MAP_BASE
+    } else {
+        "$TERRITORY_MAP_BASE?$ARG_LATITUDE=${center.latitude}&$ARG_LONGITUDE=${center.longitude}"
+    }
 }
 
 @Composable
@@ -164,7 +179,8 @@ fun RoadCanvasNavHost(
                 onFreeDrawingClick = { navController.navigate(Routes.FREE_READY) },
                 onTerritoryClick = { navController.navigate(Routes.TERRITORY_READY) },
                 onMyDrawingsClick = { navController.navigate(Routes.MY_DRAWINGS) },
-                onGalleryClick = { navController.navigate(Routes.GALLERY) }
+                onGalleryClick = { navController.navigate(Routes.GALLERY) },
+                onTerritoryMapClick = { navController.navigate(Routes.territoryMap()) }
             )
         }
         DrawingMode.entries.forEach { mode ->
@@ -226,7 +242,8 @@ fun RoadCanvasNavHost(
                     onModeSelect = {
                         navController.popBackStack(Routes.MODE_SELECT, inclusive = false)
                     },
-                    onMyDrawings = { leaveTo(Routes.MY_DRAWINGS) }
+                    onMyDrawings = { leaveTo(Routes.MY_DRAWINGS) },
+                    onTerritoryMap = { leaveTo(Routes.territoryMap(it)) }
                 )
             }
         }
@@ -236,6 +253,27 @@ fun RoadCanvasNavHost(
                     navController.navigate(Routes.CIRCLE_READY) {
                         popUpTo(Routes.MY_DRAWINGS) { inclusive = true }
                     }
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+        screen(
+            Routes.TERRITORY_MAP,
+            arguments = listOf(Routes.ARG_LATITUDE, Routes.ARG_LONGITUDE).map {
+                navArgument(it) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            }
+        ) { entry ->
+            val latitude = entry.arguments?.getString(Routes.ARG_LATITUDE)?.toDoubleOrNull()
+            val longitude = entry.arguments?.getString(Routes.ARG_LONGITUDE)?.toDoubleOrNull()
+            TerritoryMapRoute(
+                initialCenter = if (latitude != null && longitude != null) {
+                    RoutePoint(latitude, longitude)
+                } else {
+                    null
                 },
                 onBack = { navController.popBackStack() }
             )

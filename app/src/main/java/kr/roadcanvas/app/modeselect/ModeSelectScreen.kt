@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.shopl.sdg_common.foundation.SDGColor
 import com.shopl.sdg_common.foundation.SDGCornerRadius
+import kr.roadcanvas.app.territorymap.TERRITORY_MAP_LABEL
 import kr.roadcanvas.app.ui.components.COVER_BACKGROUND_COLOR
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CoverBackground
@@ -80,7 +81,8 @@ fun ModeSelectScreen(
     onMyDrawingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     onGalleryClick: () -> Unit = {},
-    onTerritoryClick: () -> Unit = {}
+    onTerritoryClick: () -> Unit = {},
+    onTerritoryMapClick: () -> Unit = {}
 ) {
     DriverSideOverlay(
         modifier = modifier,
@@ -120,7 +122,7 @@ fun ModeSelectScreen(
                         modifier = Modifier.weight(SECONDARY_ITEM_WEIGHT)
                     )
                 }
-                // 보조 동작인 내 그림과 공개 작품은 아래 끝에 나란히 둔다.
+                // 보조 동작인 내 그림, 공개 작품과 영토 지도는 아래 끝에 나란히 둔다.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(CONTROL_SPACING)
@@ -133,6 +135,11 @@ fun ModeSelectScreen(
                     SecondaryCoverButton(
                         text = GALLERY_LABEL,
                         onClick = onGalleryClick,
+                        modifier = Modifier.weight(1f)
+                    )
+                    SecondaryCoverButton(
+                        text = TERRITORY_MAP_LABEL,
+                        onClick = onTerritoryMapClick,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -224,8 +231,14 @@ private fun SecondaryCoverButton(text: String, onClick: () -> Unit, modifier: Mo
         shape = SDGCornerRadius.BoxRadius.Radius16,
         border = BorderStroke(1.dp, SECONDARY_ON_COVER_BORDER_COLOR),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = ON_COVER_TEXT_COLOR),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+        // 버튼 세 개가 한 줄에 들어가도록 가로 여백을 줄여 글자가 한 줄에 보이게 한다.
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
     ) {
-        Text(text = text, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
     }
 }

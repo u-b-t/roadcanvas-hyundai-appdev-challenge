@@ -17,16 +17,21 @@ import kr.roadcanvas.app.drawing.CompletedDrawingSummary
 import kr.roadcanvas.app.drawing.DrawingNameValidation
 import kr.roadcanvas.app.drawing.StorageResult
 import kr.roadcanvas.app.drawing.validateDrawingName
+import kr.roadcanvas.app.territory.TerritoryCaptureController
+import kr.roadcanvas.app.territory.TerritoryGame
+import kr.roadcanvas.app.territory.TerritorySyncUiState
 
 /**
  * 완료 기록 요약 목록을 불러오고 선택한 기록만 경로까지 조회한다.
  * 처음에는 가장 최근 기록을 선택한다.
  * [artworkPublisher]가 있으면 선택한 자유그림의 공개 상태를 [publishState]로 보여주고 공개·비공개로 바꾼다.
  * 공개 중이거나 등록 중인 작품은 다른 사용자에게 계속 보이므로 삭제하지 않는다.
+ * [territoryGame]이 있으면 선택한 땅따먹기 기록의 서버 반영 상태를 [territoryState]로 보여주고 다시 제출한다.
  */
 class MyDrawingsViewModel(
     private val repository: CompletedDrawingRepository,
-    artworkPublisher: ArtworkPublisher? = null
+    artworkPublisher: ArtworkPublisher? = null,
+    territoryGame: TerritoryGame? = null
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(MyDrawingsUiState())
     val state: StateFlow<MyDrawingsUiState> = mutableState.asStateFlow()
@@ -58,6 +63,18 @@ class MyDrawingsViewModel(
         publishController?.unpublish()
     }
 
+    private val territoryController =
+        territoryGame?.let { TerritoryCaptureController(it, viewModelScope) }
+
+    /** 선택한 땅따먹기 기록의 서버 반영 상태. 차지한 땅따먹기 기록이 아니면 null이다. */
+    val territoryState: StateFlow<TerritorySyncUiState?> =
+        territoryController?.state ?: MutableStateFlow(null)
+
+    /** 선택한 땅따먹기 기록을 제출하거나 반영하지 못한 획득을 다시 제출한다. */
+    fun submitTerritory() {
+        territoryController?.submit()
+    }
+
     private var listJob: Job? = null
     private var detailJob: Job? = null
 
@@ -75,6 +92,7 @@ class MyDrawingsViewModel(
         if (mutableState.value.deleting) return
         detailJob?.cancel()
         publishController?.show(null)
+        territoryController?.show(null)
         mutableState.update {
             it.copy(
                 selectedId = id,
@@ -91,6 +109,7 @@ class MyDrawingsViewModel(
             }
             if (mutableState.value.selectedId != id) return@launch
             publishController?.show((detail as? DrawingDetailState.Loaded)?.drawing)
+            territoryController?.show((detail as? DrawingDetailState.Loaded)?.drawing)
             mutableState.update { if (it.selectedId == id) it.copy(detail = detail) else it }
         }
     }
@@ -227,6 +246,7 @@ class MyDrawingsViewModel(
         if (items.isEmpty()) {
             detailJob?.cancel()
             publishController?.show(null)
+            territoryController?.show(null)
             mutableState.update {
                 it.copy(list = DrawingListState.Empty, selectedId = null, detail = null)
             }
