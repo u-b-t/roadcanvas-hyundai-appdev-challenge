@@ -10,9 +10,9 @@ Feature: 자유그림
   - [#77 자유그림 모드 열기와 기록 흐름 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/77)
   - [#111 결과 축하 연출과 자유그림 오늘의 주제](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/111)
 
-  Scenario: 모드 선택에서 자유그림을 누르면 자유그림 준비 화면으로 이동한다
-    Given 모드 선택 화면을 연다
-    When "자유그림" 항목을 누른다
+  Scenario: 메인 화면에서 자유그림을 누르면 자유그림 준비 화면으로 이동한다
+    Given 메인 화면을 연다
+    When 메인 화면에서 "자유그림 그리기" 버튼을 누른다
     Then 화면에 "자유그림 준비"가 표시된다
     And 화면에 "준비 중"이 보이지 않는다
 
@@ -140,7 +140,7 @@ Feature: 자유그림
     Examples:
       | 버튼      | 화면     |
       | 다시 그리기  | 자유그림 준비 |
-      | 모드 선택으로 | 모드 선택  |
+      | 모드 선택으로 | RoadCanvas  |
       | 내 그림    | 내 그림 목록 |
 
   Scenario: 정차 중 포기하면 자유그림 준비 화면으로 돌아간다

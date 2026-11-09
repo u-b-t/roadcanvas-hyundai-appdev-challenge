@@ -15,7 +15,6 @@ import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.isNotEnabled
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
@@ -31,8 +30,7 @@ import kr.roadcanvas.app.challenge.CIRCLE_READY_TITLE
 import kr.roadcanvas.app.challenge.ChallengeReadyScreen
 import kr.roadcanvas.app.challenge.ChallengeReadyStatus
 import kr.roadcanvas.app.challenge.READY_GUIDE_ICON_TAG
-import kr.roadcanvas.app.modeselect.CIRCLE_CHALLENGE_NAME
-import kr.roadcanvas.app.modeselect.MODE_SELECT_TITLE
+import kr.roadcanvas.app.modeselect.CIRCLE_START_LABEL
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
 import kr.roadcanvas.app.ui.components.KeepWordsText
 import kr.roadcanvas.app.ui.components.keepWordsTogether
@@ -64,10 +62,10 @@ class ChallengeReadySteps(private val ruleHolder: ComposeRuleHolder) {
             RoadCanvasNavHost(navController = rememberNavController(), splashDurationMillis = 0L)
         }
         // 실제 앱과 같은 뒤로 가기 흐름을 위해 모드 선택에서 들어간다.
-        waitForText(MODE_SELECT_TITLE)
+        composeRule.waitForHome()
         composeRule.waitForIdle()
         baseRestrictionSubscribers = fakeContainer.drivingRestrictionProvider.subscriberCount.value
-        composeRule.onNode(hasText(CIRCLE_CHALLENGE_NAME) and hasClickAction()).performClick()
+        composeRule.clickHomeButton(CIRCLE_START_LABEL)
         waitForText(CIRCLE_READY_TITLE)
         // 준비 화면이 시작 조건을 구독한 뒤에 테스트 위치를 보내야 화면이 받는다.
         composeRule.waitUntil(WAIT_TIMEOUT_MILLIS) {
@@ -222,7 +220,7 @@ class ChallengeReadySteps(private val ruleHolder: ComposeRuleHolder) {
 
     @Then("시작 조건 확인 구독이 해제된다")
     fun assertUnsubscribed() {
-        waitForText(MODE_SELECT_TITLE)
+        composeRule.waitForHome()
         composeRule.waitUntil(WAIT_TIMEOUT_MILLIS) {
             fakeContainer.locationProvider.subscriberCount.value == 0 &&
                 fakeContainer.drivingRestrictionProvider.subscriberCount.value ==

@@ -4,7 +4,6 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
@@ -17,8 +16,7 @@ import kr.roadcanvas.app.challenge.TERRITORY_READY_TITLE
 import kr.roadcanvas.app.challenge.formatEstimatedArea
 import kr.roadcanvas.app.challenge.formatEstimatedCells
 import kr.roadcanvas.app.challenge.territoryEstimateOf
-import kr.roadcanvas.app.modeselect.MODE_SELECT_TITLE
-import kr.roadcanvas.app.modeselect.TERRITORY_NAME
+import kr.roadcanvas.app.modeselect.TERRITORY_START_LABEL
 import kr.roadcanvas.app.recording.RecordingState
 import kr.roadcanvas.app.territorymap.DEFAULT_TERRITORY_MAP_CENTER
 import kr.roadcanvas.app.vehicle.LocationSample
@@ -50,8 +48,7 @@ class TerritoryLiveSteps(
     fun openReadyAtCityHall() {
         composeRule.mainClock.autoAdvance = true
         progressSteps.openApp()
-        waitForText(MODE_SELECT_TITLE)
-        composeRule.onNode(hasText(TERRITORY_NAME) and hasClickAction()).performClick()
+        composeRule.clickHomeButton(TERRITORY_START_LABEL)
         waitForText(TERRITORY_READY_TITLE)
         // 준비 화면이 위치를 구독한 뒤에 보내야 화면이 받는다.
         waitUntil { fakeContainer.locationProvider.subscriberCount.value > 0 }

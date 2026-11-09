@@ -84,9 +84,8 @@ class MyDrawingsSteps(private val ruleHolder: ComposeRuleHolder) {
         TestScreens.launchContent {
             RoadCanvasNavHost(navController = rememberNavController(), splashDurationMillis = 0L)
         }
-        // 실제 앱과 같은 흐름으로 모드 선택에서 들어간다.
-        waitFor(hasText(MY_DRAWINGS_LABEL) and hasClickAction())
-        composeRule.onNode(hasText(MY_DRAWINGS_LABEL) and hasClickAction()).performClick()
+        // 실제 앱과 같은 흐름으로 메인 화면에서 들어간다.
+        composeRule.clickHomeButton(MY_DRAWINGS_LABEL)
         waitFor(hasText(MY_DRAWINGS_TITLE))
         composeRule.waitForIdle()
     }

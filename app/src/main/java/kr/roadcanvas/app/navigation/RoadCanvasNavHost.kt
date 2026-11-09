@@ -30,7 +30,7 @@ import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.gallery.PublicArtworkDetailRoute
 import kr.roadcanvas.app.gallery.PublicGalleryRoute
 import kr.roadcanvas.app.map.RoutePoint
-import kr.roadcanvas.app.modeselect.ModeSelectScreen
+import kr.roadcanvas.app.modeselect.HomeScreen
 import kr.roadcanvas.app.modeselect.rememberModeRecordSummary
 import kr.roadcanvas.app.mydrawings.MyDrawingsRoute
 import kr.roadcanvas.app.splash.SPLASH_DURATION_MILLIS
@@ -179,15 +179,15 @@ fun RoadCanvasNavHost(
             )
         }
         screen(Routes.MODE_SELECT) {
-            ModeSelectScreen(
+            HomeScreen(
                 onCircleChallengeClick = { navController.navigate(Routes.CIRCLE_READY) },
-                onFreeDrawingClick = { navController.navigate(Routes.FREE_READY) },
+                onCircleRankingClick = { navController.navigate(Routes.CIRCLE_RANKING) },
                 onTerritoryClick = { navController.navigate(Routes.TERRITORY_READY) },
-                onMyDrawingsClick = { navController.navigate(Routes.MY_DRAWINGS) },
-                onGalleryClick = { navController.navigate(Routes.GALLERY) },
                 onTerritoryMapClick = { navController.navigate(Routes.territoryMap()) },
-                recordSummary = rememberModeRecordSummary().value,
-                onCircleRankingClick = { navController.navigate(Routes.CIRCLE_RANKING) }
+                onFreeDrawingClick = { navController.navigate(Routes.FREE_READY) },
+                onGalleryClick = { navController.navigate(Routes.GALLERY) },
+                onMyDrawingsClick = { navController.navigate(Routes.MY_DRAWINGS) },
+                recordSummary = rememberModeRecordSummary().value
             )
         }
         DrawingMode.entries.forEach { mode ->

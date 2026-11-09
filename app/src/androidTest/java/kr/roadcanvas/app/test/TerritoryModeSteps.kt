@@ -24,8 +24,7 @@ import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
 import kr.roadcanvas.app.drawing.TERRITORY_AREA_METRIC
 import kr.roadcanvas.app.drawing.TERRITORY_PERIMETER_METRIC
-import kr.roadcanvas.app.modeselect.MODE_SELECT_TITLE
-import kr.roadcanvas.app.modeselect.TERRITORY_NAME
+import kr.roadcanvas.app.modeselect.TERRITORY_START_LABEL
 import kr.roadcanvas.app.recording.RecordingState
 import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.TestPaths
@@ -59,8 +58,7 @@ class TerritoryModeSteps(
     fun startTerritory() {
         composeRule.mainClock.autoAdvance = true
         progressSteps.openApp()
-        waitForText(MODE_SELECT_TITLE)
-        composeRule.onNode(hasText(TERRITORY_NAME) and hasClickAction()).performClick()
+        composeRule.clickHomeButton(TERRITORY_START_LABEL)
         waitForText(TERRITORY_READY_TITLE)
         // 준비 화면이 시작 조건을 구독한 뒤에 테스트 위치를 보내야 화면이 받는다.
         waitUntil { fakeContainer.locationProvider.subscriberCount.value > 0 }
