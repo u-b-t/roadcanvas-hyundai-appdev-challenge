@@ -14,6 +14,9 @@ sealed interface AccountState {
     data object Failed : AccountState
 }
 
+/** 익명 사용자에게 처음 부여하는 닉네임. 프로필 규칙의 1~30자를 지킨다. */
+fun defaultNickname(uid: String): String = "드라이버-${uid.take(8)}"
+
 fun interface AccountProvider {
     suspend fun getOrCreate(): AnonymousAccount
 }

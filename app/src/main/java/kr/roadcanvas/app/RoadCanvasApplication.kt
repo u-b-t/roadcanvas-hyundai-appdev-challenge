@@ -3,6 +3,7 @@ package kr.roadcanvas.app
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import com.google.firebase.FirebaseApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,6 +22,7 @@ import kr.roadcanvas.app.vehicle.aaos.AndroidCarUxRestrictionsClient
 import kr.roadcanvas.app.vehicle.pleos.PleosLocationProvider
 
 private const val TAG = "RoadCanvas"
+private const val ACCOUNT_RETRY_DELAY_MILLIS = 30_000L
 
 open class RoadCanvasApplication : Application() {
     lateinit var container: AppContainer
@@ -36,16 +38,22 @@ open class RoadCanvasApplication : Application() {
         NaverMapSetup.configure(this, mapAuth)
         container = createContainer()
         if (container is DefaultAppContainer) {
-            accountScope.launch {
-                do {
-                    container.accountRegistration.register()
-                    if (container.accountRegistration.state.value is AccountState.Failed) {
-                        delay(
-                            30_000
-                        )
-                    }
-                } while (container.accountRegistration.state.value is AccountState.Failed)
+            if (FirebaseApp.getApps(this).isEmpty()) {
+                // google-services.json 없이 빌드하면 Firebase 없이 기기 저장만 쓴다.
+                Log.i(TAG, "Firebase 설정이 없어 익명 인증을 건너뜁니다.")
+            } else {
+                accountScope.launch { registerAccount() }
             }
+        }
+    }
+
+    /** 인증에 실패하면 앱이 실행 중인 동안 일정 간격으로 다시 시도한다. */
+    private suspend fun registerAccount() {
+        val registration = container.accountRegistration
+        registration.register()
+        while (registration.state.value is AccountState.Failed) {
+            delay(ACCOUNT_RETRY_DELAY_MILLIS)
+            registration.register()
         }
     }
 

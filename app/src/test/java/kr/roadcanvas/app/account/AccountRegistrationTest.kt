@@ -2,6 +2,7 @@ package kr.roadcanvas.app.account
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AccountRegistrationTest {
@@ -19,5 +20,19 @@ class AccountRegistrationTest {
             AccountState.Ready(AnonymousAccount("user", "드라이버-user")),
             registration.state.value
         )
+    }
+
+    @Test
+    fun `인증이 실패하면 실패 상태로 남는다`() = runTest {
+        val registration = AccountRegistration { error("offline") }
+        registration.register()
+        assertEquals(AccountState.Failed, registration.state.value)
+    }
+
+    @Test
+    fun `자동 닉네임은 사용자 식별자 앞 8자로 만든다`() {
+        val nickname = defaultNickname("abcdefghijklmnop")
+        assertEquals("드라이버-abcdefgh", nickname)
+        assertTrue(nickname.length in 1..30)
     }
 }

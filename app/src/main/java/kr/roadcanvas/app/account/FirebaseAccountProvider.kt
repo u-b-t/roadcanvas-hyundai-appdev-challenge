@@ -1,6 +1,5 @@
 package kr.roadcanvas.app.account
 
-import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -9,7 +8,6 @@ import kotlinx.coroutines.tasks.await
 /** 같은 익명 사용자에 대해 프로필을 한 번만 만든다. */
 class FirebaseAccountProvider : AccountProvider {
     override suspend fun getOrCreate(): AnonymousAccount {
-        FirebaseApp.getInstance()
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser ?: requireNotNull(auth.signInAnonymously().await().user)
         val db = FirebaseFirestore.getInstance()
@@ -20,7 +18,7 @@ class FirebaseAccountProvider : AccountProvider {
             if (current != null) {
                 current
             } else {
-                val generated = "드라이버-${user.uid.take(8)}"
+                val generated = defaultNickname(user.uid)
                 transaction.set(
                     profile,
                     mapOf(
