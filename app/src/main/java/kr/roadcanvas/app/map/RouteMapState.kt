@@ -34,6 +34,8 @@ data class RouteCircle(val center: RoutePoint, val radiusMeters: Double) {
  * [contentPadding]은 지도 위에 올린 오버레이가 가리는 영역이다. 경로·안내와 지도 로고는 이 영역을 피해 둔다.
  * [currentPosition]을 주면 경로 위에 현재 위치와 진행 방향을 출발점 마커와 구분해 표시한다. 카메라 이동에는 영향이 없다.
  * [referenceCircle]이 있으면 경로와 구분되는 스타일로 함께 그리고, 전체 경로 보기에서 원도 화면에 들어오게 맞춘다.
+ * [filledArea]가 있으면 그 꼭짓점을 이은 다각형을 반투명하게 채워 경로 아래에 그린다. 땅따먹기로 차지한 영역을 보여줄 때 쓴다.
+ * 첫 점을 끝에 반복하지 않으며, 꼭짓점이 [RouteMapState.MIN_AREA_POINTS]개보다 적으면 그리지 않는다.
  */
 data class RouteMapOptions(
     val showEndpointMarkers: Boolean = true,
@@ -41,7 +43,8 @@ data class RouteMapOptions(
     val showCurrentLocation: Boolean = false,
     val contentPadding: PaddingValues = PaddingValues(0.dp),
     val currentPosition: CurrentPosition? = null,
-    val referenceCircle: RouteCircle? = null
+    val referenceCircle: RouteCircle? = null,
+    val filledArea: List<RoutePoint>? = null
 )
 
 /** 경로를 그릴 때 카메라를 맞추는 방식 */
@@ -78,11 +81,15 @@ sealed interface RouteMapState {
         val camera: RouteCamera,
         val startMarker: RoutePoint?,
         val endMarker: RoutePoint?,
-        val circle: RouteCircle? = null
+        val circle: RouteCircle? = null,
+        val area: List<RoutePoint>? = null
     ) : RouteMapState {
         override val notice: String? = null
 
-        /** 전체 경로 보기에서 화면에 들어와야 하는 좌표. 기준 원이 있으면 원을 감싸는 꼭짓점도 넣는다. */
+        /**
+         * 전체 경로 보기에서 화면에 들어와야 하는 좌표. 기준 원이 있으면 원을 감싸는 꼭짓점도 넣는다.
+         * 채운 영역은 경로에서 만든 꼭짓점이라 경로 안에 들어 있다.
+         */
         val boundsPoints: List<RoutePoint>
             get() = points + circle?.boundsCorners().orEmpty()
     }
@@ -90,6 +97,9 @@ sealed interface RouteMapState {
     companion object {
         /** 경로선은 좌표가 2개 이상이어야 그릴 수 있다. */
         const val MIN_ROUTE_POINTS = 2
+
+        /** 채운 다각형은 꼭짓점이 3개 이상이어야 그릴 수 있다. */
+        const val MIN_AREA_POINTS = 3
 
         fun of(
             points: List<RoutePoint>,
@@ -105,15 +115,20 @@ sealed interface RouteMapState {
                 camera = RouteCamera.FOLLOW_LATEST,
                 startMarker = points.first().takeIf { options.showEndpointMarkers },
                 endMarker = null,
-                circle = options.referenceCircle
+                circle = options.referenceCircle,
+                area = options.drawableArea
             )
             else -> Route(
                 points = points,
                 camera = RouteCamera.FIT_BOUNDS,
                 startMarker = points.first().takeIf { options.showEndpointMarkers },
                 endMarker = points.last().takeIf { options.showEndpointMarkers },
-                circle = options.referenceCircle
+                circle = options.referenceCircle,
+                area = options.drawableArea
             )
         }
+
+        private val RouteMapOptions.drawableArea: List<RoutePoint>?
+            get() = filledArea?.takeIf { it.size >= MIN_AREA_POINTS }
     }
 }

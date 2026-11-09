@@ -138,4 +138,26 @@ class RouteMapStateTest {
         assertNull(state.circle)
         assertEquals(route, state.boundsPoints)
     }
+
+    @Test
+    fun `채운 영역은 꼭짓점이 3개 이상일 때만 경로와 함께 그린다`() {
+        val area = route.reversed()
+        val filled = RouteMapState.of(
+            route,
+            RouteMapOptions(filledArea = area),
+            MapAuthState.Configured
+        ) as RouteMapState.Route
+        val tooFew = RouteMapState.of(
+            route,
+            RouteMapOptions(filledArea = area.take(2)),
+            MapAuthState.Configured
+        ) as RouteMapState.Route
+        val none = RouteMapState.of(route, RouteMapOptions(), MapAuthState.Configured)
+            as RouteMapState.Route
+
+        assertEquals(area, filled.area)
+        assertEquals(route, filled.boundsPoints)
+        assertNull(tooFew.area)
+        assertNull(none.area)
+    }
 }

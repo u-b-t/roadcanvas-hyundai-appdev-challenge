@@ -46,7 +46,8 @@ class FakeRouteMapComponent : RouteMapComponent {
                     RouteCamera.FOLLOW_LATEST -> "최신 위치 따라가기"
                 }
                 val circle = state.circle?.let { " · 맞춤 원 반지름 ${it.radiusMeters.roundToInt()}m" }
-                "대체 경로 지도 · 지점 ${state.points.size}개 · $camera${circle.orEmpty()}"
+                val area = state.area?.let { " · 채운 영역 꼭짓점 ${it.size}개" }
+                "대체 경로 지도 · 지점 ${state.points.size}개 · $camera${circle.orEmpty()}${area.orEmpty()}"
             }
             is RouteMapState.CurrentLocation -> if (state.point == null) {
                 "대체 경로 지도 · 현재 위치 없음"
