@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
@@ -26,6 +27,7 @@ import io.cucumber.java.en.When
 import kotlinx.coroutines.runBlocking
 import kr.roadcanvas.app.RoadCanvasApplication
 import kr.roadcanvas.app.drawing.StorageResult
+import kr.roadcanvas.app.mydrawings.DRAWING_DETAIL_OVERLAY_TAG
 import kr.roadcanvas.app.mydrawings.MY_DRAWINGS_LIST_TAG
 import kr.roadcanvas.app.ui.components.CAR_TEXT_INPUT_TAG
 import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
@@ -111,6 +113,29 @@ class DrawingNameSteps(private val ruleHolder: ComposeRuleHolder) {
             hasAnyAncestor(hasTestTag(MY_DRAWINGS_LIST_TAG))
         waitFor(item)
         composeRule.onNode(item).assertIsDisplayed()
+    }
+
+    @Then("상세의 {string} 버튼은 상세 오버레이 너비의 절반보다 좁다")
+    fun assertCompactDetailButton(label: String) {
+        val (button, overlay) = detailButtonAndOverlayWidths(label)
+        assertTrue("버튼 $button, 오버레이 $overlay", button < overlay / 2)
+    }
+
+    @Then("상세의 {string} 버튼은 상세 오버레이 너비를 채운다")
+    fun assertFullWidthDetailButton(label: String) {
+        val (button, overlay) = detailButtonAndOverlayWidths(label)
+        // 오버레이 안쪽 여백을 뺀 너비를 채운다.
+        assertTrue("버튼 $button, 오버레이 $overlay", button > overlay * 0.8f)
+    }
+
+    private fun detailButtonAndOverlayWidths(label: String): Pair<Dp, Dp> {
+        val button = hasText(label) and hasClickAction() and
+            hasAnyAncestor(hasTestTag(DRAWING_DETAIL_OVERLAY_TAG))
+        waitFor(button)
+        val buttonWidth = composeRule.onNode(button).getUnclippedBoundsInRoot().width
+        val overlayWidth = composeRule.onNodeWithTag(DRAWING_DETAIL_OVERLAY_TAG)
+            .getUnclippedBoundsInRoot().width
+        return buttonWidth to overlayWidth
     }
 
     private fun savedSummary() = runBlocking {

@@ -21,19 +21,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
 import kotlin.math.abs
+import kr.roadcanvas.app.RoadCanvasApplication
 import kr.roadcanvas.app.modeselect.MODE_ITEM_ARROW_TAG
+import kr.roadcanvas.app.modeselect.MODE_ITEM_PICTURE_TAG
 import kr.roadcanvas.app.modeselect.MODE_SELECT_COVER_TAG
 import kr.roadcanvas.app.modeselect.MODE_SELECT_TITLE
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
 import kr.roadcanvas.app.navigation.Routes
+import kr.roadcanvas.app.territory.fake.FakeTerritoryOwnerProvider
 import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 import kr.roadcanvas.app.ui.theme.RoadCanvasColorScheme
 import kr.roadcanvas.app.ui.theme.SCREEN_PADDING
+import kr.roadcanvas.app.vehicle.fake.FakeAppContainer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -50,6 +55,9 @@ private val BACKGROUND_SAMPLE_FRACTIONS = listOf(0.3f, 0.5f, 0.7f)
 class ModeSelectSteps(private val ruleHolder: ComposeRuleHolder) {
     private val composeRule get() = ruleHolder.composeRule
     private var navController: NavHostController? = null
+    private val fakeContainer
+        get() = ApplicationProvider.getApplicationContext<RoadCanvasApplication>()
+            .container as FakeAppContainer
 
     @Given("모드 선택 화면을 연다")
     fun openModeSelect() {
@@ -103,9 +111,36 @@ class ModeSelectSteps(private val ruleHolder: ComposeRuleHolder) {
     }
 
     @Then("{string} 항목에 {string}이 표시된다")
+    @Then("{string} 항목에 {string}가 표시된다")
     fun assertItemShows(item: String, text: String) {
-        composeRule.onNode(hasText(item) and hasText(text) and hasClickAction())
-            .assertIsDisplayed()
+        // 기록 요약은 화면을 연 뒤 저장소와 서버에서 읽어 채운다.
+        val node = hasText(item) and hasText(text) and hasClickAction()
+        composeRule.waitUntil(WAIT_TIMEOUT_MILLIS) {
+            composeRule.onAllNodes(node).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNode(node).assertIsDisplayed()
+    }
+
+    @Given("서버에 내 땅 {int}칸이 있다")
+    fun putMyCells(count: Int) {
+        val owner = FakeTerritoryOwnerProvider.DEFAULT_OWNER
+        fakeContainer.territoryStore.putCells(
+            owner.uid,
+            owner.nickname,
+            List(count) { "wydm9q$it" }
+        )
+    }
+
+    @Then("{string} 항목과 {string} 항목의 높이가 같다")
+    fun assertSameHeight(first: String, second: String) {
+        val firstHeight = clickable(first).getUnclippedBoundsInRoot().height
+        val secondHeight = clickable(second).getUnclippedBoundsInRoot().height
+        assertEquals(firstHeight.value, secondHeight.value, 1f)
+    }
+
+    @Then("{string} 항목에는 모드 그림이 있다")
+    fun assertHasPicture(label: String) {
+        itemInUnmergedTree(label).assert(hasAnyDescendant(hasTestTag(MODE_ITEM_PICTURE_TAG)))
     }
 
     @Then("{string} 항목은 강조색으로 채워진다")

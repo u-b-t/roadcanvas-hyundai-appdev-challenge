@@ -3,7 +3,6 @@ package kr.roadcanvas.app.modeselect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
-import kr.roadcanvas.app.ui.theme.RoadCanvasColorScheme
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -28,12 +27,10 @@ class ModeSelectColorsTest {
     }
 
     @Test
-    fun `동그라미 챌린지 항목은 강조색으로 채우고 큰 흰 글자를 읽을 수 있다`() {
-        val primary = RoadCanvasColorScheme.primary
-        assertTrue(primary.luminance() > itemBackground.luminance())
-        // 이름과 설명은 굵은 큰 글자이므로 큰 글자 기준(3:1)을 적용한다.
-        assertContrastAtLeast(3f, RoadCanvasColorScheme.onPrimary, primary)
-        assertContrastAtLeast(3f, primary, COVER_DARK_COLOR)
+    fun `모드 카드의 기록 요약은 본문 대비 이상이고 모드 그림은 그림 배경에서 보인다`() {
+        assertContrastAtLeast(4.5f, ON_COVER_SUMMARY_COLOR, itemBackground)
+        val pictureBackground = MODE_ITEM_COLOR.compositeOver(itemBackground)
+        assertContrastAtLeast(3f, ON_COVER_SUMMARY_COLOR, pictureBackground)
     }
 
     @Test

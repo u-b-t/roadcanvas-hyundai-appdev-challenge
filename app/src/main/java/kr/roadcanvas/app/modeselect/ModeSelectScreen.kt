@@ -1,7 +1,6 @@
 package kr.roadcanvas.app.modeselect
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,6 +27,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.shopl.sdg_common.foundation.SDGColor
 import com.shopl.sdg_common.foundation.SDGCornerRadius
+import kr.roadcanvas.app.drawing.DrawingMode
+import kr.roadcanvas.app.mydrawings.ModeThumbnail
 import kr.roadcanvas.app.territorymap.TERRITORY_MAP_LABEL
 import kr.roadcanvas.app.ui.components.COVER_BACKGROUND_COLOR
 import kr.roadcanvas.app.ui.components.CarButton
@@ -68,11 +69,16 @@ const val MODE_ITEM_ARROW_TAG = "modeItemArrow"
 /** 모드 목록과 내 그림 버튼을 담는 왼쪽 영역 너비. 16:9 화면에서 커버 이미지의 어두운 영역(약 36%) 안에 들어간다. */
 private val MODE_LIST_WIDTH = 560.dp
 
-/** 남는 세로 공간을 나눌 때 동그라미 챌린지와 보조 모드(자유그림, 땅따먹기) 항목의 비율. 주 동작인 동그라미 챌린지를 더 크게 둔다. */
-private const val PRIMARY_ITEM_WEIGHT = 3f
-private const val SECONDARY_ITEM_WEIGHT = 2f
+private val ModeItemPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
 
-private val ModeItemPadding = PaddingValues(horizontal = 32.dp, vertical = 24.dp)
+/** 카드 왼쪽 모드 그림 크기 */
+private val MODE_PICTURE_SIZE = 72.dp
+
+/** 어두운 배경 위 내 기록 요약 글자 색. 흰 이름과 구분되도록 밝은 강조색을 쓴다. */
+val ON_COVER_SUMMARY_COLOR = SDGColor.Primary200
+
+const val MODE_ITEM_PICTURE_TAG = "modeItemPicture"
+const val MODE_ITEM_SUMMARY_TAG = "modeItemSummary"
 
 @Composable
 fun ModeSelectScreen(
@@ -82,7 +88,8 @@ fun ModeSelectScreen(
     modifier: Modifier = Modifier,
     onGalleryClick: () -> Unit = {},
     onTerritoryClick: () -> Unit = {},
-    onTerritoryMapClick: () -> Unit = {}
+    onTerritoryMapClick: () -> Unit = {},
+    recordSummary: ModeRecordSummary? = null
 ) {
     DriverSideOverlay(
         modifier = modifier,
@@ -103,23 +110,27 @@ fun ModeSelectScreen(
                     modifier = Modifier.fillMaxWidth().weight(1f).testTag(MODE_SELECT_LIST_TAG),
                     verticalArrangement = Arrangement.spacedBy(CONTROL_SPACING)
                 ) {
-                    PrimaryModeItem(
-                        name = CIRCLE_CHALLENGE_NAME,
+                    // 세 모드는 같은 크기와 강조로 보여 고르기 쉽게 한다.
+                    ModeItem(
+                        mode = DrawingMode.CIRCLE,
                         description = CIRCLE_CHALLENGE_DESCRIPTION,
+                        summary = recordSummary,
                         onClick = onCircleChallengeClick,
-                        modifier = Modifier.weight(PRIMARY_ITEM_WEIGHT)
+                        modifier = Modifier.weight(1f)
                     )
-                    SecondaryModeItem(
-                        name = FREE_DRAW_NAME,
+                    ModeItem(
+                        mode = DrawingMode.FREE_DRAWING,
                         description = FREE_DRAW_DESCRIPTION,
+                        summary = recordSummary,
                         onClick = onFreeDrawingClick,
-                        modifier = Modifier.weight(SECONDARY_ITEM_WEIGHT)
+                        modifier = Modifier.weight(1f)
                     )
-                    SecondaryModeItem(
-                        name = TERRITORY_NAME,
+                    ModeItem(
+                        mode = DrawingMode.TERRITORY,
                         description = TERRITORY_DESCRIPTION,
+                        summary = recordSummary,
                         onClick = onTerritoryClick,
-                        modifier = Modifier.weight(SECONDARY_ITEM_WEIGHT)
+                        modifier = Modifier.weight(1f)
                     )
                 }
                 // 보조 동작인 내 그림, 공개 작품과 영토 지도는 아래 끝에 나란히 둔다.
@@ -148,44 +159,15 @@ fun ModeSelectScreen(
     )
 }
 
-/** 주 동작 항목. 강조색으로 채우고 이름과 설명을 가장 크게 쓴다. */
+/**
+ * 모드 항목. 밝힌 배경 위에 모드 그림, 흰 이름, 흐린 한 줄 설명과 내 기록 요약을 쓴다.
+ * [summary]를 읽는 동안에는 요약 자리를 비워 둔다.
+ */
 @Composable
-private fun PrimaryModeItem(
-    name: String,
+private fun ModeItem(
+    mode: DrawingMode,
     description: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth().heightIn(min = MIN_TOUCH_TARGET),
-        color = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
-        shape = SDGCornerRadius.BoxRadius.Radius20
-    ) {
-        Row(
-            modifier = Modifier.padding(ModeItemPadding),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = name, style = MaterialTheme.typography.headlineLarge)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = description, style = MaterialTheme.typography.titleLarge)
-            }
-            Text(
-                text = "›",
-                style = MaterialTheme.typography.headlineLarge,
-                modifier = Modifier.testTag(MODE_ITEM_ARROW_TAG)
-            )
-        }
-    }
-}
-
-/** 보조 모드 항목. 강조색 없이 밝힌 배경에 흰 이름과 흐린 설명을 주 항목보다 작게 쓴다. */
-@Composable
-private fun SecondaryModeItem(
-    name: String,
-    description: String,
+    summary: ModeRecordSummary?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -198,15 +180,29 @@ private fun SecondaryModeItem(
     ) {
         Row(
             modifier = Modifier.padding(ModeItemPadding),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            ModeThumbnail(
+                mode = mode,
+                size = MODE_PICTURE_SIZE,
+                lineColor = ON_COVER_SUMMARY_COLOR,
+                backgroundColor = MODE_ITEM_COLOR,
+                modifier = Modifier.testTag(MODE_ITEM_PICTURE_TAG)
+            )
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = name, style = MaterialTheme.typography.headlineMedium)
-                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = mode.displayName, style = MaterialTheme.typography.headlineMedium)
                 Text(
                     text = description,
                     style = MaterialTheme.typography.titleMedium,
                     color = ON_COVER_SECONDARY_TEXT_COLOR
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = summary?.textFor(mode).orEmpty(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = ON_COVER_SUMMARY_COLOR,
+                    modifier = Modifier.testTag(MODE_ITEM_SUMMARY_TAG)
                 )
             }
             Text(
