@@ -24,6 +24,10 @@ import kr.roadcanvas.app.gallery.UnavailablePublicArtworkStore
 import kr.roadcanvas.app.map.MapAuth
 import kr.roadcanvas.app.map.naver.NaverMapSetup
 import kr.roadcanvas.app.recording.ServiceRecordingRunner
+import kr.roadcanvas.app.territory.AccountTerritoryOwnerProvider
+import kr.roadcanvas.app.territory.FirestoreTerritoryStore
+import kr.roadcanvas.app.territory.UnavailableTerritoryOwnerProvider
+import kr.roadcanvas.app.territory.UnavailableTerritoryStore
 import kr.roadcanvas.app.upload.DrawingRegistration
 import kr.roadcanvas.app.upload.FirestoreDrawingUploader
 import kr.roadcanvas.app.vehicle.VehicleIntegrationSelection
@@ -60,7 +64,8 @@ open class RoadCanvasApplication : Application() {
 
     /**
      * 인증에 실패하면 앱이 실행 중인 동안 일정 간격으로 다시 시도한다.
-     * 인증되면 기기의 완료 그림을 주기적으로 Firebase에 등록한다.
+     * 인증되면 서버에 반영하지 못한 땅따먹기 획득을 한 번 다시 제출하고,
+     * 기기의 완료 그림을 주기적으로 Firebase에 등록한다.
      */
     private suspend fun registerAccount() {
         val registration = container.accountRegistration
@@ -70,6 +75,7 @@ open class RoadCanvasApplication : Application() {
             registration.register()
         }
         val account = (registration.state.value as? AccountState.Ready)?.account ?: return
+        container.territoryGame.resubmitPending()
         val drawings =
             DrawingRegistration(container.completedDrawingRepository, FirestoreDrawingUploader())
         while (true) {
@@ -111,7 +117,19 @@ open class RoadCanvasApplication : Application() {
             } else {
                 UnavailablePublicArtworkStore
             },
-            onGalleryFailure = { Log.w(TAG, "공개 작품 요청에 실패했습니다.", it) }
+            onGalleryFailure = { Log.w(TAG, "공개 작품 요청에 실패했습니다.", it) },
+            // 서버 땅따먹기도 같은 조건에서 획득을 기기에 남기고 연결 실패로 안내한다.
+            territoryStore = if (firebase) FirestoreTerritoryStore() else UnavailableTerritoryStore,
+            territoryOwnerProvider = {
+                if (firebase) {
+                    AccountTerritoryOwnerProvider(
+                        it
+                    )
+                } else {
+                    UnavailableTerritoryOwnerProvider
+                }
+            },
+            onTerritoryFailure = { Log.w(TAG, "서버 땅따먹기 요청에 실패했습니다.", it) }
         )
     }
 }
