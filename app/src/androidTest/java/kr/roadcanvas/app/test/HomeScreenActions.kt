@@ -1,6 +1,7 @@
 package kr.roadcanvas.app.test
 
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -8,6 +9,7 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import kr.roadcanvas.app.modeselect.HOME_SCREEN_TAG
+import kr.roadcanvas.app.modeselect.HOME_SECTIONS_TAG
 
 private const val HOME_WAIT_TIMEOUT_MILLIS = 5_000L
 
@@ -22,7 +24,14 @@ fun ComposeTestRule.waitForHome() {
 fun ComposeTestRule.homeButton(label: String): SemanticsNodeInteraction {
     val button = hasText(label) and hasClickAction()
     waitUntil(HOME_WAIT_TIMEOUT_MILLIS) { onAllNodes(button).fetchSemanticsNodes().isNotEmpty() }
-    return onNode(button).performScrollTo()
+    val node = onNode(button)
+    return if (onAllNodes(button and hasAnyAncestor(hasTestTag(HOME_SECTIONS_TAG)))
+            .fetchSemanticsNodes().isNotEmpty()
+    ) {
+        node.performScrollTo()
+    } else {
+        node
+    }
 }
 
 /** 메인 화면에서 [label] 버튼을 누른다. */
