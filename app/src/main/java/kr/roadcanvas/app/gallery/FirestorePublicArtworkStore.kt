@@ -113,9 +113,12 @@ class FirestorePublicArtworkStore(
     }
 
     /** 응답을 기다린다. 쓰기는 null로 끝나므로 결과 값이 아니라 감싼 Result로 시간 초과를 구분한다. */
-    private suspend fun <T> Task<T>.awaitResult(): T =
-        (withTimeoutOrNull(REQUEST_TIMEOUT_MILLIS) { Result.success(await()) })?.getOrThrow()
+    private suspend fun <T> Task<T>.awaitResult(): T {
+        // 쓰기는 성공해도 null로 끝나므로 결과를 감싸 시간 초과(null)와 구분한다.
+        val result = withTimeoutOrNull(REQUEST_TIMEOUT_MILLIS) { Result.success(await()) }
             ?: throw GalleryStoreException(GalleryFailure.NETWORK, "Firestore 응답이 없습니다.")
+        return result.getOrThrow()
+    }
 
     private fun invalidChunk(chunk: DocumentSnapshot): Nothing = throw GalleryStoreException(
         GalleryFailure.INVALID_ROUTE,

@@ -87,12 +87,15 @@ class FirestoreCircleRankingStore(
         throw CircleRankingStoreException(failure, "Firestore 요청 실패: ${e.code}", e)
     }
 
-    private suspend fun <T> Task<T>.awaitResult(): T =
-        withTimeoutOrNull(REQUEST_TIMEOUT_MILLIS) { await() }
+    private suspend fun <T> Task<T>.awaitResult(): T {
+        // 쓰기는 성공해도 null로 끝나므로 결과를 감싸 시간 초과(null)와 구분한다.
+        val result = withTimeoutOrNull(REQUEST_TIMEOUT_MILLIS) { Result.success(await()) }
             ?: throw CircleRankingStoreException(
                 CircleRankingFailure.NETWORK,
                 "Firestore 응답이 없습니다."
             )
+        return result.getOrThrow()
+    }
 }
 
 private fun DocumentSnapshot.toEntry(): CircleRankingEntry? {
