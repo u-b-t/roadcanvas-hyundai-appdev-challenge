@@ -6,7 +6,6 @@ Cucumber-Android runner arguments to run only part of the scenarios.
 """
 import argparse
 import os
-import shlex
 import subprocess
 import sys
 import time
@@ -34,8 +33,8 @@ def runner_arguments(features, tags):
         paths = list(dict.fromkeys(feature_path(name) for name in features))
         arguments.append(f'{RUNNER_ARGUMENT}features={",".join(paths)}')
     if tags:
-        # 태그 식의 공백은 기기 셸이 `am instrument` 인자를 나누지 않도록 따옴표로 감싼다.
-        arguments.append(f'{RUNNER_ARGUMENT}tags={shlex.quote(tags)}')
+        # 공백이 든 태그 식도 그대로 전달된다. 따옴표를 더하면 태그 식에 포함되어 해석에 실패한다.
+        arguments.append(f'{RUNNER_ARGUMENT}tags={tags}')
     return arguments
 
 

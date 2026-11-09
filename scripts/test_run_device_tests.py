@@ -30,10 +30,10 @@ class RunnerArgumentsTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             run_device_tests.runner_arguments(['no_such_feature.feature'], None)
 
-    def test_tag_expression_is_quoted_for_device_shell(self):
+    def test_tag_expression_is_passed_unquoted(self):
         self.assertEqual(
             run_device_tests.runner_arguments([], '@smoke and not @slow'),
-            [f"{PREFIX}tags='@smoke and not @slow'"]
+            [f'{PREFIX}tags=@smoke and not @slow']
         )
 
 
