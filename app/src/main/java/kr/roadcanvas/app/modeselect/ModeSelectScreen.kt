@@ -27,9 +27,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.shopl.sdg_common.foundation.SDGColor
 import com.shopl.sdg_common.foundation.SDGCornerRadius
+import kr.roadcanvas.app.circleranking.CIRCLE_RANKING_LABEL
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.mydrawings.ModeThumbnail
-import kr.roadcanvas.app.circleranking.CIRCLE_RANKING_LABEL
 import kr.roadcanvas.app.territorymap.TERRITORY_MAP_LABEL
 import kr.roadcanvas.app.ui.components.COVER_BACKGROUND_COLOR
 import kr.roadcanvas.app.ui.components.CarButton

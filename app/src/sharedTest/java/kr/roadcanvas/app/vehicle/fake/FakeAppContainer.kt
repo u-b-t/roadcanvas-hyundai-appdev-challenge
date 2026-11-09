@@ -77,6 +77,7 @@ class FakeAppContainer : AppContainer {
     )
 
     override val voiceGuide = FakeVoiceGuide()
+
     /** 동그라미 순위 서버 저장소. 순위를 읽는 사용자는 [voterUid]와 같은 인증 사용자다. */
     val circleRankingStore = FakeCircleRankingStore()
     override val circleRanking = CircleRanking(circleRankingStore, currentUid = { voterUid })
