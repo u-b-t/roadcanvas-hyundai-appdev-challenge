@@ -566,15 +566,27 @@ private fun ColumnScope.DetailOverlayContent(
             )
         } else {
             ScoreCard(drawing = detail.drawing)
-            CarButton(
-                text = if (detail.drawing.name == null) ADD_NAME_LABEL else RENAME_LABEL,
-                onClick = onStartRename,
-                enabled = !state.deleting,
-                style = CarButtonStyle.Line,
-                modifier = Modifier.fillMaxWidth()
-            )
+            val nameLabel = if (detail.drawing.name == null) ADD_NAME_LABEL else RENAME_LABEL
+            if (detail.drawing.mode.nameRequired) {
+                CarButton(
+                    text = nameLabel,
+                    onClick = onStartRename,
+                    enabled = !state.deleting,
+                    style = CarButtonStyle.Line,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             publishState?.let { ArtworkPublishPanel(it, publishActions) }
             territoryState?.let { TerritorySyncSection(it, onSubmitTerritory) }
+            // 이름이 필요 없는 모드는 이름 붙이기를 다른 정보 아래 작은 보조 버튼으로 둔다.
+            if (!detail.drawing.mode.nameRequired) {
+                CarButton(
+                    text = nameLabel,
+                    onClick = onStartRename,
+                    enabled = !state.deleting,
+                    style = CarButtonStyle.Line
+                )
+            }
             if (state.deleteFailed) {
                 Text(
                     text = DELETE_FAILED,
