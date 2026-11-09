@@ -35,4 +35,17 @@ class AccountRegistrationTest {
         assertEquals("드라이버-abcdefgh", nickname)
         assertTrue(nickname.length in 1..30)
     }
+
+    @Test
+    fun `닉네임을 바꾸면 인증된 계정에 반영하고 인증 전이면 무시한다`() = runTest {
+        val registration = AccountRegistration { AnonymousAccount("user", "빠른 고래 1") }
+        registration.replaceNickname("도로 화가")
+        assertEquals(AccountState.Idle, registration.state.value)
+        registration.register()
+        registration.replaceNickname("도로 화가")
+        assertEquals(
+            AccountState.Ready(AnonymousAccount("user", "도로 화가")),
+            registration.state.value
+        )
+    }
 }

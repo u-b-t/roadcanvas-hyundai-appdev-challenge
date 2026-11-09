@@ -16,6 +16,8 @@ import kr.roadcanvas.app.drawing.fake.FakeInProgressDrawingRepository
 import kr.roadcanvas.app.gallery.PublicGallery
 import kr.roadcanvas.app.gallery.fake.FakePublicArtworkStore
 import kr.roadcanvas.app.map.fake.FakeRouteMapComponent
+import kr.roadcanvas.app.profile.Profile
+import kr.roadcanvas.app.profile.fake.FakeProfileStore
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.fake.FakeRecordingRunner
 import kr.roadcanvas.app.territory.TerritoryGame
@@ -28,7 +30,9 @@ import kr.roadcanvas.app.voice.fake.FakeVoiceGuide
 
 /** 테스트용 대체 구현을 담은 컨테이너 */
 class FakeAppContainer : AppContainer {
-    override val accountRegistration = AccountRegistration { AnonymousAccount("test", "드라이버-test") }
+    /** 익명 계정. 프로필에서 바꾼 닉네임이 다음 시나리오로 이어지지 않도록 [reset]할 때 새로 만든다. */
+    override var accountRegistration = newAccountRegistration()
+        private set
     override val locationProvider = FakeLocationProvider()
     override val drivingRestrictionProvider = FakeDrivingRestrictionProvider()
     override val vehicleIntegrationInfo =
@@ -87,6 +91,11 @@ class FakeAppContainer : AppContainer {
     /** 오늘의 주제는 날짜와 관계없이 첫 주제부터 보이도록 날짜를 고정한다. */
     override val drawingTopicPicker = DrawingTopicPicker(today = { TOPIC_DATE })
 
+    /** 프로필 서버 저장소. 계정 UID는 [DEFAULT_VOTER_UID]다. */
+    val profileStore = FakeProfileStore()
+    override var profile = Profile(accountRegistration, profileStore)
+        private set
+
     /** 시나리오 사이에 상태가 이어지지 않도록 초기 상태로 되돌린다. */
     fun reset() {
         recordingRunner.reset()
@@ -108,6 +117,9 @@ class FakeAppContainer : AppContainer {
         voiceGuide.reset()
         circleRankingStore.reset()
         drawingTopicPicker.reset()
+        profileStore.reset()
+        accountRegistration = newAccountRegistration()
+        profile = Profile(accountRegistration, profileStore)
         challengeRecorder = newRecorder()
     }
 
@@ -119,6 +131,9 @@ class FakeAppContainer : AppContainer {
         recordingRunner.reset()
         challengeRecorder = newRecorder()
     }
+
+    private fun newAccountRegistration() =
+        AccountRegistration { AnonymousAccount(DEFAULT_VOTER_UID, "드라이버-test") }
 
     private fun newRecorder() = ChallengeRecorder(locationProvider, inProgressDrawingRepository)
 

@@ -8,6 +8,7 @@ import kr.roadcanvas.app.drawing.CompletedDrawingRepository
 import kr.roadcanvas.app.drawing.InProgressDrawingRepository
 import kr.roadcanvas.app.gallery.PublicGallery
 import kr.roadcanvas.app.map.RouteMapComponent
+import kr.roadcanvas.app.profile.Profile
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingRunner
 import kr.roadcanvas.app.territory.TerritoryGame
@@ -36,6 +37,9 @@ interface AppContainer {
     val voiceGuide: VoiceGuide get() = silentVoiceGuide
     val circleRanking: CircleRanking
     val drawingTopicPicker: DrawingTopicPicker
+
+    /** 익명 계정의 닉네임과 내 기록 요약 */
+    val profile: Profile
 }
 
 private val silentVoiceGuide = SilentVoiceGuide()
