@@ -6,7 +6,10 @@
 
 - 화면은 `AppContainer.artworkPublisher`(`kr.roadcanvas.app.artwork.ArtworkPublisher`)만 쓰고, 결과 화면과 내 그림 상세는 `ArtworkPublishController`로 같은 상태와 조작을 공유한다.
 - 서버 접근은 `ArtworkStore`, 작성자(UID·닉네임)는 `ArtworkAuthorProvider` 인터페이스 뒤에 둔다. 테스트는 `app/src/sharedTest/`의 `FakeArtworkStore`, `FakeArtworkAuthorProvider`로 연결 실패, 인증 실패, 청크 저장 실패, 저장되지 않은 청크를 주입한다.
-- 익명 인증(#73)과 Firebase 연동(#74)이 연결되기 전에는 `DefaultAppContainer`가 항상 실패하는 `UnavailableArtworkStore`와 `UnavailableArtworkAuthorProvider`를 쓴다. 이 상태의 앱에서 공개를 누르면 계정 확인 실패로 표시된다.
+- 실제 구현은 `FirestoreArtworkStore`와 `AccountArtworkAuthorProvider`다. 작성자는 #73의 `AccountRegistration`이 만든 익명 계정 UID와 자동 닉네임이며, 아직 인증하지 않았으면 공개할 때 한 번 더 인증한다.
+- `app/google-services.json` 없이 빌드해 Firebase가 초기화되지 않으면 `RoadCanvasApplication`이 항상 실패하는 `UnavailableArtworkStore`와 `UnavailableArtworkAuthorProvider`를 넘긴다. CI 빌드가 이 상태이며 공개를 누르면 계정 확인 실패로 표시된다.
+- Firestore 규칙상 없는 작품 문서는 읽을 수 없고 `createdAt`·`ownerUid`는 바꿀 수 없으므로, 초안은 먼저 새 문서로 만들어 보고(`createdAt`은 서버 시각) 이미 있으면 나머지 값만 바꾼다. 청크 확인은 캐시가 아닌 서버에서 읽는다.
+- Firestore 요청은 각각 20초까지 기다리고 넘으면 네트워크 실패로 본다. 오프라인이면 Firestore가 쓰기를 기기에 보관했다가 나중에 보내므로, 시간 초과로 실패를 표시한 쓰기가 연결된 뒤 서버에 반영될 수 있다. 공개 전환은 서버에서 청크를 확인한 뒤에만 요청하므로 오프라인에서는 공개 전에 실패한다.
 - 기기 공개 기록은 Room `artwork_publication` 테이블(DB 버전 5)에 완료 기록별로 작품 ID와 마지막 공개 상태를 보관한다. 완료 기록을 지우면 함께 지워진다.
 
 ## 등록 흐름
@@ -32,4 +35,4 @@
 - 서버는 작품 영구 삭제를 제공하지 않는다. 비공개 전환은 다른 사용자의 조회만 막고 서버 데이터는 남는다. 미공개 작품의 기기 기록을 지워도 서버의 `DRAFT` 문서와 청크는 남는다.
 - 닉네임 변경 시 기존 작품의 `nickname` 갱신은 이 작업에 포함하지 않았다([클라이언트 조회·프로필 계약](firebase-client-queries.md) 참고).
 - 여러 쓰기는 원자적이지 않다. 청크 저장 뒤 확인 전에 끊기면 `DRAFT` 문서와 일부 청크가 남고, 다시 공개할 때 같은 문서를 덮어쓴다. 경로가 바뀌지 않으므로 남는 청크는 없다.
-- 실제 Firestore와 익명 인증으로의 등록, 서버 규칙 거부 응답의 분류, 네트워크가 불안정한 차량 환경에서의 동작은 아직 확인하지 않았다. 상태 전환과 오류 처리는 단위 테스트와 대체 구현을 쓴 Cucumber 시나리오(`artwork_publish.feature`)로만 확인했다.
+- 실제 Firebase 프로젝트로의 등록(규칙 통과 여부 포함), 서버 규칙 거부 응답의 분류, 네트워크가 불안정한 차량 환경에서의 동작은 확인하지 않았다. 상태 전환과 오류 처리는 단위 테스트와 대체 구현을 쓴 Cucumber 시나리오(`artwork_publish.feature`)로 확인했다.
