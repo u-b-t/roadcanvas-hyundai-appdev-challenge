@@ -6,11 +6,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlin.math.roundToInt
 import kr.roadcanvas.app.map.CurrentPosition
 import kr.roadcanvas.app.map.MapAuthState
+import kr.roadcanvas.app.map.MapBounds
+import kr.roadcanvas.app.map.MapExplore
 import kr.roadcanvas.app.map.RouteCamera
 import kr.roadcanvas.app.map.RouteMapComponent
 import kr.roadcanvas.app.map.RouteMapNotice
@@ -19,11 +24,19 @@ import kr.roadcanvas.app.map.RouteMapState
 import kr.roadcanvas.app.map.RoutePoint
 import kr.roadcanvas.app.map.showsCurrentPosition
 
-/** 네트워크와 지도 SDK 없이 경로 지도 표시 상태를 글로 보여주는 대체 컴포넌트 */
+/**
+ * 네트워크와 지도 SDK 없이 경로 지도 표시 상태를 글로 보여주는 대체 컴포넌트.
+ * 둘러보기 위치가 정해지면 카메라 이동이 끝난 것처럼 그 위치를 가운데 둔 [VISIBLE_SPAN_DEGREES] 범위를 한 번 알린다.
+ */
 class FakeRouteMapComponent : RouteMapComponent {
     @Composable
     override fun Content(points: List<RoutePoint>, options: RouteMapOptions, modifier: Modifier) {
         val state = RouteMapState.of(points, options, MapAuthState.Configured)
+        val onBoundsChange by rememberUpdatedState(options.onVisibleBoundsChange)
+        val explore = options.explore
+        LaunchedEffect(explore) {
+            if (explore != null) onBoundsChange?.invoke(boundsAround(explore))
+        }
         Box(modifier = modifier) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(options.contentPadding),
@@ -38,7 +51,20 @@ class FakeRouteMapComponent : RouteMapComponent {
         }
     }
 
+    private fun boundsAround(explore: MapExplore): MapBounds {
+        val half = VISIBLE_SPAN_DEGREES / 2
+        return MapBounds(
+            south = explore.center.latitude - half,
+            west = explore.center.longitude - half,
+            north = explore.center.latitude + half,
+            east = explore.center.longitude + half
+        )
+    }
+
     companion object {
+        /** 둘러보기 화면 범위의 위도·경도 폭(도). 서울에서 약 3.3km × 2.6km다. */
+        const val VISIBLE_SPAN_DEGREES = 0.03
+
         fun describe(state: RouteMapState): String = when (state) {
             is RouteMapState.Route -> {
                 val camera = when (state.camera) {
@@ -48,6 +74,10 @@ class FakeRouteMapComponent : RouteMapComponent {
                 val circle = state.circle?.let { " · 맞춤 원 반지름 ${it.radiusMeters.roundToInt()}m" }
                 val area = state.area?.let { " · 채운 영역 꼭짓점 ${it.size}개" }
                 "대체 경로 지도 · 지점 ${state.points.size}개 · $camera${circle.orEmpty()}${area.orEmpty()}"
+            }
+            is RouteMapState.Explore -> {
+                val mine = state.cells.count { it.mine }
+                "대체 영토 지도 · 내 칸 ${mine}개 · 다른 사용자 칸 ${state.cells.size - mine}개"
             }
             is RouteMapState.CurrentLocation -> if (state.point == null) {
                 "대체 경로 지도 · 현재 위치 없음"

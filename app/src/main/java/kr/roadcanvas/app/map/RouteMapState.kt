@@ -36,6 +36,9 @@ data class RouteCircle(val center: RoutePoint, val radiusMeters: Double) {
  * [referenceCircle]이 있으면 경로와 구분되는 스타일로 함께 그리고, 전체 경로 보기에서 원도 화면에 들어오게 맞춘다.
  * [filledArea]가 있으면 그 꼭짓점을 이은 다각형을 반투명하게 채워 경로 아래에 그린다. 땅따먹기로 차지한 영역을 보여줄 때 쓴다.
  * 첫 점을 끝에 반복하지 않으며, 꼭짓점이 [RouteMapState.MIN_AREA_POINTS]개보다 적으면 그리지 않는다.
+ * [cells]는 땅따먹기 칸처럼 여러 개를 함께 채워 그리는 다각형이다. 내 칸과 다른 사용자 칸을 다른 색으로 그린다.
+ * [explore]가 있고 경로가 없으면 경로 대신 그 위치에서 지도를 둘러보는 화면으로 그린다. 카메라는 처음 한 번만 옮긴다.
+ * [onVisibleBoundsChange]는 카메라 이동이 끝날 때마다 [contentPadding]을 뺀 지도 화면 범위를 받는다.
  */
 data class RouteMapOptions(
     val showEndpointMarkers: Boolean = true,
@@ -44,8 +47,25 @@ data class RouteMapOptions(
     val contentPadding: PaddingValues = PaddingValues(0.dp),
     val currentPosition: CurrentPosition? = null,
     val referenceCircle: RouteCircle? = null,
-    val filledArea: List<RoutePoint>? = null
+    val filledArea: List<RoutePoint>? = null,
+    val cells: List<MapCell> = emptyList(),
+    val explore: MapExplore? = null,
+    val onVisibleBoundsChange: ((MapBounds) -> Unit)? = null
 )
+
+/** 지도에 채워 그리는 칸 하나. [corners]는 첫 점을 끝에 반복하지 않는다. [mine]이면 내 칸 색으로 그린다. */
+data class MapCell(val corners: List<RoutePoint>, val mine: Boolean)
+
+/** 경로 없이 [center]를 [zoom] 확대 수준으로 처음 보여주는 지도 둘러보기 */
+data class MapExplore(val center: RoutePoint, val zoom: Double = DEFAULT_ZOOM) {
+    companion object {
+        /** 서울 기준 화면 가로가 약 2km라 칸(약 120m)과 주변 도로가 함께 보이는 정도다. */
+        const val DEFAULT_ZOOM = 15.5
+    }
+}
+
+/** 지도 화면 범위. 남쪽 [south], 서쪽 [west], 북쪽 [north], 동쪽 [east] 경계(도)다. */
+data class MapBounds(val south: Double, val west: Double, val north: Double, val east: Double)
 
 /** 경로를 그릴 때 카메라를 맞추는 방식 */
 enum class RouteCamera {
@@ -76,13 +96,20 @@ sealed interface RouteMapState {
         override val notice: String? = null
     }
 
+    /** 경로 없이 [center]에서 지도를 둘러보며 [cells]를 그린다. */
+    data class Explore(val center: RoutePoint, val zoom: Double, val cells: List<MapCell>) :
+        RouteMapState {
+        override val notice: String? = null
+    }
+
     data class Route(
         val points: List<RoutePoint>,
         val camera: RouteCamera,
         val startMarker: RoutePoint?,
         val endMarker: RoutePoint?,
         val circle: RouteCircle? = null,
-        val area: List<RoutePoint>? = null
+        val area: List<RoutePoint>? = null,
+        val cells: List<MapCell> = emptyList()
     ) : RouteMapState {
         override val notice: String? = null
 
@@ -109,6 +136,11 @@ sealed interface RouteMapState {
             authState is MapAuthState.KeyMissing -> KeyMissing
             authState is MapAuthState.Failed -> AuthFailed(authState.errorCode)
             options.showCurrentLocation -> CurrentLocation(points.lastOrNull())
+            options.explore != null && points.isEmpty() -> Explore(
+                center = options.explore.center,
+                zoom = options.explore.zoom,
+                cells = options.drawableCells
+            )
             points.size < MIN_ROUTE_POINTS -> NotEnoughPoints(points.lastOrNull())
             options.inProgress -> Route(
                 points = points,
@@ -116,7 +148,8 @@ sealed interface RouteMapState {
                 startMarker = points.first().takeIf { options.showEndpointMarkers },
                 endMarker = null,
                 circle = options.referenceCircle,
-                area = options.drawableArea
+                area = options.drawableArea,
+                cells = options.drawableCells
             )
             else -> Route(
                 points = points,
@@ -124,11 +157,15 @@ sealed interface RouteMapState {
                 startMarker = points.first().takeIf { options.showEndpointMarkers },
                 endMarker = points.last().takeIf { options.showEndpointMarkers },
                 circle = options.referenceCircle,
-                area = options.drawableArea
+                area = options.drawableArea,
+                cells = options.drawableCells
             )
         }
 
         private val RouteMapOptions.drawableArea: List<RoutePoint>?
             get() = filledArea?.takeIf { it.size >= MIN_AREA_POINTS }
+
+        private val RouteMapOptions.drawableCells: List<MapCell>
+            get() = cells.filter { it.corners.size >= MIN_AREA_POINTS }
     }
 }

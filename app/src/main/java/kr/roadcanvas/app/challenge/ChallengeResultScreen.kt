@@ -71,7 +71,8 @@ fun ChallengeResultRoute(
     onModeSelect: () -> Unit,
     onMyDrawings: () -> Unit,
     modifier: Modifier = Modifier,
-    mode: DrawingMode = DrawingMode.CIRCLE
+    mode: DrawingMode = DrawingMode.CIRCLE,
+    onTerritoryMap: (center: RoutePoint?) -> Unit = {}
 ) {
     val context = LocalContext.current
     val viewModel: ChallengeResultViewModel = viewModel(
@@ -86,13 +87,15 @@ fun ChallengeResultRoute(
                     inProgressRepository = container.inProgressDrawingRepository,
                     completedRepository = container.completedDrawingRepository,
                     onStorageFailure = { Log.w(TAG, "결과 저장소 작업 실패", it) },
-                    artworkPublisher = container.artworkPublisher
+                    artworkPublisher = container.artworkPublisher,
+                    territoryGame = container.territoryGame
                 )
             }
         }
     )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val publishState by viewModel.publishState.collectAsStateWithLifecycle()
+    val territoryState by viewModel.territoryState.collectAsStateWithLifecycle()
 
     // 진행 화면은 이미 닫혔으므로 뒤로 가면 모드 선택으로 간다.
     BackHandler(onBack = onModeSelect)
@@ -114,7 +117,10 @@ fun ChallengeResultRoute(
             onTryAgain = onTryAgain,
             onModeSelect = onModeSelect,
             onMyDrawings = onMyDrawings,
-            modifier = modifier
+            modifier = modifier,
+            territoryState = territoryState,
+            onSubmitTerritory = viewModel::submitTerritory,
+            onTerritoryMap = onTerritoryMap
         )
         DrawingMode.FREE_DRAWING -> FreeDrawingResultScreen(
             state = state,

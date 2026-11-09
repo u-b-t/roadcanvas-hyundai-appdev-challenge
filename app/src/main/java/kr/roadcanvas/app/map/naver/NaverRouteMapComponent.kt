@@ -12,6 +12,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +34,8 @@ import com.naver.maps.map.overlay.PathOverlay
 import com.naver.maps.map.overlay.PolygonOverlay
 import kr.roadcanvas.app.map.CurrentPosition
 import kr.roadcanvas.app.map.MapAuth
+import kr.roadcanvas.app.map.MapBounds
+import kr.roadcanvas.app.map.MapCell
 import kr.roadcanvas.app.map.MapInsets
 import kr.roadcanvas.app.map.RouteCamera
 import kr.roadcanvas.app.map.RouteCameraPadding
@@ -56,6 +59,7 @@ class NaverRouteMapComponent(private val auth: MapAuth) : RouteMapComponent {
                     state,
                     options.contentPadding,
                     options.currentPosition,
+                    options.onVisibleBoundsChange,
                     Modifier.fillMaxSize()
                 )
             }
@@ -68,6 +72,7 @@ class NaverRouteMapComponent(private val auth: MapAuth) : RouteMapComponent {
 
 private val RouteMapState.showsMap: Boolean
     get() = this is RouteMapState.Route ||
+        this is RouteMapState.Explore ||
         this is RouteMapState.NotEnoughPoints ||
         this is RouteMapState.CurrentLocation
 
@@ -76,6 +81,7 @@ private fun NaverRouteMapView(
     state: RouteMapState,
     contentPadding: PaddingValues,
     currentPosition: CurrentPosition?,
+    onVisibleBoundsChange: ((MapBounds) -> Unit)?,
     modifier: Modifier
 ) {
     val context = LocalContext.current
@@ -110,6 +116,24 @@ private fun NaverRouteMapView(
     LaunchedEffect(naverMap, state, contentPadding, cameraInsets) {
         naverMap?.let { overlays.show(it, state, cameraInsets) }
     }
+    // 카메라 이동이 끝날 때마다 콘텐츠 여백을 뺀 화면 범위를 알린다. 리스너는 지도마다 한 번만 단다.
+    val boundsCallback by rememberUpdatedState(onVisibleBoundsChange)
+    DisposableEffect(naverMap) {
+        val map = naverMap
+        val listener = NaverMap.OnCameraIdleListener {
+            val bounds = map?.contentBounds ?: return@OnCameraIdleListener
+            boundsCallback?.invoke(
+                MapBounds(
+                    south = bounds.southLatitude,
+                    west = bounds.westLongitude,
+                    north = bounds.northLatitude,
+                    east = bounds.eastLongitude
+                )
+            )
+        }
+        map?.addOnCameraIdleListener(listener)
+        onDispose { map?.removeOnCameraIdleListener(listener) }
+    }
     // 카메라는 경로 표시 상태로만 맞추고, 현재 위치 표시는 경로를 다시 그린 뒤 그 위에 덧붙인다.
     val positionIconSize = with(density) { CURRENT_POSITION_ICON_SIZE.roundToPx() }
     LaunchedEffect(naverMap, state, contentPadding, currentPosition) {
@@ -142,6 +166,7 @@ private class RouteOverlays {
         outlineWidth = 2
         color = 0xFF1E88E5.toInt()
     }
+    private val cells = CellOverlays()
     private val startMarker = Marker().apply { captionText = "출발" }
     private val endMarker = Marker().apply { captionText = "도착" }
     private var locationOverlay: LocationOverlay? = null
@@ -152,11 +177,24 @@ private class RouteOverlays {
      */
     private var followZoomed = false
 
+    /** 둘러보기로 카메라를 옮긴 위치. 칸만 다시 그릴 때는 사용자가 옮긴 카메라를 그대로 둔다. */
+    private var exploredCenter: RoutePoint? = null
+
     fun show(map: NaverMap, state: RouteMapState, cameraInsets: MapInsets) {
         when (state) {
             is RouteMapState.CurrentLocation -> {
                 detachRoute()
                 showLocation(map, state.point, cameraInsets)
+            }
+            is RouteMapState.Explore -> {
+                detach()
+                cells.show(map, state.cells)
+                if (exploredCenter != state.center) {
+                    exploredCenter = state.center
+                    map.moveCamera(
+                        CameraUpdate.scrollAndZoomTo(state.center.toLatLng(), state.zoom)
+                    )
+                }
             }
             is RouteMapState.Route -> {
                 hideLocation()
@@ -167,6 +205,7 @@ private class RouteOverlays {
                 endMarker.place(map, state.endMarker)
                 circle.place(map, state.circle)
                 area.place(map, state.area)
+                cells.show(map, state.cells)
                 when (state.camera) {
                     RouteCamera.FIT_BOUNDS -> with(cameraInsets) {
                         map.moveCamera(
@@ -227,6 +266,7 @@ private class RouteOverlays {
         endMarker.map = null
         circle.map = null
         area.map = null
+        cells.detach()
     }
 
     /**
@@ -302,3 +342,42 @@ private val CURRENT_POSITION_ICON_SIZE = 36.dp
 
 /** 현재 위치나 진행 중 경로를 처음 표시할 때의 확대 수준. 반지름 수십 m의 원과 주변 도로가 보이는 정도다. */
 private const val FOLLOW_ZOOM = 17.0
+
+/**
+ * 여러 칸을 채운 다각형으로 그린다. 칸 수가 바뀌어도 만든 오버레이를 다시 쓰고 남는 것은 지도에서 뗀다.
+ * 내 칸은 경로와 같은 파란색, 다른 사용자 칸은 주황색으로 반투명하게 채우고 테두리로 칸을 나눈다.
+ */
+private class CellOverlays {
+    private val overlays = mutableListOf<PolygonOverlay>()
+
+    fun show(map: NaverMap, cells: List<MapCell>) {
+        while (overlays.size < cells.size) {
+            overlays += PolygonOverlay().apply {
+                outlineWidth = 2
+                globalZIndex = PathOverlay.DEFAULT_GLOBAL_Z_INDEX - 2
+            }
+        }
+        overlays.forEachIndexed { index, overlay ->
+            val cell = cells.getOrNull(index)
+            if (cell == null) {
+                overlay.map = null
+            } else {
+                overlay.coords = cell.corners.map { LatLng(it.latitude, it.longitude) }
+                overlay.color = if (cell.mine) MINE_CELL_COLOR else OTHER_CELL_COLOR
+                overlay.outlineColor = if (cell.mine) MINE_CELL_OUTLINE else OTHER_CELL_OUTLINE
+                overlay.map = map
+            }
+        }
+    }
+
+    fun detach() {
+        overlays.forEach { it.map = null }
+    }
+
+    private companion object {
+        const val MINE_CELL_COLOR = 0x661E88E5
+        const val MINE_CELL_OUTLINE = 0xFF1E88E5.toInt()
+        const val OTHER_CELL_COLOR = 0x66FB8C00
+        const val OTHER_CELL_OUTLINE = 0xFFFB8C00.toInt()
+    }
+}
