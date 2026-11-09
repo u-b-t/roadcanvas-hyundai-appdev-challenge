@@ -14,15 +14,55 @@ fun interface TerritoryOwnerProvider {
  */
 data class TerritoryCaptureRequest(val captureId: String, val cells: List<String>)
 
+/** 획득으로 이전 소유자 [uid]([nickname])에게서 빼앗은 칸 [cells] */
+data class TerritoryLoss(val uid: String, val nickname: String, val cells: List<String>)
+
 /**
  * 획득을 반영한 결과. 획득한 칸을 반영 직전 소유자로 나눈다.
+ *
+ * [losses]와 [ownCellIds]는 반영한 제출의 응답에서만 알 수 있다. 서버 획득 기록과 기기에는 칸 수만 남기므로
+ * 이미 반영된 획득을 다시 제출하거나 기기에서 다시 읽은 결과는 비어 있다.
  *
  * @property newCells 소유자가 없던 칸 수
  * @property stolenCells 다른 사용자에게서 빼앗은 칸 수
  * @property ownCells 이미 내 칸이라 획득 시각만 갱신한 칸 수
+ * @property losses 빼앗은 칸을 이전 소유자별로 나눈 것. 빼앗은 칸 수가 많은 소유자부터다.
+ * @property ownCellIds 이미 내 칸이던 칸 ID
  */
-data class TerritoryCaptureOutcome(val newCells: Int, val stolenCells: Int, val ownCells: Int) {
+data class TerritoryCaptureOutcome(
+    val newCells: Int,
+    val stolenCells: Int,
+    val ownCells: Int,
+    val losses: List<TerritoryLoss> = emptyList(),
+    val ownCellIds: List<String> = emptyList()
+) {
     val totalCells: Int get() = newCells + stolenCells + ownCells
+
+    /** 칸 수만 남긴 결과. 서버 획득 기록과 기기에 보관하는 값이다. */
+    fun countsOnly() = TerritoryCaptureOutcome(newCells, stolenCells, ownCells)
+}
+
+/**
+ * 반영 직전 칸 소유자 [previousOwners](칸 ID → UID, 소유자가 없으면 null)로 [uid]의 획득 결과를 만든다.
+ * 이전 소유자 닉네임은 [nicknameOf]로 찾는다.
+ */
+fun territoryCaptureOutcomeOf(
+    uid: String,
+    previousOwners: Map<String, String?>,
+    nicknameOf: (String) -> String
+): TerritoryCaptureOutcome {
+    val stolen = previousOwners.filterValues { it != null && it != uid }
+    val losses = stolen.entries.groupBy({ it.value!! }, { it.key })
+        .map { (owner, cells) -> TerritoryLoss(owner, nicknameOf(owner), cells) }
+        .sortedWith(compareByDescending<TerritoryLoss> { it.cells.size }.thenBy { it.uid })
+    val own = previousOwners.filterValues { it == uid }.keys.toList()
+    return TerritoryCaptureOutcome(
+        newCells = previousOwners.count { it.value == null },
+        stolenCells = stolen.size,
+        ownCells = own.size,
+        losses = losses,
+        ownCellIds = own
+    )
 }
 
 /** 지도에 그리는 칸 하나. [mine]이면 현재 사용자의 칸이다. */

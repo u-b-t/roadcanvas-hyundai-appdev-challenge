@@ -25,11 +25,14 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kr.roadcanvas.app.RoadCanvasApplication
 import kr.roadcanvas.app.challenge.formatArea
+import kr.roadcanvas.app.challenge.territoryBoundaryOf
 import kr.roadcanvas.app.drawing.CompletedDrawing
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
 import kr.roadcanvas.app.drawing.TERRITORY_AREA_METRIC
+import kr.roadcanvas.app.map.MapCell
+import kr.roadcanvas.app.map.MapCellStyle
 import kr.roadcanvas.app.map.RoutePoint as MapPoint
 import kr.roadcanvas.app.map.fake.FakeRouteMapComponent
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
@@ -89,6 +92,45 @@ class TerritoryMapSteps(
         val boundary = (claimed as TerritoryResult.Claimed).boundary
         val cells = (territoryCellsOf(boundary) as TerritoryCellsResult.Cells).cells
         store.putCells("other", nickname, cells)
+    }
+
+    @Given("다른 사용자 {string}가 반지름 {int}m 원 영역의 칸 {int}개와 그 바깥 칸 {int}개를 차지하고 있다")
+    fun putClaimedAndOutsideCells(nickname: String, radius: Int, inside: Int, outside: Int) {
+        val boundary = claimedBoundary(radius)
+        store.putCells(
+            "other",
+            nickname,
+            centralCells(boundary).take(inside) + outsideCells(boundary).take(outside)
+        )
+    }
+
+    @Given("내가 반지름 {int}m 원 영역의 칸 {int}개를 이미 차지하고 있다")
+    fun putMyClaimedCells(radius: Int, count: Int) {
+        // 다른 사용자에게 준 가운데 칸과 겹치지 않도록 그 다음 칸부터 준다.
+        val cells = centralCells(claimedBoundary(radius)).drop(MY_CELLS_OFFSET).take(count)
+        val owner = FakeTerritoryOwnerProvider.DEFAULT_OWNER
+        store.putCells(owner.uid, owner.nickname, cells)
+    }
+
+    @Then("결과 지도에 빼앗은 칸 {int}개, 이미 내 칸 {int}개, 나머지 차지한 칸과 주변 다른 사용자 칸 {int}개가 표시된다")
+    fun assertResultMapCells(stolen: Int, kept: Int, others: Int) {
+        waitUntil { savedDrawings().isNotEmpty() }
+        val boundary = requireNotNull(territoryBoundaryOf(savedDrawings().single()))
+        val total = (territoryCellsOf(boundary) as TerritoryCellsResult.Cells).cells.size
+        assertTrue("차지한 칸 $total", total > stolen + kept)
+        val expected = FakeRouteMapComponent.describeResultCells(
+            List(total - stolen - kept) { resultCell(MapCellStyle.CAPTURED) } +
+                List(stolen) { resultCell(MapCellStyle.STOLEN) } +
+                List(kept) { resultCell(MapCellStyle.KEPT) } +
+                List(others) { resultCell(MapCellStyle.FAINT, mine = false) }
+        ).substringBefore(" · 칸 글자")
+        waitFor(hasText(expected, substring = true))
+    }
+
+    @Then("결과 지도의 빼앗은 칸에 {string}가 표시된다")
+    @Then("결과 지도의 빼앗은 칸에 {string}이 표시된다")
+    fun assertResultMapLabel(nickname: String) {
+        waitFor(hasText("칸 글자 $nickname", substring = true))
     }
 
     @Given("서울시청 주변 서버 칸 소유자가 있다")
@@ -301,6 +343,49 @@ class TerritoryMapSteps(
         )
     }
 
+    private fun claimedBoundary(radius: Int): List<GeoPoint> = (
+        TerritoryCalculator().calculate(
+            TestPaths.circle(radius.toDouble())
+        ) as TerritoryResult.Claimed
+        )
+        .boundary
+
+    /** 영역 가운데에서 가까운 순서의 칸. 기록 경로가 조금 달라도 영역 안에 남는 칸부터 고른다. */
+    private fun centralCells(boundary: List<GeoPoint>): List<String> {
+        val center = MapPoint(
+            boundary.map { it.latitude }.average(),
+            boundary.map { it.longitude }.average()
+        )
+        return (territoryCellsOf(boundary) as TerritoryCellsResult.Cells).cells.sortedBy {
+            val cell = Geohash.bounds(it).center
+            distanceMeters(center, MapPoint(cell.latitude, cell.longitude))
+        }
+    }
+
+    /** 영역 북쪽 바로 바깥의 칸. 칸 가운데가 영역 북쪽 끝보다 칸 높이의 1/4 이상 북쪽에 있다. */
+    private fun outsideCells(boundary: List<GeoPoint>): List<String> {
+        val latitude = boundary.maxOf { it.latitude } +
+            Geohash.latitudeSpan(TERRITORY_CELL_PRECISION) * 0.75
+        val west = boundary.minOf { it.longitude }
+        val east = boundary.maxOf { it.longitude }
+        val step = Geohash.longitudeSpan(TERRITORY_CELL_PRECISION)
+        return generateSequence(west) { it + step }.takeWhile { it <= east }
+            .map { Geohash.encode(GeoPoint(latitude, it), TERRITORY_CELL_PRECISION) }
+            .distinct()
+            .toList()
+    }
+
+    private fun resultCell(style: MapCellStyle, mine: Boolean = true) =
+        MapCell(emptyList(), mine, style)
+
+    private fun savedDrawings(): List<CompletedDrawing> {
+        val repository = fakeContainer.completedDrawingRepository
+        val summaries = (runBlocking { repository.summaries() } as StorageResult.Success).value
+        return summaries.mapNotNull {
+            (runBlocking { repository.find(it.id) } as StorageResult.Success).value
+        }
+    }
+
     /** 대체 지도가 보여주는 둘러보기 중심. 아직 정하지 않았으면 null이다. */
     private fun currentMapCenter(): MapPoint? {
         val prefix = FakeRouteMapComponent.describeCenter(DEFAULT_TERRITORY_MAP_CENTER)
@@ -346,6 +431,9 @@ class TerritoryMapSteps(
     }
 
     private companion object {
+        /** 내 칸으로 줄 칸을 영역 가운데에서 몇 번째 칸부터 고를지. 다른 사용자 칸 2개 다음이다. */
+        const val MY_CELLS_OFFSET = 2
+
         /**
          * [center]에서 가까운 순서의 geohash7 칸. 대체 지도가 알리는 범위 안에 들도록
          * 범위 폭의 절반보다 조금 안쪽까지만 고른다.

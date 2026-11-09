@@ -63,7 +63,13 @@ class TerritoryGameTest {
 
         assertEquals(
             TerritoryCaptureState.Submitted(
-                TerritoryCaptureOutcome(newCells = 3, stolenCells = 2, ownCells = 1)
+                TerritoryCaptureOutcome(
+                    newCells = 3,
+                    stolenCells = 2,
+                    ownCells = 1,
+                    losses = listOf(TerritoryLoss("other", "다른 사람", cells.take(2))),
+                    ownCellIds = listOf(cells[2])
+                )
             ),
             result
         )
@@ -72,6 +78,22 @@ class TerritoryGameTest {
         assertTrue(store.cells.filterKeys { it in cells }.values.all { it == "test" })
         assertEquals(CaptureSyncStatus.SUBMITTED, captures.all.single().status)
         assertEquals(result, state())
+    }
+
+    @Test
+    fun `이전 소유자별 빼앗은 칸은 이 실행에서만 남고 다시 만든 게임은 칸 수만 읽는다`() = runTest {
+        val cells = cellsOf(2, 3)
+        store.putCells("other", "다른 사람", cells.take(2))
+        capture()
+
+        val restarted = TerritoryGame(store, captures, owner, clock = { now })
+        val reloaded = (restarted.state(1L) as TerritoryCall.Success).value
+
+        assertEquals(1, (state() as TerritoryCaptureState.Submitted).outcome.losses.size)
+        assertEquals(
+            TerritoryCaptureState.Submitted(TerritoryCaptureOutcome(4, 2, 0)),
+            reloaded
+        )
     }
 
     @Test

@@ -16,6 +16,8 @@ import kotlin.math.roundToInt
 import kr.roadcanvas.app.map.CurrentPosition
 import kr.roadcanvas.app.map.MapAuthState
 import kr.roadcanvas.app.map.MapBounds
+import kr.roadcanvas.app.map.MapCell
+import kr.roadcanvas.app.map.MapCellStyle
 import kr.roadcanvas.app.map.MapExplore
 import kr.roadcanvas.app.map.RouteCamera
 import kr.roadcanvas.app.map.RouteMapComponent
@@ -76,7 +78,9 @@ class FakeRouteMapComponent : RouteMapComponent {
                 }
                 val circle = state.circle?.let { " · 맞춤 원 반지름 ${it.radiusMeters.roundToInt()}m" }
                 val area = state.area?.let { " · 채운 영역 꼭짓점 ${it.size}개" }
-                "대체 경로 지도 · 지점 ${state.points.size}개 · $camera${circle.orEmpty()}${area.orEmpty()}"
+                val cells = describeResultCells(state.cells)
+                "대체 경로 지도 · 지점 ${state.points.size}개 · $camera" +
+                    "${circle.orEmpty()}${area.orEmpty()}$cells"
             }
             is RouteMapState.Explore -> {
                 val mine = state.cells.count { it.mine }
@@ -93,6 +97,23 @@ class FakeRouteMapComponent : RouteMapComponent {
                 "대체 경로 지도 · $location$cells"
             }
             else -> state.notice.orEmpty()
+        }
+
+        /**
+         * 결과 지도의 칸 구분. 칸이 없으면 빈 문자열이다. 예:
+         * ` · 차지한 칸 3개 · 빼앗은 칸 2개 · 이미 내 칸 1개 · 주변 내 칸 0개 · 주변 다른 사용자 칸 3개 · 칸 글자 드라이버-other`
+         */
+        fun describeResultCells(cells: List<MapCell>): String {
+            if (cells.isEmpty()) return ""
+            fun count(style: MapCellStyle, mine: Boolean? = null) =
+                cells.count { it.style == style && (mine == null || it.mine == mine) }
+            val labels = cells.mapNotNull { it.label }
+            return " · 차지한 칸 ${count(MapCellStyle.CAPTURED)}개" +
+                " · 빼앗은 칸 ${count(MapCellStyle.STOLEN)}개" +
+                " · 이미 내 칸 ${count(MapCellStyle.KEPT)}개" +
+                " · 주변 내 칸 ${count(MapCellStyle.FAINT, mine = true)}개" +
+                " · 주변 다른 사용자 칸 ${count(MapCellStyle.FAINT, mine = false)}개" +
+                if (labels.isEmpty()) "" else " · 칸 글자 ${labels.joinToString(", ")}"
         }
 
         /** 둘러보기 카메라 중심. 위도·경도를 소수점 다섯째 자리(약 1m)까지 보여준다. */

@@ -5,8 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -23,9 +26,19 @@ import kr.roadcanvas.app.drawing.validateDrawingName
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingState
 import kr.roadcanvas.app.score.CircleScoreCalculator
+import kr.roadcanvas.app.score.TerritoryResult
+import kr.roadcanvas.app.territory.TerritoryCall
 import kr.roadcanvas.app.territory.TerritoryCaptureController
+import kr.roadcanvas.app.territory.TerritoryCaptureState
+import kr.roadcanvas.app.territory.TerritoryCell
+import kr.roadcanvas.app.territory.TerritoryCellsResult
 import kr.roadcanvas.app.territory.TerritoryGame
+import kr.roadcanvas.app.territory.TerritoryMapCells
+import kr.roadcanvas.app.territory.TerritoryResultCells
 import kr.roadcanvas.app.territory.TerritorySyncUiState
+import kr.roadcanvas.app.territory.boundsAroundArea
+import kr.roadcanvas.app.territory.territoryCellsOf
+import kr.roadcanvas.app.territory.territoryResultCellsOf
 
 /**
  * [startedAtMillis]에 시작해 [endedAtMillis]에 종료한 도전의 결과를 만들고 완료 기록으로 저장한다.
@@ -43,7 +56,7 @@ import kr.roadcanvas.app.territory.TerritorySyncUiState
  * [artworkPublisher]가 있으면 저장한 자유그림의 공개 상태를 [publishState]로 보여주고 공개·비공개로 바꾼다.
  *
  * [territoryGame]이 있으면 저장한 땅따먹기 기록의 획득을 서버에 제출하고 [territoryState]로 반영 상태를 보여준다.
- * 이 기록을 제출한 뒤에는 반영하지 못한 다른 획득도 다시 제출한다.
+ * 이 기록을 제출한 뒤에는 결과 영역 주변 칸을 읽어 [resultCells]로 보여주고, 반영하지 못한 다른 획득도 다시 제출한다.
  *
  * 자유그림은 [suggestedName](시작할 때 고른 오늘의 주제)을 이름 입력 기본값으로 제안한다.
  */
@@ -103,6 +116,26 @@ class ChallengeResultViewModel(
     fun submitTerritory() {
         territoryController?.submit()
     }
+
+    /** 결과 영역 주변 서버 칸. 읽지 못했거나 칸이 너무 많으면 비어 있다. */
+    private val nearbyCells = MutableStateFlow(emptyList<TerritoryCell>())
+
+    /**
+     * 결과 지도에 그릴 칸. 차지한 영역의 칸을 서버 반영 결과로 나누고 주변 다른 사용자 칸을 함께 둔다.
+     * 땅따먹기 서버가 없거나, 영역을 차지하지 못했거나, 칸이 너무 많아 획득하지 않으면 null이다.
+     */
+    val resultCells: StateFlow<TerritoryResultCells?> =
+        combine(uiState, territoryState, nearbyCells) { ui, sync, nearby ->
+            if (territoryGame == null) return@combine null
+            val claimed = claimedOf(ui) ?: return@combine null
+            val cells = territoryCellsOf(claimed.boundary) as? TerritoryCellsResult.Cells
+                ?: return@combine null
+            val outcome = (
+                (sync as? TerritorySyncUiState.Capture)?.state
+                    as? TerritoryCaptureState.Submitted
+                )?.outcome
+            territoryResultCellsOf(cells.cells, outcome, nearby)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** 저장했거나 이미 저장되어 있던 완료 기록 */
     private var savedDrawing: CompletedDrawing? = null
@@ -311,8 +344,20 @@ class ChallengeResultViewModel(
         val game = territoryGame ?: return
         territoryController?.show(savedDrawing)
         territoryController?.submit()?.join()
+        loadNearbyCells(game)
         game.resubmitPending()
     }
+
+    /** 이 기록을 제출한 뒤 결과 영역 주변 칸을 읽는다. 빼앗은 칸도 내 칸으로 읽힌다. */
+    private suspend fun loadNearbyCells(game: TerritoryGame) {
+        val claimed = claimedOf(mutableState.value) ?: return
+        val loaded = game.mapCells(boundsAroundArea(claimed.boundary))
+        val cells = ((loaded as? TerritoryCall.Success)?.value as? TerritoryMapCells.Loaded)?.cells
+        if (cells != null) nearbyCells.value = cells
+    }
+
+    private fun claimedOf(state: ChallengeResultUiState): TerritoryResult.Claimed? =
+        (state as? ChallengeResultUiState.Calculated)?.result?.territory as? TerritoryResult.Claimed
 
     /** 이 도전의 진행 중 기록만 지운다. 지우지 못해도 완료 기록은 저장되었으므로 결과는 저장됨이다. */
     private suspend fun clearInProgress() {

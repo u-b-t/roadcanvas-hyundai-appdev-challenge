@@ -101,6 +101,7 @@ fun ChallengeResultRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val publishState by viewModel.publishState.collectAsStateWithLifecycle()
     val territoryState by viewModel.territoryState.collectAsStateWithLifecycle()
+    val territoryCells by viewModel.resultCells.collectAsStateWithLifecycle()
 
     // 진행 화면은 이미 닫혔으므로 뒤로 가면 모드 선택으로 간다.
     BackHandler(onBack = onModeSelect)
@@ -119,12 +120,12 @@ fun ChallengeResultRoute(
         DrawingMode.TERRITORY -> TerritoryResultScreen(
             state = state,
             onRetrySave = viewModel::retrySave,
-            onSaveName = viewModel::saveName,
             onTryAgain = onTryAgain,
             onModeSelect = onModeSelect,
             onMyDrawings = onMyDrawings,
             modifier = modifier,
             territoryState = territoryState,
+            territoryCells = territoryCells,
             onSubmitTerritory = viewModel::submitTerritory,
             onTerritoryMap = onTerritoryMap
         )

@@ -36,6 +36,7 @@ import kr.roadcanvas.app.map.CurrentPosition
 import kr.roadcanvas.app.map.MapAuth
 import kr.roadcanvas.app.map.MapBounds
 import kr.roadcanvas.app.map.MapCell
+import kr.roadcanvas.app.map.MapCellStyle
 import kr.roadcanvas.app.map.MapInsets
 import kr.roadcanvas.app.map.RouteCamera
 import kr.roadcanvas.app.map.RouteCameraPadding
@@ -348,14 +349,15 @@ private const val FOLLOW_ZOOM = 17.0
 /**
  * 여러 칸을 채운 다각형으로 그린다. 칸 수가 바뀌어도 만든 오버레이를 다시 쓰고 남는 것은 지도에서 뗀다.
  * 내 칸은 경로와 같은 파란색, 다른 사용자 칸은 주황색으로 반투명하게 채우고 테두리로 칸을 나눈다.
+ * [MapCellStyle]에 따라 진하기와 테두리를 바꾸고, 글자가 있는 칸은 가운데에 글자 마커를 둔다.
  */
 private class CellOverlays {
     private val overlays = mutableListOf<PolygonOverlay>()
+    private val labels = mutableListOf<Marker>()
 
     fun show(map: NaverMap, cells: List<MapCell>) {
         while (overlays.size < cells.size) {
             overlays += PolygonOverlay().apply {
-                outlineWidth = 2
                 globalZIndex = PathOverlay.DEFAULT_GLOBAL_Z_INDEX - 2
             }
         }
@@ -365,15 +367,49 @@ private class CellOverlays {
                 overlay.map = null
             } else {
                 overlay.coords = cell.corners.map { LatLng(it.latitude, it.longitude) }
-                overlay.color = if (cell.mine) MINE_CELL_COLOR else OTHER_CELL_COLOR
-                overlay.outlineColor = if (cell.mine) MINE_CELL_OUTLINE else OTHER_CELL_OUTLINE
+                overlay.color = fillOf(cell)
+                overlay.outlineColor = outlineOf(cell)
+                overlay.outlineWidth = if (cell.style == MapCellStyle.STOLEN) 6 else 2
                 overlay.map = map
+            }
+        }
+        val labeled = cells.filter { it.label != null }
+        while (labels.size < labeled.size) {
+            labels += Marker().apply {
+                iconTintColor = STOLEN_OUTLINE
+                captionTextSize = LABEL_TEXT_SIZE
+                captionColor = STOLEN_OUTLINE
+                captionHaloColor = 0xFFFFFFFF.toInt()
+            }
+        }
+        labels.forEachIndexed { index, marker ->
+            val cell = labeled.getOrNull(index)
+            if (cell == null) {
+                marker.map = null
+            } else {
+                marker.position = LatLng(cell.center.latitude, cell.center.longitude)
+                marker.captionText = cell.label.orEmpty()
+                marker.map = map
             }
         }
     }
 
     fun detach() {
         overlays.forEach { it.map = null }
+        labels.forEach { it.map = null }
+    }
+
+    private fun fillOf(cell: MapCell): Int = when (cell.style) {
+        MapCellStyle.DEFAULT -> if (cell.mine) MINE_CELL_COLOR else OTHER_CELL_COLOR
+        MapCellStyle.CAPTURED, MapCellStyle.STOLEN -> CAPTURED_CELL_COLOR
+        MapCellStyle.KEPT -> KEPT_CELL_COLOR
+        MapCellStyle.FAINT -> if (cell.mine) FAINT_MINE_CELL_COLOR else FAINT_OTHER_CELL_COLOR
+    }
+
+    private fun outlineOf(cell: MapCell): Int = when (cell.style) {
+        MapCellStyle.STOLEN -> STOLEN_OUTLINE
+        MapCellStyle.FAINT -> if (cell.mine) FAINT_MINE_CELL_OUTLINE else FAINT_OTHER_CELL_OUTLINE
+        else -> if (cell.mine) MINE_CELL_OUTLINE else OTHER_CELL_OUTLINE
     }
 
     private companion object {
@@ -381,5 +417,13 @@ private class CellOverlays {
         const val MINE_CELL_OUTLINE = 0xFF1E88E5.toInt()
         const val OTHER_CELL_COLOR = 0x66FB8C00
         const val OTHER_CELL_OUTLINE = 0xFFFB8C00.toInt()
+        const val CAPTURED_CELL_COLOR = 0x991E88E5.toInt()
+        const val KEPT_CELL_COLOR = 0x401E88E5
+        const val FAINT_MINE_CELL_COLOR = 0x261E88E5
+        const val FAINT_MINE_CELL_OUTLINE = 0x801E88E5.toInt()
+        const val FAINT_OTHER_CELL_COLOR = 0x26FB8C00
+        const val FAINT_OTHER_CELL_OUTLINE = 0x80FB8C00.toInt()
+        const val STOLEN_OUTLINE = 0xFFE53935.toInt()
+        const val LABEL_TEXT_SIZE = 16f
     }
 }
