@@ -65,6 +65,44 @@ class ChallengeResultViewModelTest {
         onStorageFailure = { storageFailures += it }
     )
 
+    private fun suggestingViewModel(suggestion: String?) = ChallengeResultViewModel(
+        startedAtMillis = START,
+        endedAtMillis = END,
+        savedStateHandle = SavedStateHandle(),
+        recorder = recorder,
+        inProgressRepository = inProgress,
+        completedRepository = completed,
+        suggestedName = { suggestion }
+    )
+
+    @Test
+    fun `자유그림은 시작할 때 고른 주제를 이름 기본값으로 제안하고 저장하지는 않는다`() = runTest(dispatcher) {
+        saveInProgress(circlePath(), mode = DrawingMode.FREE_DRAWING)
+
+        val state = suggestingViewModel("별").uiState.value as ChallengeResultUiState.Calculated
+
+        assertEquals(ResultSaveStatus.SAVED, state.saveStatus)
+        assertEquals("별", state.suggestedName)
+        assertNull(state.name)
+        assertNull(savedSummaries().single().name)
+    }
+
+    @Test
+    fun `동그라미 챌린지는 주제를 제안하지 않는다`() = runTest(dispatcher) {
+        saveInProgress(circlePath())
+
+        val state = suggestingViewModel("별").uiState.value as ChallengeResultUiState.Calculated
+
+        assertNull(state.suggestedName)
+    }
+
+    @Test
+    fun `고른 주제가 없으면 제안하지 않는다`() = runTest(dispatcher) {
+        saveInProgress(circlePath(), mode = DrawingMode.FREE_DRAWING)
+        val none = suggestingViewModel(null).uiState.value as ChallengeResultUiState.Calculated
+        assertNull(none.suggestedName)
+    }
+
     private suspend fun saveInProgress(
         path: List<RoutePoint>,
         startedAtMillis: Long = START,

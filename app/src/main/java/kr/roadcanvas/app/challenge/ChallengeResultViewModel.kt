@@ -44,6 +44,8 @@ import kr.roadcanvas.app.territory.TerritorySyncUiState
  *
  * [territoryGame]이 있으면 저장한 땅따먹기 기록의 획득을 서버에 제출하고 [territoryState]로 반영 상태를 보여준다.
  * 이 기록을 제출한 뒤에는 반영하지 못한 다른 획득도 다시 제출한다.
+ *
+ * 자유그림은 [suggestedName](시작할 때 고른 오늘의 주제)을 이름 입력 기본값으로 제안한다.
  */
 class ChallengeResultViewModel(
     private val startedAtMillis: Long,
@@ -55,7 +57,8 @@ class ChallengeResultViewModel(
     private val calculator: CircleScoreCalculator = CircleScoreCalculator(),
     private val onStorageFailure: (Throwable) -> Unit = {},
     artworkPublisher: ArtworkPublisher? = null,
-    private val territoryGame: TerritoryGame? = null
+    private val territoryGame: TerritoryGame? = null,
+    private val suggestedName: () -> String? = { null }
 ) : ViewModel() {
     private val mutableState =
         MutableStateFlow<ChallengeResultUiState>(ChallengeResultUiState.Calculating)
@@ -180,7 +183,8 @@ class ChallengeResultViewModel(
         mutableState.value = ChallengeResultUiState.Calculated(
             result,
             ResultSaveStatus.SAVING,
-            bestComparison = bestComparison(result)
+            bestComparison = bestComparison(result),
+            suggestedName = suggestionFor(result)
         )
         save(result)
     }
@@ -197,7 +201,8 @@ class ChallengeResultViewModel(
                 result,
                 ResultSaveStatus.SAVED,
                 name = drawing.name,
-                bestComparison = bestComparison(result)
+                bestComparison = bestComparison(result),
+                suggestedName = suggestionFor(result)
             )
         }
         // 저장한 뒤 진행 중 기록을 지우지 못했다면 다시 지운다.
@@ -217,6 +222,13 @@ class ChallengeResultViewModel(
             .filter { it.mode == result.mode && it.completedAtMillis != result.completedAtMillis }
             .maxOfOrNull { it.score }
         return bestRecordComparisonOf(score.score, previousBest)
+    }
+
+    /** 이름 입력 기본값으로 제안할 이름. 자유그림만 제안하고, 이름 규칙에 맞지 않으면 제안하지 않는다. */
+    private fun suggestionFor(result: ChallengeResult): String? {
+        if (result.mode != DrawingMode.FREE_DRAWING) return null
+        val validation = validateDrawingName(suggestedName() ?: return null, required = true)
+        return (validation as? DrawingNameValidation.Valid)?.name
     }
 
     /** 저장하지 않기로 한 것을 [SavedStateHandle]에 남겨 화면이 다시 만들어져도 저장하지 않는다. */

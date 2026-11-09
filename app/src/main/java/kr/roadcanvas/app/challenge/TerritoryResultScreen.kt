@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.shopl.sdg_common.enums.Keyboard
 import com.shopl.sdg_common.util.keyboardAsState
@@ -66,6 +67,7 @@ fun TerritoryResultScreen(
                 ),
                 modifier = Modifier.fillMaxSize()
             )
+            ResultCelebrationLayer(territoryCelebrationOf(territoryState))
         },
         controls = {
             // 내용이 화면 높이를 넘으면 결과 카드만 스크롤하고 버튼은 항상 보이게 둔다.
@@ -87,6 +89,14 @@ fun TerritoryResultScreen(
                                 StatusText(TERRITORY_NOT_SAVED)
                             } else {
                                 SaveStatus(state.saveStatus, onRetrySave)
+                            }
+                            territoryCelebrationOf(territoryState)?.let {
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.testTag(TERRITORY_OUTCOME_TAG)
+                                )
                             }
                             territoryState?.let { TerritorySyncSection(it, onSubmitTerritory) }
                             if (state.saveStatus == ResultSaveStatus.SAVED) {

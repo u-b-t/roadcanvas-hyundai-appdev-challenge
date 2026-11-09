@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -91,7 +92,8 @@ fun ChallengeResultRoute(
                     completedRepository = container.completedDrawingRepository,
                     onStorageFailure = { Log.w(TAG, "결과 저장소 작업 실패", it) },
                     artworkPublisher = container.artworkPublisher,
-                    territoryGame = container.territoryGame
+                    territoryGame = container.territoryGame,
+                    suggestedName = { container.drawingTopicPicker.startedTopic }
                 )
             }
         }
@@ -173,6 +175,7 @@ fun ChallengeResultScreen(
                 ),
                 modifier = Modifier.fillMaxSize()
             )
+            ResultCelebrationLayer(circleCelebrationOf(state))
         },
         controls = {
             // 내용이 화면 높이를 넘으면 결과 카드만 스크롤하고 버튼은 항상 보이게 둔다.
@@ -230,7 +233,14 @@ fun ChallengeResultScreen(
 
 @Composable
 private fun ResultSummary(result: ChallengeResult, bestComparison: BestRecordComparison?) {
-    Text(text = "${result.score?.score ?: 0}점", style = MaterialTheme.typography.displayMedium)
+    val score = result.score?.score ?: 0
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(text = "${score}점", style = MaterialTheme.typography.displayMedium)
+        if (isBestRecord(score, bestComparison)) BestRecordBadge()
+    }
     bestComparison?.let {
         Text(
             text = it.text,
@@ -328,7 +338,10 @@ internal fun ResultNameEditor(
     val required = state.result.mode.nameRequired
     val focusManager = LocalFocusManager.current
     // 저장한 이름이 바뀌면 입력창도 앞뒤 공백을 제거한 저장 값으로 맞춘다.
-    var input by rememberSaveable(state.name) { mutableStateOf(state.name.orEmpty()) }
+    // 이름이 없으면 제안한 이름(자유그림 오늘의 주제)을 기본값으로 둔다.
+    var input by rememberSaveable(state.name) {
+        mutableStateOf(state.name ?: state.suggestedName.orEmpty())
+    }
     var attempted by rememberSaveable { mutableStateOf(false) }
     val saving = state.nameSaveStatus == NameSaveStatus.SAVING
     DrawingNameInput(

@@ -8,6 +8,7 @@ import kr.roadcanvas.app.artwork.ArtworkPublisher
 import kr.roadcanvas.app.artwork.ArtworkStore
 import kr.roadcanvas.app.artwork.UnavailableArtworkAuthorProvider
 import kr.roadcanvas.app.artwork.UnavailableArtworkStore
+import kr.roadcanvas.app.challenge.DrawingTopicPicker
 import kr.roadcanvas.app.circleranking.CircleRanking
 import kr.roadcanvas.app.circleranking.CircleRankingStore
 import kr.roadcanvas.app.circleranking.UnavailableCircleRankingStore
@@ -145,4 +146,5 @@ class DefaultAppContainer(
         syncRecords = syncCircleRecords,
         onFailure = onCircleRankingFailure
     )
+    override val drawingTopicPicker = DrawingTopicPicker()
 }
