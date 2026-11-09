@@ -10,11 +10,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kr.roadcanvas.app.account.AccountState
 import kr.roadcanvas.app.artwork.AccountArtworkAuthorProvider
 import kr.roadcanvas.app.artwork.FirestoreArtworkStore
 import kr.roadcanvas.app.artwork.UnavailableArtworkAuthorProvider
 import kr.roadcanvas.app.artwork.UnavailableArtworkStore
+import kr.roadcanvas.app.circleranking.FirestoreCircleRankingStore
+import kr.roadcanvas.app.circleranking.UnavailableCircleRankingStore
 import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.di.DefaultAppContainer
 import kr.roadcanvas.app.drawing.room.DrawingDatabase
@@ -49,6 +53,12 @@ open class RoadCanvasApplication : Application() {
     /** 빌드에 넣은 네이버 지도 키 ID와 SDK가 알린 인증 실패 상태 */
     val mapAuth = MapAuth(BuildConfig.NAVER_MAP_CLIENT_ID)
 
+    /** 완료 그림 등록. 주기 등록과 순위 화면의 즉시 등록이 겹치지 않도록 [registrationLock]으로 한 번에 하나만 실행한다. */
+    private val drawingRegistration by lazy {
+        DrawingRegistration(container.completedDrawingRepository, FirestoreDrawingUploader())
+    }
+    private val registrationLock = Mutex()
+
     override fun onCreate() {
         super.onCreate()
         NaverMapSetup.configure(this, mapAuth)
@@ -77,11 +87,9 @@ open class RoadCanvasApplication : Application() {
         }
         val account = (registration.state.value as? AccountState.Ready)?.account ?: return
         container.territoryGame.resubmitPending()
-        val drawings =
-            DrawingRegistration(container.completedDrawingRepository, FirestoreDrawingUploader())
         while (true) {
             try {
-                drawings.register(account)
+                registrationLock.withLock { drawingRegistration.register(account) }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -89,6 +97,13 @@ open class RoadCanvasApplication : Application() {
             }
             delay(ACCOUNT_RETRY_DELAY_MILLIS)
         }
+    }
+
+    /** 인증된 계정이 있으면 아직 등록하지 않은 완료 그림을 바로 등록한다. 실패하면 예외를 던진다. */
+    private suspend fun registerDrawingsNow() {
+        val account = (container.accountRegistration.state.value as? AccountState.Ready)?.account
+            ?: return
+        registrationLock.withLock { drawingRegistration.register(account) }
     }
 
     /** 테스트용 Application은 이 함수를 바꿔 대체 구현을 주입한다. */
@@ -131,7 +146,15 @@ open class RoadCanvasApplication : Application() {
                     UnavailableTerritoryOwnerProvider
                 }
             },
-            onTerritoryFailure = { Log.w(TAG, "서버 땅따먹기 요청에 실패했습니다.", it) }
+            onTerritoryFailure = { Log.w(TAG, "서버 땅따먹기 요청에 실패했습니다.", it) },
+            // 동그라미 순위도 같은 조건에서 항상 연결 실패로 안내한다.
+            circleRankingStore = if (firebase) {
+                FirestoreCircleRankingStore()
+            } else {
+                UnavailableCircleRankingStore
+            },
+            syncCircleRecords = { if (firebase) registerDrawingsNow() },
+            onCircleRankingFailure = { Log.w(TAG, "동그라미 순위 요청에 실패했습니다.", it) }
         )
     }
 }

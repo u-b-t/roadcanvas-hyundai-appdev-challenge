@@ -6,6 +6,8 @@ import kr.roadcanvas.app.artwork.ArtworkPublisher
 import kr.roadcanvas.app.artwork.fake.FakeArtworkAuthorProvider
 import kr.roadcanvas.app.artwork.fake.FakeArtworkPublicationRepository
 import kr.roadcanvas.app.artwork.fake.FakeArtworkStore
+import kr.roadcanvas.app.circleranking.CircleRanking
+import kr.roadcanvas.app.circleranking.fake.FakeCircleRankingStore
 import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.drawing.fake.FakeCompletedDrawingRepository
 import kr.roadcanvas.app.drawing.fake.FakeInProgressDrawingRepository
@@ -76,6 +78,10 @@ class FakeAppContainer : AppContainer {
 
     override val voiceGuide = FakeVoiceGuide()
 
+    /** 동그라미 순위 서버 저장소. 순위를 읽는 사용자는 [voterUid]와 같은 인증 사용자다. */
+    val circleRankingStore = FakeCircleRankingStore()
+    override val circleRanking = CircleRanking(circleRankingStore, currentUid = { voterUid })
+
     /** 시나리오 사이에 상태가 이어지지 않도록 초기 상태로 되돌린다. */
     fun reset() {
         recordingRunner.reset()
@@ -95,6 +101,7 @@ class FakeAppContainer : AppContainer {
         territoryNowMillis = DEFAULT_TERRITORY_NOW_MILLIS
         captureCount = 0
         voiceGuide.reset()
+        circleRankingStore.reset()
         challengeRecorder = newRecorder()
     }
 

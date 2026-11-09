@@ -8,6 +8,9 @@ import kr.roadcanvas.app.artwork.ArtworkPublisher
 import kr.roadcanvas.app.artwork.ArtworkStore
 import kr.roadcanvas.app.artwork.UnavailableArtworkAuthorProvider
 import kr.roadcanvas.app.artwork.UnavailableArtworkStore
+import kr.roadcanvas.app.circleranking.CircleRanking
+import kr.roadcanvas.app.circleranking.CircleRankingStore
+import kr.roadcanvas.app.circleranking.UnavailableCircleRankingStore
 import kr.roadcanvas.app.drawing.CompletedDrawingRepository
 import kr.roadcanvas.app.drawing.DrawingStorage
 import kr.roadcanvas.app.drawing.InProgressDrawingRepository
@@ -50,6 +53,8 @@ import kr.roadcanvas.app.voice.VoiceGuide
  * 서버 땅따먹기도 Firebase 설정이 있을 때만 [territoryStore]와 [territoryOwnerProvider]를 넘기며,
  * 기본값은 항상 실패해 획득을 기기에 남긴다.
  * 음성 안내는 Context가 필요하므로 Application이 [voiceGuide]로 넘기며, 기본값은 읽지 않는다.
+ * 동그라미 순위도 Firebase 설정이 있을 때만 [circleRankingStore]를 넘기고, 읽기 전에 [syncCircleRecords]로
+ * 기기의 완료 기록을 등록한다.
  */
 class DefaultAppContainer(
     selection: VehicleIntegrationSelection,
@@ -72,7 +77,10 @@ class DefaultAppContainer(
         UnavailableTerritoryOwnerProvider
     },
     onTerritoryFailure: (Throwable) -> Unit = {},
-    override val voiceGuide: VoiceGuide = SilentVoiceGuide()
+    override val voiceGuide: VoiceGuide = SilentVoiceGuide(),
+    circleRankingStore: CircleRankingStore = UnavailableCircleRankingStore,
+    syncCircleRecords: suspend () -> Unit = {},
+    onCircleRankingFailure: (Throwable) -> Unit = {}
 ) : AppContainer {
     override val accountRegistration = AccountRegistration(FirebaseAccountProvider())
 
@@ -129,5 +137,12 @@ class DefaultAppContainer(
         drawingStorage.territoryCaptures,
         territoryOwnerProvider(accountRegistration),
         onFailure = onTerritoryFailure
+    )
+
+    override val circleRanking = CircleRanking(
+        circleRankingStore,
+        currentUid = { (accountRegistration.state.value as? AccountState.Ready)?.account?.uid },
+        syncRecords = syncCircleRecords,
+        onFailure = onCircleRankingFailure
     )
 }
