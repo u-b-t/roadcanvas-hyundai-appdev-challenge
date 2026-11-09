@@ -7,9 +7,9 @@ import kr.roadcanvas.app.artwork.ArtworkPublisher
 import kr.roadcanvas.app.artwork.fake.FakeArtworkAuthorProvider
 import kr.roadcanvas.app.artwork.fake.FakeArtworkPublicationRepository
 import kr.roadcanvas.app.artwork.fake.FakeArtworkStore
+import kr.roadcanvas.app.challenge.DrawingTopicPicker
 import kr.roadcanvas.app.circleranking.CircleRanking
 import kr.roadcanvas.app.circleranking.fake.FakeCircleRankingStore
-import kr.roadcanvas.app.challenge.DrawingTopicPicker
 import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.drawing.fake.FakeCompletedDrawingRepository
 import kr.roadcanvas.app.drawing.fake.FakeInProgressDrawingRepository
@@ -83,6 +83,7 @@ class FakeAppContainer : AppContainer {
     /** 동그라미 순위 서버 저장소. 순위를 읽는 사용자는 [voterUid]와 같은 인증 사용자다. */
     val circleRankingStore = FakeCircleRankingStore()
     override val circleRanking = CircleRanking(circleRankingStore, currentUid = { voterUid })
+
     /** 오늘의 주제는 날짜와 관계없이 첫 주제부터 보이도록 날짜를 고정한다. */
     override val drawingTopicPicker = DrawingTopicPicker(today = { TOPIC_DATE })
 

@@ -2,8 +2,8 @@ package kr.roadcanvas.app.di
 
 import kr.roadcanvas.app.account.AccountRegistration
 import kr.roadcanvas.app.artwork.ArtworkPublisher
-import kr.roadcanvas.app.circleranking.CircleRanking
 import kr.roadcanvas.app.challenge.DrawingTopicPicker
+import kr.roadcanvas.app.circleranking.CircleRanking
 import kr.roadcanvas.app.drawing.CompletedDrawingRepository
 import kr.roadcanvas.app.drawing.InProgressDrawingRepository
 import kr.roadcanvas.app.gallery.PublicGallery
