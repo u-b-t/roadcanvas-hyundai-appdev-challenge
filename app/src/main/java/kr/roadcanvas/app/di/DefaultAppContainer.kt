@@ -21,6 +21,9 @@ import kr.roadcanvas.app.gallery.UnavailablePublicArtworkStore
 import kr.roadcanvas.app.map.MapAuth
 import kr.roadcanvas.app.map.RouteMapComponent
 import kr.roadcanvas.app.map.naver.NaverRouteMapComponent
+import kr.roadcanvas.app.profile.Profile
+import kr.roadcanvas.app.profile.ProfileStore
+import kr.roadcanvas.app.profile.UnavailableProfileStore
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingRunner
 import kr.roadcanvas.app.territory.TerritoryGame
@@ -56,6 +59,7 @@ import kr.roadcanvas.app.voice.VoiceGuide
  * 음성 안내는 Context가 필요하므로 Application이 [voiceGuide]로 넘기며, 기본값은 읽지 않는다.
  * 동그라미 순위도 Firebase 설정이 있을 때만 [circleRankingStore]를 넘기고, 읽기 전에 [syncCircleRecords]로
  * 기기의 완료 기록을 등록한다.
+ * 프로필도 Firebase 설정이 있을 때만 [profileStore]를 넘기고, 기본값은 항상 연결 실패다.
  */
 class DefaultAppContainer(
     selection: VehicleIntegrationSelection,
@@ -81,7 +85,9 @@ class DefaultAppContainer(
     override val voiceGuide: VoiceGuide = SilentVoiceGuide(),
     circleRankingStore: CircleRankingStore = UnavailableCircleRankingStore,
     syncCircleRecords: suspend () -> Unit = {},
-    onCircleRankingFailure: (Throwable) -> Unit = {}
+    onCircleRankingFailure: (Throwable) -> Unit = {},
+    profileStore: ProfileStore = UnavailableProfileStore,
+    onProfileFailure: (Throwable) -> Unit = {}
 ) : AppContainer {
     override val accountRegistration = AccountRegistration(FirebaseAccountProvider())
 
@@ -147,4 +153,6 @@ class DefaultAppContainer(
         onFailure = onCircleRankingFailure
     )
     override val drawingTopicPicker = DrawingTopicPicker()
+
+    override val profile = Profile(accountRegistration, profileStore, onFailure = onProfileFailure)
 }

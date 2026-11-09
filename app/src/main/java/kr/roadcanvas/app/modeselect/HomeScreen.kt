@@ -27,6 +27,7 @@ import com.shopl.sdg_common.foundation.SDGColor
 import com.shopl.sdg_common.foundation.SDGCornerRadius
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.mydrawings.ModeThumbnail
+import kr.roadcanvas.app.profile.PROFILE_LABEL
 import kr.roadcanvas.app.splash.APP_NAME
 import kr.roadcanvas.app.territorymap.TERRITORY_MAP_LABEL
 import kr.roadcanvas.app.ui.components.COVER_BACKGROUND_COLOR
@@ -110,7 +111,8 @@ fun HomeScreen(
     onGalleryClick: () -> Unit,
     onMyDrawingsClick: () -> Unit,
     modifier: Modifier = Modifier,
-    recordSummary: ModeRecordSummary? = null
+    recordSummary: ModeRecordSummary? = null,
+    onProfileClick: () -> Unit = {}
 ) {
     val sections = listOf(
         HomeSection(
@@ -147,7 +149,7 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(CONTROL_SPACING)
             ) {
-                // 모든 모드의 기록을 모아 보는 내 그림은 어느 섹션에도 속하지 않으므로 제목 줄에 둔다.
+                // 모든 모드의 기록을 모아 보는 내 그림과 프로필은 어느 섹션에도 속하지 않으므로 제목 줄에 둔다.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -160,6 +162,7 @@ fun HomeScreen(
                         modifier = Modifier.weight(1f)
                     )
                     SecondaryCoverButton(text = MY_DRAWINGS_LABEL, onClick = onMyDrawingsClick)
+                    SecondaryCoverButton(text = PROFILE_LABEL, onClick = onProfileClick)
                 }
                 Column(
                     modifier = Modifier

@@ -3,6 +3,7 @@ Feature: Firebase 클라이언트 목록 조회와 프로필 변경
 
   Issues:
   - [#83 feat: 클라이언트 목록 조회와 프로필 계약 보완](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/83)
+  - [#126 feat: 프로필 화면과 닉네임 변경 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/126)
 
   Scenario: 공개 작품을 최신순으로 조회한다
     Given 공개 작품과 다른 사용자의 비공개 작품이 있다
@@ -14,10 +15,10 @@ Feature: Firebase 클라이언트 목록 조회와 프로필 변경
     When 자기 작품을 최신순으로 조회한다
     Then 자기 공개 작품과 초안을 최신순으로 표시한다
 
-  Scenario: 닉네임 변경이 중간에 실패한다
-    Given 사용자의 프로필과 리더보드 및 공개 작품이 있다
+  Scenario: 닉네임 변경이 실패한다
+    Given 사용자의 프로필과 리더보드, 땅따먹기 순위 및 공개 작품이 있다
     When 닉네임 반영 중 네트워크가 끊긴다
-    Then 성공한 변경은 유지하고 남은 반영을 재시도한다
+    Then 어느 문서의 닉네임도 바뀌지 않고 사용자가 다시 저장해 재시도한다
 
   Scenario: 동점 사용자의 순위를 조회한다
     Given 같은 점수를 가진 사용자가 둘 이상 있다

@@ -34,6 +34,7 @@ import kr.roadcanvas.app.map.RoutePoint
 import kr.roadcanvas.app.modeselect.HomeScreen
 import kr.roadcanvas.app.modeselect.rememberModeRecordSummary
 import kr.roadcanvas.app.mydrawings.MyDrawingsRoute
+import kr.roadcanvas.app.profile.ProfileRoute
 import kr.roadcanvas.app.splash.SPLASH_DURATION_MILLIS
 import kr.roadcanvas.app.splash.SplashScreen
 import kr.roadcanvas.app.territorymap.TerritoryMapRoute
@@ -107,6 +108,9 @@ object Routes {
     const val CIRCLE_RECORD = "circleRanking/{$ARG_UID}"
 
     fun circleRecord(uid: String) = "circleRanking/${Uri.encode(uid)}"
+
+    /** 닉네임과 내 기록 요약 */
+    const val PROFILE = "profile"
 
     /** 공개 작품 목록과 [ARG_ARTWORK_ID] 작품의 상세 */
     const val GALLERY = "gallery"
@@ -192,7 +196,8 @@ fun RoadCanvasNavHost(
                 onFreeDrawingClick = { navController.navigate(Routes.FREE_READY) },
                 onGalleryClick = { navController.navigate(Routes.GALLERY) },
                 onMyDrawingsClick = { navController.navigate(Routes.MY_DRAWINGS) },
-                recordSummary = rememberModeRecordSummary().value
+                recordSummary = rememberModeRecordSummary().value,
+                onProfileClick = { navController.navigate(Routes.PROFILE) }
             )
         }
         DrawingMode.entries.forEach { mode ->
@@ -305,6 +310,9 @@ fun RoadCanvasNavHost(
                 uid = requireNotNull(entry.arguments?.getString(Routes.ARG_UID)),
                 onBack = { navController.popBackStack() }
             )
+        }
+        screen(Routes.PROFILE) {
+            ProfileRoute(onBack = { navController.popBackStack() })
         }
         screen(Routes.GALLERY) {
             PublicGalleryRoute(

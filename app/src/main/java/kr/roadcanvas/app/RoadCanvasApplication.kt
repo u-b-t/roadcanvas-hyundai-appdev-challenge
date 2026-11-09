@@ -27,6 +27,8 @@ import kr.roadcanvas.app.gallery.FirestorePublicArtworkStore
 import kr.roadcanvas.app.gallery.UnavailablePublicArtworkStore
 import kr.roadcanvas.app.map.MapAuth
 import kr.roadcanvas.app.map.naver.NaverMapSetup
+import kr.roadcanvas.app.profile.FirestoreProfileStore
+import kr.roadcanvas.app.profile.UnavailableProfileStore
 import kr.roadcanvas.app.recording.ServiceRecordingRunner
 import kr.roadcanvas.app.territory.AccountTerritoryOwnerProvider
 import kr.roadcanvas.app.territory.FirestoreTerritoryStore
@@ -85,11 +87,12 @@ open class RoadCanvasApplication : Application() {
             delay(ACCOUNT_RETRY_DELAY_MILLIS)
             registration.register()
         }
-        val account = (registration.state.value as? AccountState.Ready)?.account ?: return
+        if (registration.state.value !is AccountState.Ready) return
         container.territoryGame.resubmitPending()
         while (true) {
             try {
-                registrationLock.withLock { drawingRegistration.register(account) }
+                // 프로필에서 바꾼 닉네임으로 등록하도록 매번 현재 계정을 읽는다.
+                registerDrawingsNow()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -154,7 +157,9 @@ open class RoadCanvasApplication : Application() {
                 UnavailableCircleRankingStore
             },
             syncCircleRecords = { if (firebase) registerDrawingsNow() },
-            onCircleRankingFailure = { Log.w(TAG, "동그라미 순위 요청에 실패했습니다.", it) }
+            onCircleRankingFailure = { Log.w(TAG, "동그라미 순위 요청에 실패했습니다.", it) },
+            profileStore = if (firebase) FirestoreProfileStore() else UnavailableProfileStore,
+            onProfileFailure = { Log.w(TAG, "프로필 요청에 실패했습니다.", it) }
         )
     }
 }
