@@ -17,7 +17,7 @@
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
     </queries>
-    <application android:name=".RoadCanvasApplication" android:label="RoadCanvas" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+    <application android:name=".RoadCanvasApplication" android:icon="@mipmap/ic_launcher" android:label="로드캔버스" android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <uses-library android:name="android.car" android:required="false" />
         <activity
             android:name=".MainActivity"
