@@ -36,6 +36,8 @@ import kr.roadcanvas.app.vehicle.simulated.SimulatedDrivingRestrictionProvider
 import kr.roadcanvas.app.vehicle.simulated.SimulatedLocationProvider
 import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteConfig
 import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteGenerator
+import kr.roadcanvas.app.voice.SilentVoiceGuide
+import kr.roadcanvas.app.voice.VoiceGuide
 
 /**
  * 빌드 속성으로 고른 구현을 구성한다. 실제 구현이 없는 동안에는 모의 구현을 사용한다.
@@ -47,6 +49,7 @@ import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteGenerator
  * 공개 작품은 Firebase 설정이 있을 때만 Application이 [publicArtworkStore]로 서버 저장소를 넘긴다.
  * 서버 땅따먹기도 Firebase 설정이 있을 때만 [territoryStore]와 [territoryOwnerProvider]를 넘기며,
  * 기본값은 항상 실패해 획득을 기기에 남긴다.
+ * 음성 안내는 Context가 필요하므로 Application이 [voiceGuide]로 넘기며, 기본값은 읽지 않는다.
  */
 class DefaultAppContainer(
     selection: VehicleIntegrationSelection,
@@ -68,7 +71,8 @@ class DefaultAppContainer(
     territoryOwnerProvider: (AccountRegistration) -> TerritoryOwnerProvider = {
         UnavailableTerritoryOwnerProvider
     },
-    onTerritoryFailure: (Throwable) -> Unit = {}
+    onTerritoryFailure: (Throwable) -> Unit = {},
+    override val voiceGuide: VoiceGuide = SilentVoiceGuide()
 ) : AppContainer {
     override val accountRegistration = AccountRegistration(FirebaseAccountProvider())
 
