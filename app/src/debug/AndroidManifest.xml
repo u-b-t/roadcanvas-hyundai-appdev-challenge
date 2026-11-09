@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application>
         <!-- 경로 지도 확인용 디버그 전용 화면. adb로 직접 실행하며 앱 화면 흐름에는 넣지 않는다. -->
         <activity android:name=".debug.RouteMapPreviewActivity" android:exported="true" />
@@ -11,5 +12,9 @@
             android:name=".debug.SeedDrawingsActivity"
             android:exported="true"
             android:theme="@android:style/Theme.NoDisplay" />
+        <!-- androidTest가 화면을 띄우는 ui-test-manifest의 화면. 기어가 D여도 플랫폼이 가리지 않도록 DO를 선언한다. -->
+        <activity android:name="androidx.activity.ComponentActivity" tools:node="merge">
+            <meta-data android:name="distractionOptimized" android:value="true" />
+        </activity>
     </application>
 </manifest>
