@@ -22,6 +22,8 @@ enum class ChallengeProgressPhase {
  * 진행 화면 상태. [path]와 [elapsedMillis]는 화면 갱신 시점의 값이다.
  * [lap]은 [path]로 계산한 출발점까지 거리와 회전 진행률이다.
  * [mode]는 기록 중인 도전의 모드이며 기록을 준비하는 중이거나 모르면 null이다.
+ * [territoryEstimate]는 땅따먹기에서 [path]를 출발점까지 이어 닫은 예상 영역이며 일정 간격으로만 다시 계산한다.
+ * [startApproach]는 땅따먹기에서 출발점에 얼마나 가까워졌는지다.
  */
 data class ChallengeProgressUiState(
     val phase: ChallengeProgressPhase,
@@ -30,8 +32,15 @@ data class ChallengeProgressUiState(
     val path: List<RoutePoint>,
     val restriction: DrivingRestriction,
     val lap: LapProgress = LapProgress.EMPTY,
-    val mode: DrawingMode? = null
+    val mode: DrawingMode? = null,
+    val territoryEstimate: TerritoryEstimate? = null,
+    val startApproach: StartApproach = StartApproach.AWAY
 ) {
+    /** 땅따먹기 예상 영역과 출발점 접근 안내를 보여줄지 */
+    val showsTerritoryProgress: Boolean
+        get() = mode == DrawingMode.TERRITORY &&
+            (phase == ChallengeProgressPhase.RECORDING || phase == ChallengeProgressPhase.FINISHED)
+
     /**
      * 기록 중 조작할 수 없는 상태. 주행 중이거나 주행 상태를 확인할 수 없으면 종료·포기 버튼을 숨기고
      * 측정값을 크게 보여준다.
@@ -67,11 +76,15 @@ data class ChallengeProgressUiState(
         }
 }
 
-/** 기록 상태와 주행 규제를 [nowMillis] 시점의 화면 상태로 바꾼다. */
+/**
+ * 기록 상태와 주행 규제를 [nowMillis] 시점의 화면 상태로 바꾼다.
+ * 땅따먹기 기록이면 따로 계산한 [territoryEstimate]와 출발점 접근 단계를 함께 넣는다.
+ */
 fun challengeProgressOf(
     recording: RecordingState,
     restriction: DrivingRestriction,
-    nowMillis: Long
+    nowMillis: Long,
+    territoryEstimate: TerritoryEstimate? = null
 ): ChallengeProgressUiState = when (recording) {
     RecordingState.Idle -> ChallengeProgressUiState(
         ChallengeProgressPhase.PREPARING,
@@ -87,7 +100,13 @@ fun challengeProgressOf(
         path = recording.path,
         restriction = restriction,
         lap = lapProgressOf(recording.path),
-        mode = recording.mode
+        mode = recording.mode,
+        territoryEstimate = territoryEstimate.takeIf { recording.mode == DrawingMode.TERRITORY },
+        startApproach = if (recording.mode == DrawingMode.TERRITORY) {
+            startApproachOf(recording.path)
+        } else {
+            StartApproach.AWAY
+        }
     )
     is RecordingState.Finished -> ChallengeProgressUiState(
         phase = ChallengeProgressPhase.FINISHED,

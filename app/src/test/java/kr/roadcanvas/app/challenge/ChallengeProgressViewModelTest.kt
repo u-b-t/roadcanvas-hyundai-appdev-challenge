@@ -1,5 +1,6 @@
 package kr.roadcanvas.app.challenge
 
+import kotlin.math.PI
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,6 +19,7 @@ import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingRequest
 import kr.roadcanvas.app.recording.RecordingState
 import kr.roadcanvas.app.recording.fake.FakeRecordingRunner
+import kr.roadcanvas.app.score.TestPaths
 import kr.roadcanvas.app.vehicle.DrivingRestriction
 import kr.roadcanvas.app.vehicle.LocationSample
 import kr.roadcanvas.app.vehicle.fake.FakeDrivingRestrictionProvider
@@ -95,6 +97,47 @@ class ChallengeProgressViewModelTest {
         advanceTimeBy(PROGRESS_REFRESH_MILLIS + 1)
         assertEquals(1, viewModel.uiState.value.path.size)
         assertEquals(1_000L, viewModel.uiState.value.elapsedMillis)
+    }
+
+    @Test
+    fun `땅따먹기는 일정 간격으로 예상 영역을 계산한다`() = runTest(dispatcher) {
+        runner.run(RecordingRequest.New(DrawingMode.TERRITORY))
+        locationProvider.subscriberCount.first { it > 0 }
+        val viewModel = ChallengeProgressViewModel(
+            recorder,
+            runner,
+            restrictionProvider,
+            clock = { now },
+            estimateDispatcher = dispatcher
+        )
+        subscribe(viewModel)
+        assertNull(viewModel.uiState.value.territoryEstimate)
+
+        TestPaths.semicircle(60.0).forEach {
+            locationProvider.sendLocation(LocationSample(it.latitude, it.longitude, now))
+        }
+        advanceTimeBy(TERRITORY_ESTIMATE_REFRESH_MILLIS + 1)
+
+        val state = viewModel.uiState.value
+        assertTrue(state.showsTerritoryProgress)
+        assertEquals(PI * 60 * 60 / 2, state.territoryEstimate!!.areaSquareMeters, 100.0)
+        // 반원 끝점이 출발점에서 가장 먼 점(지름 120m)이라 아직 돌아오는 중이 아니다.
+        assertEquals(StartApproach.AWAY, state.startApproach)
+    }
+
+    @Test
+    fun `땅따먹기가 아니면 예상 영역을 계산하지 않는다`() = runTest(dispatcher) {
+        startRecording()
+        val viewModel = viewModel()
+        subscribe(viewModel)
+        TestPaths.semicircle(60.0).forEach {
+            locationProvider.sendLocation(LocationSample(it.latitude, it.longitude, now))
+        }
+
+        advanceTimeBy(TERRITORY_ESTIMATE_REFRESH_MILLIS + 1)
+
+        assertNull(viewModel.uiState.value.territoryEstimate)
+        assertFalse(viewModel.uiState.value.showsTerritoryProgress)
     }
 
     @Test

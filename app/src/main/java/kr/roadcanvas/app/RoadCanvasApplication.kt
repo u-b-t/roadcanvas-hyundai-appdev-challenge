@@ -33,6 +33,7 @@ import kr.roadcanvas.app.upload.FirestoreDrawingUploader
 import kr.roadcanvas.app.vehicle.VehicleIntegrationSelection
 import kr.roadcanvas.app.vehicle.aaos.AndroidCarUxRestrictionsClient
 import kr.roadcanvas.app.vehicle.pleos.PleosLocationProvider
+import kr.roadcanvas.app.voice.TextToSpeechVoiceGuide
 
 private const val TAG = "RoadCanvas"
 
@@ -118,6 +119,7 @@ open class RoadCanvasApplication : Application() {
                 UnavailablePublicArtworkStore
             },
             onGalleryFailure = { Log.w(TAG, "공개 작품 요청에 실패했습니다.", it) },
+            voiceGuide = TextToSpeechVoiceGuide(this),
             // 서버 땅따먹기도 같은 조건에서 획득을 기기에 남기고 연결 실패로 안내한다.
             territoryStore = if (firebase) FirestoreTerritoryStore() else UnavailableTerritoryStore,
             territoryOwnerProvider = {

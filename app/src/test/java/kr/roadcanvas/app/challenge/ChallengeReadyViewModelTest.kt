@@ -9,6 +9,14 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kr.roadcanvas.app.score.GeoPoint
+import kr.roadcanvas.app.territory.Geohash
+import kr.roadcanvas.app.territory.NearbyTerritory
+import kr.roadcanvas.app.territory.TERRITORY_CELL_PRECISION
+import kr.roadcanvas.app.territory.TerritoryGame
+import kr.roadcanvas.app.territory.fake.FakeTerritoryCaptureRepository
+import kr.roadcanvas.app.territory.fake.FakeTerritoryOwnerProvider
+import kr.roadcanvas.app.territory.fake.FakeTerritoryStore
 import kr.roadcanvas.app.vehicle.DrivingRestriction
 import kr.roadcanvas.app.vehicle.LocationAvailability
 import kr.roadcanvas.app.vehicle.LocationSample
@@ -146,5 +154,41 @@ class ChallengeReadyViewModelTest {
 
         assertNull(viewModel.currentLocation.value)
         assertEquals(ChallengeReadyStatus.LocatingPosition, viewModel.status.value)
+    }
+
+    @Test
+    fun `땅따먹기 준비 화면은 현재 위치 주변 칸을 읽고 멀리 움직이면 다시 읽는다`() = runTest(dispatcher) {
+        val store = FakeTerritoryStore()
+        val cityHall = GeoPoint(37.5665, 126.978)
+        store.putCells(
+            "u1",
+            "드라이버-01",
+            listOf(Geohash.encode(cityHall, TERRITORY_CELL_PRECISION))
+        )
+        val game = TerritoryGame(
+            store,
+            FakeTerritoryCaptureRepository(),
+            FakeTerritoryOwnerProvider()
+        )
+        val territoryViewModel =
+            ChallengeReadyViewModel(locationProvider, drivingRestrictionProvider, game)
+        backgroundScope.launch { territoryViewModel.nearbyTerritory.collect {} }
+        assertEquals(NearbyTerritory.Loading, territoryViewModel.nearbyTerritory.value)
+
+        sendLocation()
+        locationProvider.sendLocation(LocationSample(37.5666, 126.978, 1L))
+
+        val loaded = territoryViewModel.nearbyTerritory.value as NearbyTerritory.Loaded
+        assertEquals(1, loaded.summary.totalCells)
+        assertEquals(1, store.requests.count { it.startsWith("cells:") })
+
+        locationProvider.sendLocation(LocationSample(37.5765, 126.978, 2L))
+
+        assertEquals(2, store.requests.count { it.startsWith("cells:") })
+    }
+
+    @Test
+    fun `땅따먹기가 아니면 주변 칸을 읽지 않는다`() = runTest(dispatcher) {
+        assertNull(viewModel.nearbyTerritory.value)
     }
 }

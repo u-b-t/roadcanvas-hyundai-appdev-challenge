@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -128,6 +129,7 @@ fun ChallengeProgressRoute(
     BackHandler(enabled = state.phase != ChallengeProgressPhase.FAILED) {}
 
     val screenMode = state.mode ?: mode ?: DrawingMode.CIRCLE
+    TerritoryApproachSpeech(state.startApproach)
     ChallengeProgressScreen(
         state = state.copy(mode = screenMode),
         onFinish = { viewModel.finish(onFinished) },
@@ -149,6 +151,20 @@ fun ChallengeProgressRoute(
     }
 }
 
+/**
+ * 땅따먹기에서 출발점에 더 가까운 단계로 들어올 때 한 번씩 음성으로 안내한다.
+ * 화면이 다시 만들어져도 같은 단계를 다시 읽지 않도록 마지막 단계를 저장한다.
+ */
+@Composable
+private fun TerritoryApproachSpeech(approach: StartApproach) {
+    val voiceGuide = LocalContext.current.appContainer.voiceGuide
+    var announced by rememberSaveable { mutableStateOf(StartApproach.AWAY) }
+    LaunchedEffect(approach) {
+        approachSpeechOf(announced, approach)?.let(voiceGuide::speak)
+        announced = approach
+    }
+}
+
 @Composable
 fun ChallengeProgressScreen(
     state: ChallengeProgressUiState,
@@ -166,6 +182,9 @@ fun ChallengeProgressScreen(
                 options = RouteMapOptions(
                     showEndpointMarkers = true,
                     inProgress = true,
+                    filledArea = state.territoryEstimate?.boundary
+                        ?.takeIf { state.showsTerritoryProgress }
+                        ?.map { RoutePoint(it.latitude, it.longitude) },
                     contentPadding = driverSideOverlayContentPadding(),
                     currentPosition = state.path.lastOrNull()?.let {
                         CurrentPosition(
@@ -189,8 +208,16 @@ fun ChallengeProgressScreen(
                     ChallengeProgressPhase.RECORDING, ChallengeProgressPhase.FINISHED -> {
                         if (state.showsFinishGuidance) {
                             Guidance(FINISH_GUIDANCE, MaterialTheme.colorScheme.primary)
+                        } else if (state.showsTerritoryProgress) {
+                            state.startApproach.guidance?.let {
+                                Guidance(it, approachColor(state.startApproach))
+                            }
                         }
-                        ProgressMeasurements(state)
+                        if (state.showsTerritoryProgress) {
+                            TerritoryMeasurements(state)
+                        } else {
+                            ProgressMeasurements(state)
+                        }
                     }
                 }
                 if (state.phase != ChallengeProgressPhase.FAILED && !state.showsFinishGuidance) {
@@ -280,6 +307,35 @@ private fun ProgressMeasurements(state: ChallengeProgressUiState) {
     if (!large) Measurement(TURN_PROGRESS_LABEL, formatTurnPercent(state.lap.turnPercent))
 }
 
+/**
+ * 땅따먹기 측정값. 주행 중에는 출발점까지 거리와 예상 면적만 크게 보여주고,
+ * 정차 중에는 경과 시간, 이동 거리와 예상 칸 수까지 보여준다. 출발점에 가까워지면 거리를 강조한다.
+ */
+@Composable
+private fun TerritoryMeasurements(state: ChallengeProgressUiState) {
+    val large = state.driving
+    if (!large) {
+        Measurement(ELAPSED_LABEL, formatElapsed(state.elapsedMillis))
+        Measurement(DISTANCE_LABEL, formatDistance(state.distanceMeters))
+    }
+    Measurement(
+        DISTANCE_TO_START_LABEL,
+        formatDistanceToStart(state.lap.distanceToStartMeters),
+        large,
+        valueColor = approachColor(state.startApproach)
+    )
+    Measurement(ESTIMATED_AREA_LABEL, formatEstimatedArea(state.territoryEstimate), large)
+    if (!large) Measurement(ESTIMATED_CELLS_LABEL, formatEstimatedCells(state.territoryEstimate))
+}
+
+/** 출발점 접근 단계의 강조 색. 멀면 기본 글자 색이다. */
+@Composable
+private fun approachColor(approach: StartApproach): Color = when (approach) {
+    StartApproach.AWAY -> MaterialTheme.colorScheme.onSurface
+    StartApproach.NEAR -> MaterialTheme.colorScheme.secondary
+    StartApproach.ARRIVING -> MaterialTheme.colorScheme.primary
+}
+
 /** 짧고 크게 쓰는 안내. 주행 중에도 읽을 수 있도록 [color]로 강조한다. */
 @Composable
 private fun Guidance(text: String, color: Color) {
@@ -287,7 +343,12 @@ private fun Guidance(text: String, color: Color) {
 }
 
 @Composable
-internal fun Measurement(label: String, value: String, large: Boolean = false) {
+internal fun Measurement(
+    label: String,
+    value: String,
+    large: Boolean = false,
+    valueColor: Color = Color.Unspecified
+) {
     val typography = MaterialTheme.typography
     // 이름과 값을 한 번에 읽도록 묶는다.
     Column(modifier = Modifier.semantics(mergeDescendants = true) {}) {
@@ -296,6 +357,10 @@ internal fun Measurement(label: String, value: String, large: Boolean = false) {
             style = if (large) typography.titleLarge else typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Text(text = value, style = if (large) typography.displayMedium else typography.displaySmall)
+        Text(
+            text = value,
+            style = if (large) typography.displayMedium else typography.displaySmall,
+            color = valueColor
+        )
     }
 }

@@ -10,12 +10,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kr.roadcanvas.app.drawing.toRoutePoint
+import kr.roadcanvas.app.recording.distanceTo
+import kr.roadcanvas.app.score.GeoPoint
+import kr.roadcanvas.app.territory.NEARBY_TERRITORY_RELOAD_METERS
+import kr.roadcanvas.app.territory.NearbyTerritory
+import kr.roadcanvas.app.territory.TerritoryGame
+import kr.roadcanvas.app.territory.nearbyTerritory
 import kr.roadcanvas.app.vehicle.DrivingRestrictionProvider
 import kr.roadcanvas.app.vehicle.LocationProvider
 import kr.roadcanvas.app.vehicle.LocationSample
@@ -23,11 +32,13 @@ import kr.roadcanvas.app.vehicle.LocationSample
 /**
  * 준비 화면의 시작 조건을 구독한다. 화면이 보이는 동안에만 위치와 주행 규제를 구독하고,
  * 화면을 떠나 구독자가 없어지면 바로 구독을 해제한다.
+ * 땅따먹기 준비 화면은 [territoryGame]을 받아 현재 위치 주변의 서버 칸을 읽는다.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChallengeReadyViewModel(
     private val locationProvider: LocationProvider,
-    drivingRestrictionProvider: DrivingRestrictionProvider
+    drivingRestrictionProvider: DrivingRestrictionProvider,
+    territoryGame: TerritoryGame? = null
 ) : ViewModel() {
     private val locationRequest = MutableStateFlow(0)
     private val permissionPermanentlyDenied = MutableStateFlow(false)
@@ -53,6 +64,24 @@ class ChallengeReadyViewModel(
         started = SharingStarted.WhileSubscribed(),
         initialValue = null
     )
+
+    /**
+     * 현재 위치 주변 영토. 땅따먹기가 아니면 null이다. 처음 위치를 받으면 읽고,
+     * [NEARBY_TERRITORY_RELOAD_METERS]보다 멀리 움직이면 다시 읽는다.
+     */
+    val nearbyTerritory: StateFlow<NearbyTerritory?> = territoryGame?.let { game ->
+        latestLocation.filterNotNull()
+            .map { it.toRoutePoint() }
+            .distinctUntilChanged { old, new ->
+                old.distanceTo(new) <= NEARBY_TERRITORY_RELOAD_METERS
+            }
+            .mapLatest { game.nearbyTerritory(GeoPoint(it.latitude, it.longitude)) }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(),
+                initialValue = NearbyTerritory.Loading
+            )
+    } ?: MutableStateFlow(null)
 
     val status: StateFlow<ChallengeReadyStatus> = combine(
         locationProvider.availability,

@@ -20,6 +20,7 @@ import kr.roadcanvas.app.territory.fake.FakeTerritoryOwnerProvider
 import kr.roadcanvas.app.territory.fake.FakeTerritoryStore
 import kr.roadcanvas.app.vehicle.IntegrationSource
 import kr.roadcanvas.app.vehicle.VehicleIntegrationInfo
+import kr.roadcanvas.app.voice.fake.FakeVoiceGuide
 
 /** 테스트용 대체 구현을 담은 컨테이너 */
 class FakeAppContainer : AppContainer {
@@ -73,6 +74,8 @@ class FakeAppContainer : AppContainer {
         conflictRetryDelayMillis = 0
     )
 
+    override val voiceGuide = FakeVoiceGuide()
+
     /** 시나리오 사이에 상태가 이어지지 않도록 초기 상태로 되돌린다. */
     fun reset() {
         recordingRunner.reset()
@@ -91,6 +94,7 @@ class FakeAppContainer : AppContainer {
         territoryOwnerProvider.reset()
         territoryNowMillis = DEFAULT_TERRITORY_NOW_MILLIS
         captureCount = 0
+        voiceGuide.reset()
         challengeRecorder = newRecorder()
     }
 
