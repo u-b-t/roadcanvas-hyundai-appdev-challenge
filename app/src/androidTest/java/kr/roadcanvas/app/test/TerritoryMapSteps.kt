@@ -1,5 +1,7 @@
 package kr.roadcanvas.app.test
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
@@ -18,10 +20,18 @@ import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
 import kotlin.math.cos
 import kotlin.math.hypot
+import kotlin.math.sin
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kr.roadcanvas.app.RoadCanvasApplication
 import kr.roadcanvas.app.challenge.formatArea
+import kr.roadcanvas.app.drawing.CompletedDrawing
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
+import kr.roadcanvas.app.drawing.StorageResult
+import kr.roadcanvas.app.drawing.TERRITORY_AREA_METRIC
+import kr.roadcanvas.app.map.RoutePoint as MapPoint
 import kr.roadcanvas.app.map.fake.FakeRouteMapComponent
 import kr.roadcanvas.app.modeselect.MODE_SELECT_TITLE
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
@@ -43,6 +53,7 @@ import kr.roadcanvas.app.territorymap.MY_RANK_LABEL
 import kr.roadcanvas.app.territorymap.RANKING_ROW_TAG
 import kr.roadcanvas.app.territorymap.TERRITORY_MAP_LABEL
 import kr.roadcanvas.app.territorymap.TERRITORY_MAP_TITLE
+import kr.roadcanvas.app.vehicle.LocationSample
 import kr.roadcanvas.app.vehicle.fake.FakeAppContainer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -50,6 +61,10 @@ import org.junit.Assert.assertTrue
 private const val WAIT_TIMEOUT_MILLIS = 5_000L
 private const val FAKE_TERRITORY_MAP = "대체 영토 지도"
 private const val METERS_PER_DEGREE_LATITUDE = 111_195.0
+private const val FAKE_CURRENT_POSITION = "대체 현재 위치"
+
+/** 지도 중심 비교 허용 거리. 기록 경로 가운데와 원 중심의 차이를 받아들인다. */
+private const val CENTER_TOLERANCE_METERS = 20.0
 
 /**
  * 서버 땅따먹기 시나리오. 대체 서버 저장소에 칸을 두고 결과·영토 지도·내 그림 화면을 실제 흐름으로 연다.
@@ -147,6 +162,63 @@ class TerritoryMapSteps(
         composeRule.waitForIdle()
     }
 
+    @Given("서울시청에서 북쪽으로 {int}m 떨어진 곳에 차지한 땅따먹기 기록이 있다")
+    fun saveClaimedTerritoryNorth(meters: Int) {
+        // 북쪽 끝에서 출발해 반지름 50m 원을 돌아 출발점으로 돌아온다.
+        val center = northOfCityHall(meters.toDouble())
+        val start = System.currentTimeMillis() - 60_000L
+        val path = (0..36).map { i ->
+            val angle = Math.toRadians(90.0 + i * 10.0)
+            RoutePoint(
+                center.latitude + 50.0 * sin(angle) / METERS_PER_DEGREE_LATITUDE,
+                center.longitude + 50.0 * cos(angle) /
+                    (METERS_PER_DEGREE_LATITUDE * cos(Math.toRadians(center.latitude))),
+                start + i * 1_000L
+            )
+        }
+        val drawing = CompletedDrawing(
+            mode = DrawingMode.TERRITORY,
+            completedAtMillis = start + 60_000L,
+            path = path,
+            score = 0,
+            metrics = mapOf(TERRITORY_AREA_METRIC to 7_854.0),
+            distanceMeters = 314.0,
+            durationMillis = 36_000L
+        )
+        val saved = runBlocking { fakeContainer.completedDrawingRepository.save(drawing) }
+        assertTrue("저장 결과: $saved", saved is StorageResult.Success)
+    }
+
+    @When("현재 위치를 서울시청에서 북쪽으로 {int}m 떨어진 곳으로 받는다")
+    fun sendLocationNorth(meters: Int) {
+        val point = northOfCityHall(meters.toDouble())
+        val location = fakeContainer.locationProvider
+        runBlocking {
+            withTimeout(WAIT_TIMEOUT_MILLIS) { location.subscriberCount.first { it > 0 } }
+            location.sendLocation(
+                LocationSample(point.latitude, point.longitude, System.currentTimeMillis())
+            )
+        }
+    }
+
+    @Then("영토 지도 중심은 서울시청에서 북쪽으로 {int}m 떨어진 곳이다")
+    fun assertMapCenterNorth(meters: Int) {
+        val expected = northOfCityHall(meters.toDouble())
+        var last: MapPoint? = null
+        val reached = runCatching {
+            waitUntil {
+                last = currentMapCenter()
+                last?.let { distanceMeters(it, expected) <= CENTER_TOLERANCE_METERS } == true
+            }
+        }
+        assertTrue("지도 중심 $last, 기대 $expected", reached.isSuccess)
+    }
+
+    @Then("지도에 내 위치가 표시된다")
+    fun assertMyLocationShown() {
+        waitFor(hasText(FAKE_CURRENT_POSITION, substring = true))
+    }
+
     @Then("서버 반영 상태는 {string}이다")
     @Then("서버 반영 상태는 {string}다")
     fun assertSyncStatus(label: String) {
@@ -233,6 +305,30 @@ class TerritoryMapSteps(
             composeRule.onAllNodes(hasTestTag(MY_RANKING_ROW_TAG)).fetchSemanticsNodes().size
         )
     }
+
+    /** 대체 지도가 보여주는 둘러보기 중심. 아직 정하지 않았으면 null이다. */
+    private fun currentMapCenter(): MapPoint? {
+        val prefix = FakeRouteMapComponent.describeCenter(DEFAULT_TERRITORY_MAP_CENTER)
+            .substringBefore('·')
+        val text = composeRule.onAllNodes(hasText(prefix, substring = true))
+            .fetchSemanticsNodes()
+            .firstNotNullOfOrNull { node ->
+                node.config.getOrNull(SemanticsProperties.Text)?.joinToString { it.text }
+            } ?: return null
+        val (latitude, longitude) = text.substringAfter('·').split(',').map { it.trim().toDouble() }
+        return MapPoint(latitude, longitude)
+    }
+
+    private fun northOfCityHall(meters: Double) = MapPoint(
+        DEFAULT_TERRITORY_MAP_CENTER.latitude + meters / METERS_PER_DEGREE_LATITUDE,
+        DEFAULT_TERRITORY_MAP_CENTER.longitude
+    )
+
+    private fun distanceMeters(a: MapPoint, b: MapPoint): Double = hypot(
+        (a.latitude - b.latitude) * METERS_PER_DEGREE_LATITUDE,
+        (a.longitude - b.longitude) * METERS_PER_DEGREE_LATITUDE *
+            cos(Math.toRadians(a.latitude))
+    )
 
     /** 오버레이 카드가 스크롤되어 있어도 [matcher] 노드까지 스크롤해 보이는지 확인한다. */
     private fun showInScroll(matcher: SemanticsMatcher) {

@@ -34,6 +34,7 @@ import kr.roadcanvas.app.appContainer
 import kr.roadcanvas.app.challenge.BACK_TO_MODE_SELECT_LABEL
 import kr.roadcanvas.app.challenge.Measurement
 import kr.roadcanvas.app.challenge.formatArea
+import kr.roadcanvas.app.map.CurrentPosition
 import kr.roadcanvas.app.map.MapBounds
 import kr.roadcanvas.app.map.MapCell
 import kr.roadcanvas.app.map.MapExplore
@@ -50,12 +51,14 @@ import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
 import kr.roadcanvas.app.ui.components.OverlayCard
 import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
+import kr.roadcanvas.app.ui.theme.CONTROL_SPACING
 
 const val TERRITORY_MAP_LABEL = "영토 지도"
 const val TERRITORY_MAP_TITLE = "내 영토"
 const val MY_CELLS_LABEL = "보유 칸"
 const val MY_AREA_LABEL = "면적"
 const val TERRITORY_REFRESH_LABEL = "새로고침"
+const val MY_LAND_LABEL = "내 땅으로"
 const val TERRITORY_LOADING = "불러오는 중"
 const val TERRITORY_EMPTY = "아직 차지한 칸이 없어요"
 const val TERRITORY_EMPTY_BODY = "땅따먹기로 한 바퀴 돌아 둘러싼 땅을 차지해 보세요"
@@ -83,24 +86,29 @@ fun TerritoryMapRoute(
                 TerritoryMapViewModel(
                     container.territoryGame,
                     container.completedDrawingRepository,
+                    container.locationProvider,
                     initialCenter
                 )
             }
         }
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val myLocation by viewModel.myLocation.collectAsStateWithLifecycle()
     TerritoryMapScreen(
         state = state,
         onVisibleBoundsChange = viewModel::onVisibleBoundsChange,
         onRefresh = viewModel::refresh,
         onBack = onBack,
-        modifier = modifier
+        modifier = modifier,
+        myLocation = myLocation,
+        onMoveToMyLand = viewModel::moveToMyLand
     )
 }
 
 /**
- * 지도에 화면 범위의 칸을 내 칸과 다른 사용자 칸으로 나눠 채우고, 왼쪽 오버레이에 내 보유 칸·면적, 안내와 상위 순위를 둔다.
- * 새로고침과 모드 선택으로 버튼은 오버레이 아래에 항상 보이게 둔다.
+ * 지도에 화면 범위의 칸을 내 칸과 다른 사용자 칸으로 나눠 채우고 [myLocation]이 있으면 내 위치를 표시한다.
+ * 왼쪽 오버레이에 내 보유 칸·면적, 안내와 상위 순위를 둔다.
+ * 내 땅으로, 새로고침과 모드 선택으로 버튼은 오버레이 아래에 항상 보이게 둔다. 내 땅으로는 내 땅이 모인 곳을 알 때만 누를 수 있다.
  */
 @Composable
 fun TerritoryMapScreen(
@@ -108,7 +116,9 @@ fun TerritoryMapScreen(
     onVisibleBoundsChange: (MapBounds) -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    myLocation: RoutePoint? = null,
+    onMoveToMyLand: () -> Unit = {}
 ) {
     val loadedCells = ((state.cells as? TerritoryLoad.Loaded)?.value as? TerritoryMapCells.Loaded)
         ?.cells
@@ -128,7 +138,8 @@ fun TerritoryMapScreen(
                     options = RouteMapOptions(
                         contentPadding = driverSideOverlayContentPadding(),
                         cells = mapCells,
-                        explore = MapExplore(center),
+                        explore = MapExplore(center, moveId = state.cameraMoveId),
+                        currentPosition = myLocation?.let { CurrentPosition(it, null) },
                         onVisibleBoundsChange = onVisibleBoundsChange
                     ),
                     modifier = Modifier.fillMaxSize()
@@ -153,11 +164,20 @@ fun TerritoryMapScreen(
                     Ranking(state.ranking)
                 }
             }
-            CarButton(
-                text = TERRITORY_REFRESH_LABEL,
-                onClick = onRefresh,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(CONTROL_SPACING)) {
+                CarButton(
+                    text = MY_LAND_LABEL,
+                    onClick = onMoveToMyLand,
+                    enabled = state.myLandCenter != null,
+                    style = CarButtonStyle.Neutral,
+                    modifier = Modifier.weight(1f)
+                )
+                CarButton(
+                    text = TERRITORY_REFRESH_LABEL,
+                    onClick = onRefresh,
+                    modifier = Modifier.weight(1f)
+                )
+            }
             CarButton(
                 text = BACK_TO_MODE_SELECT_LABEL,
                 onClick = onBack,

@@ -50,6 +50,7 @@ class PublicGalleryPreviewActivity : ComponentActivity() {
                         PublicGalleryScreen(
                             state = state,
                             onItemVisible = viewModel::onItemVisible,
+                            onSelectArtwork = viewModel::select,
                             onOpenArtwork = { navController.navigate("detail/$it") },
                             onRefresh = viewModel::refresh,
                             onLoadMore = viewModel::loadMore,

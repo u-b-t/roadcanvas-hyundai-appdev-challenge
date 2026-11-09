@@ -177,8 +177,8 @@ private class RouteOverlays {
      */
     private var followZoomed = false
 
-    /** 둘러보기로 카메라를 옮긴 위치. 칸만 다시 그릴 때는 사용자가 옮긴 카메라를 그대로 둔다. */
-    private var exploredCenter: RoutePoint? = null
+    /** 둘러보기로 카메라를 옮긴 위치와 이동 번호. 칸만 다시 그릴 때는 사용자가 옮긴 카메라를 그대로 둔다. */
+    private var explored: Pair<RoutePoint, Long>? = null
 
     fun show(map: NaverMap, state: RouteMapState, cameraInsets: MapInsets) {
         when (state) {
@@ -190,8 +190,9 @@ private class RouteOverlays {
             is RouteMapState.Explore -> {
                 detach()
                 cells.show(map, state.cells)
-                if (exploredCenter != state.center) {
-                    exploredCenter = state.center
+                val target = state.center to state.moveId
+                if (explored != target) {
+                    explored = target
                     map.moveCamera(
                         CameraUpdate.scrollAndZoomTo(state.center.toLatLng(), state.zoom)
                     )

@@ -45,21 +45,30 @@ class TerritoryMapPreviewActivity : ComponentActivity() {
             TerritoryOwnerProvider { PREVIEW_OWNER }
         )
         val repository = appContainer.completedDrawingRepository
+        val locationProvider = appContainer.locationProvider
         setContent {
             RoadCanvasTheme {
                 val viewModel: TerritoryMapViewModel = viewModel(
                     factory = viewModelFactory {
                         initializer {
-                            TerritoryMapViewModel(game, repository, DEFAULT_TERRITORY_MAP_CENTER)
+                            TerritoryMapViewModel(
+                                game,
+                                repository,
+                                locationProvider,
+                                DEFAULT_TERRITORY_MAP_CENTER
+                            )
                         }
                     }
                 )
                 val state by viewModel.state.collectAsStateWithLifecycle()
+                val myLocation by viewModel.myLocation.collectAsStateWithLifecycle()
                 TerritoryMapScreen(
                     state = state,
                     onVisibleBoundsChange = viewModel::onVisibleBoundsChange,
                     onRefresh = viewModel::refresh,
-                    onBack = ::finish
+                    onBack = ::finish,
+                    myLocation = myLocation,
+                    onMoveToMyLand = viewModel::moveToMyLand
                 )
             }
         }
