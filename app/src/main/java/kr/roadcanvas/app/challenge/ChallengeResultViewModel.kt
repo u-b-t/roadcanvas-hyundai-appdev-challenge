@@ -201,8 +201,10 @@ class ChallengeResultViewModel(
      * 이동하지 않은 기록이라 경로가 없어도 보여줄 내용은 같다.
      */
     private suspend fun showNotSaved(mode: DrawingMode) {
+        // 진행 중 기록을 이미 지웠으면 경로가 없으므로 땅따먹기는 판정 사유를 알 수 없다.
         val result = finishedResult()
             ?: challengeResultOf(mode, emptyList(), startedAtMillis, endedAtMillis, calculator)
+                .copy(territory = null)
         mutableState.value = ChallengeResultUiState.Calculated(result, ResultSaveStatus.NOT_SAVED)
         clearInProgress()
     }

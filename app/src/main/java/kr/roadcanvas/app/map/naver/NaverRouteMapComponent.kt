@@ -30,6 +30,7 @@ import com.naver.maps.map.overlay.CircleOverlay
 import com.naver.maps.map.overlay.LocationOverlay
 import com.naver.maps.map.overlay.Marker
 import com.naver.maps.map.overlay.PathOverlay
+import com.naver.maps.map.overlay.PolygonOverlay
 import kr.roadcanvas.app.map.CurrentPosition
 import kr.roadcanvas.app.map.MapAuth
 import kr.roadcanvas.app.map.MapInsets
@@ -120,8 +121,15 @@ private fun NaverRouteMapView(
     AndroidView(factory = { mapView }, modifier = modifier)
 }
 
-/** 경로선과 출발·도착 마커, 기준 원, 현재 위치. 좌표가 바뀌면 같은 오버레이에 좌표열을 다시 지정한다. */
+/** 경로선과 출발·도착 마커, 기준 원, 채운 영역, 현재 위치. 좌표가 바뀌면 같은 오버레이에 좌표열을 다시 지정한다. */
 private class RouteOverlays {
+    // 경로선 아래에 반투명한 경로 색으로 채워, 경로선이 영역의 테두리처럼 보이게 한다.
+    private val area = PolygonOverlay().apply {
+        color = 0x4D1E88E5
+        outlineWidth = 0
+        globalZIndex = PathOverlay.DEFAULT_GLOBAL_Z_INDEX - 1
+    }
+
     // 경로선(파란 굵은 선) 위에 가는 주황 테두리와 반투명 면으로 그려, 경로와 겹쳐도 원이 보이고 구분된다.
     private val circle = CircleOverlay().apply {
         color = 0x1FFB8C00
@@ -158,6 +166,7 @@ private class RouteOverlays {
                 startMarker.place(map, state.startMarker)
                 endMarker.place(map, state.endMarker)
                 circle.place(map, state.circle)
+                area.place(map, state.area)
                 when (state.camera) {
                     RouteCamera.FIT_BOUNDS -> with(cameraInsets) {
                         map.moveCamera(
@@ -217,6 +226,7 @@ private class RouteOverlays {
         startMarker.map = null
         endMarker.map = null
         circle.map = null
+        area.map = null
     }
 
     /**
@@ -271,6 +281,15 @@ private class RouteOverlays {
         } else {
             center = routeCircle.center.toLatLng()
             radius = routeCircle.radiusMeters
+            this.map = map
+        }
+    }
+
+    private fun PolygonOverlay.place(map: NaverMap, points: List<RoutePoint>?) {
+        if (points == null) {
+            this.map = null
+        } else {
+            coords = points.map { it.toLatLng() }
             this.map = map
         }
     }

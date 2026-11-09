@@ -41,6 +41,7 @@ const val CIRCLE_CHALLENGE_DESCRIPTION = "원을 그리며 달리고 점수를 �
 const val FREE_DRAW_NAME = "자유그림"
 const val FREE_DRAW_DESCRIPTION = "도로 위에 자유롭게 그려요"
 const val TERRITORY_NAME = "땅따먹기"
+const val TERRITORY_DESCRIPTION = "한 바퀴 돌아 둘러싼 땅을 차지해요"
 const val MY_DRAWINGS_LABEL = "내 그림"
 const val GALLERY_LABEL = "공개 작품"
 const val MODE_SELECT_COVER_TAG = "modeSelectCover"
@@ -66,7 +67,7 @@ const val MODE_ITEM_ARROW_TAG = "modeItemArrow"
 /** 모드 목록과 내 그림 버튼을 담는 왼쪽 영역 너비. 16:9 화면에서 커버 이미지의 어두운 영역(약 36%) 안에 들어간다. */
 private val MODE_LIST_WIDTH = 560.dp
 
-/** 남는 세로 공간을 나눌 때 동그라미 챌린지와 자유그림 항목의 비율. 주 동작인 동그라미 챌린지를 더 크게 둔다. */
+/** 남는 세로 공간을 나눌 때 동그라미 챌린지와 보조 모드(자유그림, 땅따먹기) 항목의 비율. 주 동작인 동그라미 챌린지를 더 크게 둔다. */
 private const val PRIMARY_ITEM_WEIGHT = 3f
 private const val SECONDARY_ITEM_WEIGHT = 2f
 
@@ -78,7 +79,8 @@ fun ModeSelectScreen(
     onFreeDrawingClick: () -> Unit,
     onMyDrawingsClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onGalleryClick: () -> Unit = {}
+    onGalleryClick: () -> Unit = {},
+    onTerritoryClick: () -> Unit = {}
 ) {
     DriverSideOverlay(
         modifier = modifier,
@@ -109,6 +111,12 @@ fun ModeSelectScreen(
                         name = FREE_DRAW_NAME,
                         description = FREE_DRAW_DESCRIPTION,
                         onClick = onFreeDrawingClick,
+                        modifier = Modifier.weight(SECONDARY_ITEM_WEIGHT)
+                    )
+                    SecondaryModeItem(
+                        name = TERRITORY_NAME,
+                        description = TERRITORY_DESCRIPTION,
+                        onClick = onTerritoryClick,
                         modifier = Modifier.weight(SECONDARY_ITEM_WEIGHT)
                     )
                 }

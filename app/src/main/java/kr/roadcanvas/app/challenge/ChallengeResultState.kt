@@ -4,6 +4,8 @@ import kotlin.math.roundToInt
 import kr.roadcanvas.app.drawing.CompletedDrawing
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
+import kr.roadcanvas.app.drawing.TERRITORY_AREA_METRIC
+import kr.roadcanvas.app.drawing.TERRITORY_PERIMETER_METRIC
 import kr.roadcanvas.app.map.RouteCircle
 import kr.roadcanvas.app.map.RoutePoint as MapPoint
 import kr.roadcanvas.app.recording.pathDistanceMeters
@@ -12,6 +14,8 @@ import kr.roadcanvas.app.score.CircleScoreConfig
 import kr.roadcanvas.app.score.CircleScoreMetrics
 import kr.roadcanvas.app.score.CircleScoreResult
 import kr.roadcanvas.app.score.GeoPoint
+import kr.roadcanvas.app.score.TerritoryCalculator
+import kr.roadcanvas.app.score.TerritoryResult
 import kr.roadcanvas.app.score.ZeroScoreReason
 
 /**
@@ -20,7 +24,9 @@ import kr.roadcanvas.app.score.ZeroScoreReason
  */
 const val FREE_DRAWING_MIN_DISTANCE_METERS = 10.0
 
-/** 종료한 도전 하나의 결과. 점수를 매기는 모드만 [score]가 있다. */
+/**
+ * 종료한 도전 하나의 결과. 점수를 매기는 모드만 [score]가 있고, 땅따먹기만 영역 판정 결과 [territory]가 있다.
+ */
 data class ChallengeResult(
     val mode: DrawingMode,
     val path: List<RoutePoint>,
@@ -29,34 +35,43 @@ data class ChallengeResult(
     val distanceMeters: Double,
     val score: CircleScoreResult?,
     /** 0점 사유 안내. 점수를 계산한 설정의 기준값을 넣는다. 0점이 아니거나 점수가 없으면 null이다. */
-    val zeroReasonText: String?
+    val zeroReasonText: String?,
+    val territory: TerritoryResult? = null
 ) {
     /**
      * 완료 기록으로 저장할지. 그림이 없는 도전은 저장하지 않는다.
      * 점수를 매기는 모드는 위치가 부족하거나 거의 움직이지 않아 0점이면 저장하지 않고, 움직였지만 원이 아니거나 작아 0점이면 저장한다.
-     * 점수가 없는 모드는 이동 거리가 [FREE_DRAWING_MIN_DISTANCE_METERS]보다 짧으면 저장하지 않는다.
+     * 땅따먹기는 영역을 차지했을 때만 저장한다.
+     * 그 밖의 점수가 없는 모드는 이동 거리가 [FREE_DRAWING_MIN_DISTANCE_METERS]보다 짧으면 저장하지 않는다.
      */
     val savable: Boolean
-        get() = if (mode.scored) {
-            score?.zeroReason != ZeroScoreReason.INSUFFICIENT_POINTS &&
-                score?.zeroReason != ZeroScoreReason.NO_MOVEMENT
-        } else {
-            distanceMeters >= FREE_DRAWING_MIN_DISTANCE_METERS
+        get() = when {
+            mode.scored ->
+                score?.zeroReason != ZeroScoreReason.INSUFFICIENT_POINTS &&
+                    score?.zeroReason != ZeroScoreReason.NO_MOVEMENT
+            mode == DrawingMode.TERRITORY -> territory is TerritoryResult.Claimed
+            else -> distanceMeters >= FREE_DRAWING_MIN_DISTANCE_METERS
         }
 
-    /** 완료 기록으로 저장할 값. 0점이거나 점수가 없는 모드는 세부 지표 없이 점수 0으로 저장한다. */
+    /**
+     * 완료 기록으로 저장할 값. 0점이거나 점수가 없는 모드는 세부 지표 없이 점수 0으로 저장한다.
+     * 차지한 땅따먹기는 면적과 둘레를 세부 지표로 저장한다.
+     */
     fun toCompletedDrawing() = CompletedDrawing(
         mode = mode,
         completedAtMillis = completedAtMillis,
         path = path,
         score = score?.score ?: 0,
-        metrics = score?.metrics?.toNamedValues().orEmpty(),
+        metrics = score?.metrics?.toNamedValues()
+            ?: (territory as? TerritoryResult.Claimed)?.toNamedValues().orEmpty(),
         distanceMeters = distanceMeters,
         durationMillis = durationMillis
     )
 }
 
-/** 시작부터 종료까지 기록한 [path]로 결과를 만든다. 점수를 매기는 모드만 점수를 계산한다. */
+/**
+ * 시작부터 종료까지 기록한 [path]로 결과를 만든다. 점수를 매기는 모드만 점수를 계산하고 땅따먹기만 영역을 판정한다.
+ */
 fun challengeResultOf(
     mode: DrawingMode,
     path: List<RoutePoint>,
@@ -72,7 +87,7 @@ fun challengeResultOf(
     calculator = calculator
 )
 
-/** 저장한 완료 기록을 다시 보여줄 때 같은 경로로 점수와 0점 사유를 다시 구한다. */
+/** 저장한 완료 기록을 다시 보여줄 때 같은 경로로 점수와 0점 사유, 땅따먹기 영역을 다시 구한다. */
 fun challengeResultOf(
     drawing: CompletedDrawing,
     calculator: CircleScoreCalculator = CircleScoreCalculator()
@@ -98,6 +113,11 @@ private fun scoredResult(
     } else {
         null
     }
+    val territory = if (mode == DrawingMode.TERRITORY) {
+        TerritoryCalculator().calculate(path.map { GeoPoint(it.latitude, it.longitude) })
+    } else {
+        null
+    }
     return ChallengeResult(
         mode = mode,
         path = path,
@@ -105,9 +125,26 @@ private fun scoredResult(
         durationMillis = durationMillis,
         distanceMeters = distanceMeters,
         score = score,
-        zeroReasonText = score?.zeroReason?.let { zeroScoreReasonText(it, calculator.config) }
+        zeroReasonText = score?.zeroReason?.let { zeroScoreReasonText(it, calculator.config) },
+        territory = territory
     )
 }
+
+/** 저장한 땅따먹기 기록이 차지한 영역의 경계. 경로로 다시 판정하며 땅따먹기가 아니거나 차지하지 못했으면 null이다. */
+fun territoryBoundaryOf(
+    drawing: CompletedDrawing,
+    calculator: TerritoryCalculator = TerritoryCalculator()
+): List<GeoPoint>? {
+    if (drawing.mode != DrawingMode.TERRITORY) return null
+    val territory = calculator.calculate(drawing.path.map { GeoPoint(it.latitude, it.longitude) })
+    return (territory as? TerritoryResult.Claimed)?.boundary
+}
+
+/** 차지한 영역을 저장소에 기록하는 이름과 값 */
+fun TerritoryResult.Claimed.toNamedValues(): Map<String, Double> = mapOf(
+    TERRITORY_AREA_METRIC to areaSquareMeters,
+    TERRITORY_PERIMETER_METRIC to perimeterMeters
+)
 
 /** 세부 지표를 저장소에 기록하는 이름과 값. 이름은 저장된 기록을 읽을 때 쓰므로 바꾸지 않는다. */
 fun CircleScoreMetrics.toNamedValues(): Map<String, Double> = mapOf(

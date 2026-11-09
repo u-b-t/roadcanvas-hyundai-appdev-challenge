@@ -162,6 +162,7 @@ fun RoadCanvasNavHost(
             ModeSelectScreen(
                 onCircleChallengeClick = { navController.navigate(Routes.CIRCLE_READY) },
                 onFreeDrawingClick = { navController.navigate(Routes.FREE_READY) },
+                onTerritoryClick = { navController.navigate(Routes.TERRITORY_READY) },
                 onMyDrawingsClick = { navController.navigate(Routes.MY_DRAWINGS) },
                 onGalleryClick = { navController.navigate(Routes.GALLERY) }
             )

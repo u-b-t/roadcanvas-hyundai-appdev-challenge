@@ -20,6 +20,7 @@ import kr.roadcanvas.app.drawing.fake.FakeCompletedDrawingRepository
 import kr.roadcanvas.app.drawing.fake.FakeInProgressDrawingRepository
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingRequest
+import kr.roadcanvas.app.score.TerritoryResult
 import kr.roadcanvas.app.score.TestPaths
 import kr.roadcanvas.app.score.ZeroScoreReason
 import kr.roadcanvas.app.vehicle.LocationSample
@@ -525,5 +526,54 @@ class ChallengeResultViewModelTest {
     private companion object {
         const val START = 1_700_000_000_000L
         const val END = START + 185_000L
+    }
+
+    @Test
+    fun `차지한 땅따먹기는 면적과 함께 땅따먹기 모드로 저장하고 진행 중 기록을 지운다`() = runTest(dispatcher) {
+        saveInProgress(circlePath(), mode = DrawingMode.TERRITORY)
+
+        val state = viewModel().uiState.value as ChallengeResultUiState.Calculated
+
+        assertEquals(ResultSaveStatus.SAVED, state.saveStatus)
+        val claimed = state.result.territory as TerritoryResult.Claimed
+        assertNull(state.bestComparison)
+        val summary = savedSummaries().single()
+        assertEquals(DrawingMode.TERRITORY, summary.mode)
+        assertEquals(claimed.areaSquareMeters, summary.territoryAreaSquareMeters!!, 0.0)
+        assertNull(inProgressDrawing())
+    }
+
+    @Test
+    fun `닫히지 않은 땅따먹기는 이유를 남기고 저장하지 않으며 진행 중 기록을 지운다`() = runTest(dispatcher) {
+        val path = TestPaths.openCircle(60.0, 55.0).mapIndexed { i, it ->
+            RoutePoint(it.latitude, it.longitude, START + i * 1_000L)
+        }
+        saveInProgress(path, mode = DrawingMode.TERRITORY)
+        val handle = SavedStateHandle()
+
+        val state = viewModel(handle).uiState.value as ChallengeResultUiState.Calculated
+        val recreated = viewModel(handle).uiState.value as ChallengeResultUiState.Calculated
+
+        assertEquals(ResultSaveStatus.NOT_SAVED, state.saveStatus)
+        assertTrue(state.result.territory is TerritoryResult.NotClosed)
+        assertEquals(ResultSaveStatus.NOT_SAVED, recreated.saveStatus)
+        assertEquals(DrawingMode.TERRITORY, recreated.result.mode)
+        // 진행 중 기록을 지운 뒤라 경로가 없어 다시 판정하지 않는다.
+        assertNull(recreated.result.territory)
+        assertTrue(savedSummaries().isEmpty())
+        assertNull(inProgressDrawing())
+    }
+
+    @Test
+    fun `저장한 땅따먹기는 화면이 다시 만들어지면 저장한 기록으로 같은 영역을 보여준다`() = runTest(dispatcher) {
+        saveInProgress(circlePath(), mode = DrawingMode.TERRITORY)
+        val handle = SavedStateHandle()
+        val first = viewModel(handle).uiState.value as ChallengeResultUiState.Calculated
+
+        val recreated = viewModel(handle).uiState.value as ChallengeResultUiState.Calculated
+
+        assertEquals(ResultSaveStatus.SAVED, recreated.saveStatus)
+        assertEquals(first.result.territory, recreated.result.territory)
+        assertEquals(1, savedSummaries().size)
     }
 }

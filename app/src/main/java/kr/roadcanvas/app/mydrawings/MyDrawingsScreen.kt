@@ -56,12 +56,18 @@ import kr.roadcanvas.app.artwork.ArtworkPublishActions
 import kr.roadcanvas.app.artwork.ArtworkPublishPanel
 import kr.roadcanvas.app.artwork.ArtworkPublishUiState
 import kr.roadcanvas.app.artwork.PublishStatus
+import kr.roadcanvas.app.challenge.AREA_LABEL
 import kr.roadcanvas.app.challenge.BACK_TO_MODE_SELECT_LABEL
+import kr.roadcanvas.app.challenge.PERIMETER_LABEL
 import kr.roadcanvas.app.challenge.RETRY_LABEL
+import kr.roadcanvas.app.challenge.formatArea
+import kr.roadcanvas.app.challenge.territoryBoundaryOf
 import kr.roadcanvas.app.drawing.CompletedDrawing
 import kr.roadcanvas.app.drawing.CompletedDrawingSummary
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.DrawingNameValidation
+import kr.roadcanvas.app.drawing.territoryAreaSquareMeters
+import kr.roadcanvas.app.drawing.territoryPerimeterMeters
 import kr.roadcanvas.app.drawing.validateDrawingName
 import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
@@ -104,6 +110,7 @@ const val DELETE_BLOCKED_BY_PUBLISH = "공개 중인 작품은 비공개로 바�
 const val MY_DRAWINGS_LIST_TAG = "myDrawingsList"
 const val MY_DRAWINGS_ITEM_SCORE_TAG = "myDrawingsItemScore"
 const val MY_DRAWINGS_ITEM_MODE_TAG = "myDrawingsItemMode"
+const val MY_DRAWINGS_ITEM_AREA_TAG = "myDrawingsItemArea"
 const val DRAWING_DETAIL_TAG = "drawingDetail"
 const val DRAWING_DETAIL_OVERLAY_TAG = "drawingDetailOverlay"
 const val DRAWING_DETAIL_NAME_TAG = "drawingDetailName"
@@ -392,7 +399,8 @@ fun listItemTexts(summary: CompletedDrawingSummary): Pair<String, String> {
 
 /**
  * SDG 리스트 항목처럼 썸네일, 모드·날짜·거리와 시간 글자와 오른쪽 점수를 한 줄에 둔다.
- * 점수가 없는 자유그림은 점수를 표시하지 않는다. 고른 항목은 Primary 배경으로 표시한다.
+ * 점수가 없는 자유그림은 점수를 표시하지 않고, 땅따먹기는 점수 자리에 차지한 면적을 표시한다.
+ * 고른 항목은 Primary 배경으로 표시한다.
  */
 @Composable
 private fun DrawingListItem(
@@ -433,16 +441,25 @@ private fun DrawingListItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        val trailingColor = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        }
         if (summary.mode.scored) {
             Text(
                 text = formatScore(summary.score),
                 style = MaterialTheme.typography.titleLarge,
-                color = if (selected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
+                color = trailingColor,
                 modifier = Modifier.testTag(MY_DRAWINGS_ITEM_SCORE_TAG)
+            )
+        }
+        summary.territoryAreaSquareMeters?.let {
+            Text(
+                text = formatArea(it),
+                style = MaterialTheme.typography.titleLarge,
+                color = trailingColor,
+                modifier = Modifier.testTag(MY_DRAWINGS_ITEM_AREA_TAG)
             )
         }
     }
@@ -666,7 +683,10 @@ private fun DeleteDrawingButton(
     }
 }
 
-/** 모드, 이름, 날짜, 큰 점수와 거리·소요 시간을 한 카드에 보여준다. 점수가 없는 자유그림은 점수를 뺀다. */
+/**
+ * 모드, 이름, 날짜, 큰 점수와 거리·소요 시간을 한 카드에 보여준다. 점수가 없는 자유그림은 점수를 뺀다.
+ * 땅따먹기는 점수 대신 차지한 면적을 크게 보여주고 둘레를 거리 앞에 둔다.
+ */
 @Composable
 private fun ScoreCard(drawing: CompletedDrawing) {
     Text(
@@ -687,6 +707,20 @@ private fun ScoreCard(drawing: CompletedDrawing) {
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+    drawing.territoryAreaSquareMeters?.let {
+        Column {
+            Text(
+                text = AREA_LABEL,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = formatArea(it),
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
     if (drawing.mode.scored) {
         Column {
             Text(
@@ -702,7 +736,8 @@ private fun ScoreCard(drawing: CompletedDrawing) {
         }
     }
     Row(modifier = Modifier.fillMaxWidth()) {
-        listOf(
+        listOfNotNull(
+            drawing.territoryPerimeterMeters?.let { PERIMETER_LABEL to formatDistance(it) },
             DISTANCE_LABEL to formatDistance(drawing.distanceMeters),
             DURATION_LABEL to formatDuration(drawing.durationMillis)
         ).forEach { (label, value) ->
@@ -727,10 +762,14 @@ private fun DrawingRouteMap(
     val points = remember(drawing.path) {
         drawing.path.map { RoutePoint(it.latitude, it.longitude) }
     }
+    // 차지한 영역의 경계는 저장하지 않으므로 결과 화면과 같은 판정으로 경로에서 다시 구한다.
+    val area = remember(drawing.mode, drawing.path) {
+        territoryBoundaryOf(drawing)?.map { RoutePoint(it.latitude, it.longitude) }
+    }
     // 지도를 표시할 수 없으면 지도 컴포넌트가 콘텐츠 영역 안에 안내를 표시한다.
     RouteMap(
         points = points,
-        options = RouteMapOptions(contentPadding = contentPadding),
+        options = RouteMapOptions(contentPadding = contentPadding, filledArea = area),
         modifier = modifier
     )
 }

@@ -85,8 +85,10 @@ data class CompletedThumbnailPointEntity(
     @ColumnInfo(name = "time_millis") val timeMillis: Long
 )
 
+/** 목록 요약 조회 결과. [territoryArea]는 땅따먹기 면적 지표이며 없으면 null이다. */
 data class CompletedDrawingWithThumbnail(
     @Embedded val drawing: CompletedDrawingEntity,
+    @ColumnInfo(name = "territory_area") val territoryArea: Double? = null,
     @Relation(parentColumn = "id", entityColumn = "drawing_id")
     val thumbnail: List<CompletedThumbnailPointEntity>
 )
