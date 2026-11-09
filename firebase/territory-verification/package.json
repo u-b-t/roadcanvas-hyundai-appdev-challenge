@@ -2,9 +2,10 @@
   "name": "roadcanvas-territory-verification",
   "private": true,
   "type": "module",
-  "description": "Firestore 에뮬레이터에서 땅따먹기 소유권 모델을 검증한다. 운영 프로젝트에 접근하지 않는다.",
+  "description": "Firestore 에뮬레이터에서 땅따먹기 소유권 모델을 검증하고 운영 규칙(firebase/firestore.rules)의 땅따먹기 규칙을 시험한다. 운영 프로젝트에 접근하지 않는다.",
   "scripts": {
-    "verify": "firebase emulators:exec --config firebase.json --project demo-roadcanvas-territory --only firestore,auth \"node verify.mjs\""
+    "verify": "firebase emulators:exec --config firebase.json --project demo-roadcanvas-territory --only firestore,auth \"node verify.mjs\"",
+    "test:rules": "firebase emulators:exec --config ../../firebase.json --project demo-roadcanvas-rules --only firestore,auth \"node rules-test.mjs\""
   },
   "devDependencies": {
     "firebase": "13.2.0",

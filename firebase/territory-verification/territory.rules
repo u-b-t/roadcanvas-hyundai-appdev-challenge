@@ -1,6 +1,7 @@
 rules_version = '2';
 // 땅따먹기 소유권 모델 검증 전용 규칙이다. 에뮬레이터(demo- 프로젝트)에서만 쓰고 운영 Firebase에 배포하지 않는다.
-// 운영 규칙은 firebase/firestore.rules이며 이 파일의 컬렉션을 포함하지 않는다.
+// 운영 규칙은 firebase/firestore.rules다. 격자 모델(territoryCaptures, territoryCells)은 #103에서 칸 분류 수와
+// 400칸 제한을 더해 운영 규칙에 합쳤고(docs/firebase-territory.md), 운영 규칙 시험은 npm run test:rules다.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }

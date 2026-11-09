@@ -14,7 +14,7 @@ service cloud.firestore {
     function validDrawing(data) {
       return data.keys().hasOnly(['mode', 'startedAt', 'finishedAt', 'distanceMeters', 'durationMillis', 'score', 'algorithmVersion', 'pointChunkCount']) &&
         data.keys().hasAll(['mode', 'startedAt', 'finishedAt', 'distanceMeters', 'durationMillis', 'pointChunkCount']) &&
-        data.mode in ['CIRCLE', 'FREE_DRAWING'] &&
+        data.mode in ['CIRCLE', 'FREE_DRAWING', 'TERRITORY'] &&
         data.startedAt is timestamp && data.finishedAt is timestamp && data.finishedAt >= data.startedAt &&
         data.distanceMeters is number && data.distanceMeters >= 0 &&
         data.durationMillis is int && data.durationMillis >= 0 &&
@@ -91,6 +91,68 @@ service cloud.firestore {
         allow update: if false;
         allow delete: if owner(uid);
       }
+    }
+    // 서버 땅따먹기(docs/firebase-territory.md). 서버 검증 없이 클라이언트가 보낸 칸과 칸 수를 믿는다.
+    // 획득 기록: 획득 ID가 중복 제출 식별자이며 한 번만 만들 수 있다. 칸 분류 수는 클라이언트가 계산한 값이다.
+    function validCapture(data) {
+      return data.keys().hasOnly(['ownerUid', 'createdAt', 'cells', 'cellCount', 'newCellCount', 'stolenCellCount', 'ownCellCount']) &&
+        data.keys().hasAll(['ownerUid', 'createdAt', 'cells', 'cellCount', 'newCellCount', 'stolenCellCount', 'ownCellCount']) &&
+        data.ownerUid == request.auth.uid && data.createdAt == request.time &&
+        data.cells is list && data.cells.size() > 0 && data.cells.size() <= 400 &&
+        data.cellCount == data.cells.size() &&
+        data.newCellCount is int && data.newCellCount >= 0 &&
+        data.stolenCellCount is int && data.stolenCellCount >= 0 &&
+        data.ownCellCount is int && data.ownCellCount >= 0 &&
+        data.newCellCount + data.stolenCellCount + data.ownCellCount == data.cellCount;
+    }
+    // 같은 요청에서 만든 본인 획득 기록
+    function capturedNow(captureId) {
+      let capture = getAfter(/databases/$(database)/documents/territoryCaptures/$(captureId)).data;
+      return capture.ownerUid == request.auth.uid && capture.createdAt == request.time;
+    }
+    match /territoryCaptures/{captureId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && validCapture(request.resource.data);
+      allow update, delete: if false;
+    }
+    // 칸별 현재 소유자. 같은 요청에서 만든 본인 획득 기록이 이 칸을 포함해야 하고 version을 1씩 올린다.
+    // version 규칙은 오래된 오프라인 쓰기가 최신 소유를 덮어쓰지 못하게 한다.
+    function validCell(cellId, data) {
+      return data.keys().hasOnly(['ownerUid', 'captureId', 'capturedAt', 'version', 'gh6']) &&
+        data.keys().hasAll(['ownerUid', 'captureId', 'capturedAt', 'version', 'gh6']) &&
+        cellId.size() == 7 && data.gh6 == cellId[0:6] &&
+        data.ownerUid == request.auth.uid && data.capturedAt == request.time &&
+        data.captureId is string && capturedNow(data.captureId) &&
+        cellId in getAfter(/databases/$(database)/documents/territoryCaptures/$(data.captureId)).data.cells &&
+        data.version == (resource == null ? 1 : resource.data.version + 1);
+    }
+    match /territoryCells/{cellId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && validCell(cellId, request.resource.data);
+      allow delete: if false;
+    }
+    // 순위: 닉네임과 보유 칸 수. 본인 문서는 쓸 수 있다. 다른 사용자 문서는 같은 요청에서 만든 본인 획득 기록을
+    // lastLossCaptureId에 적을 때만, 그 획득의 빼앗은 칸 수 이하만큼 칸 수를 줄일 수 있다.
+    // 줄인 칸이 실제로 그 사용자의 칸이었는지는 검사하지 않는다.
+    function validOwner(data) {
+      return data.keys().hasOnly(['nickname', 'cellCount', 'lastLossCaptureId']) &&
+        data.keys().hasAll(['nickname', 'cellCount']) &&
+        shortText(data.nickname, 30) && data.cellCount is int && data.cellCount >= 0 &&
+        (!('lastLossCaptureId' in data) || shortText(data.lastLossCaptureId, 128));
+    }
+    function validLoss(data, previous) {
+      let capture = getAfter(/databases/$(database)/documents/territoryCaptures/$(data.lastLossCaptureId)).data;
+      return data.diff(previous).affectedKeys().hasOnly(['cellCount', 'lastLossCaptureId']) &&
+        'lastLossCaptureId' in data && capturedNow(data.lastLossCaptureId) &&
+        data.cellCount < previous.cellCount &&
+        previous.cellCount - data.cellCount <= capture.stolenCellCount;
+    }
+    match /territoryOwners/{uid} {
+      allow read: if signedIn();
+      allow create: if owner(uid) && validOwner(request.resource.data);
+      allow update: if signedIn() && validOwner(request.resource.data) &&
+        (owner(uid) || validLoss(request.resource.data, resource.data));
+      allow delete: if false;
     }
     match /leaderboards/circle/entries/{uid} {
       allow read: if signedIn();
