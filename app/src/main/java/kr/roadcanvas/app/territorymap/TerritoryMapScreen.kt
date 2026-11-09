@@ -49,6 +49,7 @@ import kr.roadcanvas.app.territory.text
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
+import kr.roadcanvas.app.ui.components.NavigationIcon
 import kr.roadcanvas.app.ui.components.OverlayCard
 import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 import kr.roadcanvas.app.ui.theme.CONTROL_SPACING
@@ -57,13 +58,12 @@ const val TERRITORY_MAP_LABEL = "영토 지도"
 const val TERRITORY_MAP_TITLE = "내 영토"
 const val MY_CELLS_LABEL = "보유 칸"
 const val MY_AREA_LABEL = "면적"
-const val TERRITORY_REFRESH_LABEL = "새로고침"
 const val MY_LAND_LABEL = "내 땅으로"
 const val TERRITORY_LOADING = "불러오는 중"
 const val TERRITORY_EMPTY = "아직 차지한 칸이 없어요"
 const val TERRITORY_EMPTY_BODY = "땅따먹기로 한 바퀴 돌아 둘러싼 땅을 차지해 보세요"
 const val TERRITORY_TOO_MANY = "이 범위에는 칸이 너무 많아요. 지도를 확대해 주세요"
-const val TERRITORY_RETRY_HINT = "새로고침해 다시 불러와 주세요"
+const val TERRITORY_RETRY_HINT = "홈으로 돌아간 뒤 다시 열어 주세요"
 const val RANKING_TITLE = "순위"
 const val RANKING_EMPTY = "아직 칸을 차지한 사용자가 없어요"
 const val MY_RANK_LABEL = "나"
@@ -97,7 +97,6 @@ fun TerritoryMapRoute(
     TerritoryMapScreen(
         state = state,
         onVisibleBoundsChange = viewModel::onVisibleBoundsChange,
-        onRefresh = viewModel::refresh,
         onBack = onBack,
         modifier = modifier,
         myLocation = myLocation,
@@ -108,13 +107,12 @@ fun TerritoryMapRoute(
 /**
  * 지도에 화면 범위의 칸을 내 칸과 다른 사용자 칸으로 나눠 채우고 [myLocation]이 있으면 내 위치를 표시한다.
  * 왼쪽 오버레이에 내 보유 칸·면적, 안내와 상위 순위를 둔다.
- * 내 땅으로, 새로고침과 모드 선택으로 버튼은 오버레이 아래에 항상 보이게 둔다. 내 땅으로는 내 땅이 모인 곳을 알 때만 누를 수 있다.
+ * 내 땅으로, 홈으로 버튼은 오버레이 아래에 항상 보이게 둔다. 내 땅으로는 내 땅이 모인 곳을 알 때만 누를 수 있다.
  */
 @Composable
 fun TerritoryMapScreen(
     state: TerritoryMapUiState,
     onVisibleBoundsChange: (MapBounds) -> Unit,
-    onRefresh: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     myLocation: RoutePoint? = null,
@@ -172,14 +170,10 @@ fun TerritoryMapScreen(
                     style = CarButtonStyle.Neutral,
                     modifier = Modifier.weight(1f)
                 )
-                CarButton(
-                    text = TERRITORY_REFRESH_LABEL,
-                    onClick = onRefresh,
-                    modifier = Modifier.weight(1f)
-                )
             }
             CarButton(
                 text = BACK_TO_MODE_SELECT_LABEL,
+                icon = NavigationIcon.Home,
                 onClick = onBack,
                 style = CarButtonStyle.Neutral,
                 modifier = Modifier.fillMaxWidth()

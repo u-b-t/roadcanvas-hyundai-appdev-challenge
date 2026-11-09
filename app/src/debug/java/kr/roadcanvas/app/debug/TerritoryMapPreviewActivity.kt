@@ -65,7 +65,6 @@ class TerritoryMapPreviewActivity : ComponentActivity() {
                 TerritoryMapScreen(
                     state = state,
                     onVisibleBoundsChange = viewModel::onVisibleBoundsChange,
-                    onRefresh = viewModel::refresh,
                     onBack = ::finish,
                     myLocation = myLocation,
                     onMoveToMyLand = viewModel::moveToMyLand

@@ -46,6 +46,7 @@ import kr.roadcanvas.app.mydrawings.SAVING_NAME_LABEL
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
+import kr.roadcanvas.app.ui.components.NavigationIcon
 import kr.roadcanvas.app.ui.components.OverlayCard
 import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 import kr.roadcanvas.app.ui.theme.CONTROL_SPACING
@@ -209,6 +210,7 @@ fun ChallengeResultScreen(
             )
             CarButton(
                 text = BACK_TO_MODE_SELECT_LABEL,
+                icon = NavigationIcon.Home,
                 onClick = onModeSelect,
                 style = CarButtonStyle.Neutral,
                 modifier = Modifier.fillMaxWidth()
@@ -217,6 +219,7 @@ fun ChallengeResultScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(CONTROL_SPACING)) {
                 CarButton(
                     text = MY_DRAWINGS_LABEL,
+                    icon = NavigationIcon.Drawings,
                     onClick = onMyDrawings,
                     style = CarButtonStyle.Neutral,
                     modifier = Modifier.weight(1f)

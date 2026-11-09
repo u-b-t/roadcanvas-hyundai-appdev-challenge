@@ -5,10 +5,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
@@ -34,6 +36,8 @@ import kr.roadcanvas.app.ui.components.COVER_BACKGROUND_COLOR
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CoverBackground
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
+import kr.roadcanvas.app.ui.components.NavigationButtonIcon
+import kr.roadcanvas.app.ui.components.NavigationIcon
 import kr.roadcanvas.app.ui.theme.CONTROL_SPACING
 import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
 
@@ -161,8 +165,16 @@ fun HomeScreen(
                         color = ON_COVER_TEXT_COLOR,
                         modifier = Modifier.weight(1f)
                     )
-                    SecondaryCoverButton(text = MY_DRAWINGS_LABEL, onClick = onMyDrawingsClick)
-                    SecondaryCoverButton(text = PROFILE_LABEL, onClick = onProfileClick)
+                    SecondaryCoverButton(
+                        text = MY_DRAWINGS_LABEL,
+                        icon = NavigationIcon.Drawings,
+                        onClick = onMyDrawingsClick
+                    )
+                    SecondaryCoverButton(
+                        text = PROFILE_LABEL,
+                        icon = NavigationIcon.Profile,
+                        onClick = onProfileClick
+                    )
                 }
                 Column(
                     modifier = Modifier
@@ -249,7 +261,12 @@ private fun ModeSection(section: HomeSection, summary: ModeRecordSummary?) {
  * 같은 모서리·글꼴·터치 크기로 흰 글자와 흐린 흰 테두리만 그린다.
  */
 @Composable
-private fun SecondaryCoverButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun SecondaryCoverButton(
+    text: String,
+    icon: NavigationIcon? = null,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     OutlinedButton(
         onClick = onClick,
         modifier = modifier.sizeIn(minWidth = MIN_TOUCH_TARGET, minHeight = MIN_TOUCH_TARGET),
@@ -258,6 +275,10 @@ private fun SecondaryCoverButton(text: String, onClick: () -> Unit, modifier: Mo
         colors = ButtonDefaults.outlinedButtonColors(contentColor = ON_COVER_TEXT_COLOR),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
     ) {
+        if (icon != null) {
+            NavigationButtonIcon(icon)
+            Spacer(Modifier.width(8.dp))
+        }
         Text(
             text = text,
             style = MaterialTheme.typography.titleLarge,

@@ -7,6 +7,7 @@ Feature: 자유그림
   준비 화면은 날짜로 고른 오늘의 주제를 보여 주고 다른 주제로 바꿀 수 있으며, 시작한 주제를 결과 화면의 이름 기본값으로 제안한다.
 
   Issues:
+  - [#143 홈 이동 버튼과 보조 버튼 아이콘 통일 및 새로고침 제거](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/143)
   - [#77 자유그림 모드 열기와 기록 흐름 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/77)
   - [#111 결과 축하 연출과 자유그림 오늘의 주제](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/111)
 
@@ -140,7 +141,7 @@ Feature: 자유그림
     Examples:
       | 버튼      | 화면     |
       | 다시 그리기  | 자유그림 준비 |
-      | 모드 선택으로 | RoadCanvas  |
+      | 홈으로 | RoadCanvas  |
       | 내 그림    | 내 그림 목록 |
 
   Scenario: 정차 중 포기하면 자유그림 준비 화면으로 돌아간다

@@ -47,6 +47,7 @@ import kr.roadcanvas.app.mydrawings.formatDuration
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
+import kr.roadcanvas.app.ui.components.NavigationIcon
 import kr.roadcanvas.app.ui.components.OverlayCard
 import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
@@ -55,7 +56,6 @@ const val GALLERY_TITLE = "공개 작품"
 const val GALLERY_EMPTY = "아직 공개된 작품이 없어요"
 const val GALLERY_EMPTY_BODY = "이름 붙인 자유그림을 공개하면 여기에 보여요"
 const val GALLERY_LOAD_ERROR = "공개 작품을 불러오지 못했어요"
-const val GALLERY_REFRESH_LABEL = "새로고침"
 const val GALLERY_LOAD_MORE_LABEL = "더 보기"
 const val GALLERY_LOAD_MORE_ERROR = "다음 작품을 불러오지 못했어요"
 const val GALLERY_VOTES_LOADING = "표 수 확인 중"
@@ -86,7 +86,6 @@ fun PublicGalleryRoute(
         onItemVisible = viewModel::onItemVisible,
         onSelectArtwork = viewModel::select,
         onOpenArtwork = onOpenArtwork,
-        onRefresh = viewModel::refresh,
         onLoadMore = viewModel::loadMore,
         onBack = onBack,
         modifier = modifier
@@ -114,7 +113,7 @@ fun formatVoteCount(votes: Long): String = "${votes}표"
 /**
  * 고른 작품의 경로 지도를 화면 전체에 깔고 운전석 쪽 왼쪽 오버레이에 작품 목록을 둔다.
  * 항목을 누르면 그 작품을 골라 지도에 경로를 그리고, 고른 항목의 작품 보기 버튼으로 상세에 들어간다.
- * 목록이 비었거나 불러오지 못하면 오버레이에 안내를 둔다. 새로고침과 모드 선택으로 버튼은 오버레이 아래에 항상 보이게 둔다.
+ * 목록이 비었거나 불러오지 못하면 오버레이에 안내를 둔다. 홈으로 버튼은 오버레이 아래에 항상 보이게 둔다.
  */
 @Composable
 fun PublicGalleryScreen(
@@ -122,7 +121,6 @@ fun PublicGalleryScreen(
     onItemVisible: (PublicArtwork) -> Unit,
     onSelectArtwork: (PublicArtwork) -> Unit,
     onOpenArtwork: (String) -> Unit,
-    onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -145,7 +143,7 @@ fun PublicGalleryScreen(
                     GalleryListState.Empty -> Notice(GALLERY_EMPTY, GALLERY_EMPTY_BODY)
                     is GalleryListState.Error -> Notice(
                         title = GALLERY_LOAD_ERROR,
-                        body = galleryFailureHint(list.reason),
+                        body = "${galleryFailureHint(list.reason)} 홈으로 돌아간 뒤 다시 열어 주세요",
                         titleColor = MaterialTheme.colorScheme.error
                     )
                     is GalleryListState.Loaded -> ArtworkList(
@@ -161,13 +159,8 @@ fun PublicGalleryScreen(
                 }
             }
             CarButton(
-                text = if (list is GalleryListState.Error) RETRY_LABEL else GALLERY_REFRESH_LABEL,
-                onClick = onRefresh,
-                enabled = list != GalleryListState.Loading,
-                modifier = Modifier.fillMaxWidth()
-            )
-            CarButton(
                 text = BACK_TO_MODE_SELECT_LABEL,
+                icon = NavigationIcon.Home,
                 onClick = onBack,
                 style = CarButtonStyle.Neutral,
                 modifier = Modifier.fillMaxWidth()
