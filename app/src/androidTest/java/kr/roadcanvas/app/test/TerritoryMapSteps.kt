@@ -54,6 +54,7 @@ private const val METERS_PER_DEGREE_LATITUDE = 111_195.0
 /**
  * 서버 땅따먹기 시나리오. 대체 서버 저장소에 칸을 두고 결과·영토 지도·내 그림 화면을 실제 흐름으로 연다.
  * 대체 지도는 둘러보기 위치를 가운데 둔 범위를 알리므로, 칸은 서울시청에서 가까운 칸부터 채운다.
+ * 서버 연결 끊기와 제출 없음 확인은 [TerritoryCaptureSyncSteps]의 단계를 함께 쓴다.
  */
 class TerritoryMapSteps(
     private val ruleHolder: ComposeRuleHolder,
@@ -88,11 +89,6 @@ class TerritoryMapSteps(
     @Given("서울시청 주변에 다른 사용자 칸 {int}개가 있다")
     fun putManyCells(count: Int) {
         store.putCells("other", "드라이버-other", List(count) { nearbyCells.next() })
-    }
-
-    @Given("땅따먹기 서버에 연결할 수 없다")
-    fun disconnect() {
-        store.networkFailure = true
     }
 
     @When("땅따먹기 서버 연결을 되돌린다")
@@ -187,12 +183,6 @@ class TerritoryMapSteps(
     fun assertSubmittedIds(captureId: String) {
         waitUntil { store.capture(captureId) != null }
         assertEquals(setOf(captureId), store.submitRequests.toSet())
-    }
-
-    @Then("서버에 제출한 획득이 없다")
-    fun assertNoSubmit() {
-        composeRule.waitForIdle()
-        assertTrue("제출 요청 ${store.submitRequests}", store.submitRequests.isEmpty())
     }
 
     @Then("지도에 내 칸 {int}개와 다른 사용자 칸 {int}개가 표시된다")
