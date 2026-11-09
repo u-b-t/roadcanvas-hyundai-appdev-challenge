@@ -1,0 +1,34 @@
+package kr.roadcanvas.app.territory.fake
+
+import kr.roadcanvas.app.drawing.StorageResult
+import kr.roadcanvas.app.territory.CaptureSyncStatus
+import kr.roadcanvas.app.territory.StoredTerritoryCapture
+import kr.roadcanvas.app.territory.TerritoryCaptureRepository
+
+/** 메모리에 보관하는 획득 저장소. [failure]를 지정하면 모든 요청이 그 오류로 실패한다. */
+class FakeTerritoryCaptureRepository : TerritoryCaptureRepository {
+    private val captures = linkedMapOf<String, StoredTerritoryCapture>()
+
+    var failure: Throwable? = null
+
+    val all: List<StoredTerritoryCapture> get() = captures.values.toList()
+
+    override suspend fun findByDrawing(drawingId: Long) =
+        result { captures.values.firstOrNull { it.drawingId == drawingId } }
+
+    override suspend fun pending() = result {
+        captures.values.filter { it.status == CaptureSyncStatus.PENDING }
+            .sortedBy { it.createdAtMillis }
+    }
+
+    override suspend fun save(capture: StoredTerritoryCapture) =
+        result { captures[capture.captureId] = capture }
+
+    fun reset() {
+        captures.clear()
+        failure = null
+    }
+
+    private inline fun <T> result(block: () -> T): StorageResult<T> =
+        failure?.let { StorageResult.Failure(it) } ?: StorageResult.Success(block())
+}

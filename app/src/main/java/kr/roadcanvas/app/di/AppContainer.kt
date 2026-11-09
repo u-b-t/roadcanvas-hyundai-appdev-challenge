@@ -8,6 +8,7 @@ import kr.roadcanvas.app.gallery.PublicGallery
 import kr.roadcanvas.app.map.RouteMapComponent
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingRunner
+import kr.roadcanvas.app.territory.TerritoryGame
 import kr.roadcanvas.app.vehicle.DrivingRestrictionProvider
 import kr.roadcanvas.app.vehicle.LocationProvider
 import kr.roadcanvas.app.vehicle.VehicleIntegrationInfo
@@ -25,4 +26,5 @@ interface AppContainer {
     val recordingRunner: RecordingRunner
     val artworkPublisher: ArtworkPublisher
     val publicGallery: PublicGallery
+    val territoryGame: TerritoryGame
 }

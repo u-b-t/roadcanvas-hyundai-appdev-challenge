@@ -14,6 +14,10 @@ import kr.roadcanvas.app.gallery.fake.FakePublicArtworkStore
 import kr.roadcanvas.app.map.fake.FakeRouteMapComponent
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.fake.FakeRecordingRunner
+import kr.roadcanvas.app.territory.TerritoryGame
+import kr.roadcanvas.app.territory.fake.FakeTerritoryCaptureRepository
+import kr.roadcanvas.app.territory.fake.FakeTerritoryOwnerProvider
+import kr.roadcanvas.app.territory.fake.FakeTerritoryStore
 import kr.roadcanvas.app.vehicle.IntegrationSource
 import kr.roadcanvas.app.vehicle.VehicleIntegrationInfo
 
@@ -51,6 +55,24 @@ class FakeAppContainer : AppContainer {
     var voterUid: String? = DEFAULT_VOTER_UID
     override val publicGallery = PublicGallery(publicArtworkStore, currentUid = { voterUid })
 
+    /**
+     * 서버 땅따먹기. 획득 ID는 만든 순서대로 capture-1, capture-2...이고, 시각은 [territoryNowMillis]다.
+     * 경합 재실행은 기다리지 않는다.
+     */
+    val territoryStore = FakeTerritoryStore()
+    val territoryCaptureRepository = FakeTerritoryCaptureRepository()
+    val territoryOwnerProvider = FakeTerritoryOwnerProvider()
+    var territoryNowMillis: Long = DEFAULT_TERRITORY_NOW_MILLIS
+    private var captureCount = 0
+    override val territoryGame = TerritoryGame(
+        territoryStore,
+        territoryCaptureRepository,
+        territoryOwnerProvider,
+        clock = { territoryNowMillis },
+        newCaptureId = { "capture-${++captureCount}" },
+        conflictRetryDelayMillis = 0
+    )
+
     /** 시나리오 사이에 상태가 이어지지 않도록 초기 상태로 되돌린다. */
     fun reset() {
         recordingRunner.reset()
@@ -64,6 +86,11 @@ class FakeAppContainer : AppContainer {
         artworkCount = 0
         publicArtworkStore.reset()
         voterUid = DEFAULT_VOTER_UID
+        territoryStore.reset()
+        territoryCaptureRepository.reset()
+        territoryOwnerProvider.reset()
+        territoryNowMillis = DEFAULT_TERRITORY_NOW_MILLIS
+        captureCount = 0
         challengeRecorder = newRecorder()
     }
 
@@ -80,5 +107,8 @@ class FakeAppContainer : AppContainer {
 
     companion object {
         const val DEFAULT_VOTER_UID = "test"
+
+        /** 2026-11-09 12:00(KST) */
+        const val DEFAULT_TERRITORY_NOW_MILLIS = 1_794_193_200_000L
     }
 }

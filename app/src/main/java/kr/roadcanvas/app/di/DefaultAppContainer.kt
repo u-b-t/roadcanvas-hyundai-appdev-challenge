@@ -19,6 +19,11 @@ import kr.roadcanvas.app.map.RouteMapComponent
 import kr.roadcanvas.app.map.naver.NaverRouteMapComponent
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingRunner
+import kr.roadcanvas.app.territory.TerritoryGame
+import kr.roadcanvas.app.territory.TerritoryOwnerProvider
+import kr.roadcanvas.app.territory.TerritoryStore
+import kr.roadcanvas.app.territory.UnavailableTerritoryOwnerProvider
+import kr.roadcanvas.app.territory.UnavailableTerritoryStore
 import kr.roadcanvas.app.vehicle.DrivingRestrictionProvider
 import kr.roadcanvas.app.vehicle.IntegrationSource
 import kr.roadcanvas.app.vehicle.LocationProvider
@@ -40,6 +45,8 @@ import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteGenerator
  * 작품 공개는 Firebase 설정이 있을 때만 Application이 [artworkStore]와 [artworkAuthorProvider]를 넘기며,
  * 기본값은 항상 실패한다. 작성자는 [accountRegistration]의 익명 계정으로 만든다.
  * 공개 작품은 Firebase 설정이 있을 때만 Application이 [publicArtworkStore]로 서버 저장소를 넘긴다.
+ * 서버 땅따먹기도 Firebase 설정이 있을 때만 [territoryStore]와 [territoryOwnerProvider]를 넘기며,
+ * 기본값은 항상 실패해 획득을 기기에 남긴다.
  */
 class DefaultAppContainer(
     selection: VehicleIntegrationSelection,
@@ -56,7 +63,12 @@ class DefaultAppContainer(
     },
     onArtworkFailure: (Throwable) -> Unit = {},
     publicArtworkStore: PublicArtworkStore = UnavailablePublicArtworkStore,
-    onGalleryFailure: (Throwable) -> Unit = {}
+    onGalleryFailure: (Throwable) -> Unit = {},
+    territoryStore: TerritoryStore = UnavailableTerritoryStore,
+    territoryOwnerProvider: (AccountRegistration) -> TerritoryOwnerProvider = {
+        UnavailableTerritoryOwnerProvider
+    },
+    onTerritoryFailure: (Throwable) -> Unit = {}
 ) : AppContainer {
     override val accountRegistration = AccountRegistration(FirebaseAccountProvider())
 
@@ -106,5 +118,12 @@ class DefaultAppContainer(
         publicArtworkStore,
         currentUid = { (accountRegistration.state.value as? AccountState.Ready)?.account?.uid },
         onFailure = onGalleryFailure
+    )
+
+    override val territoryGame = TerritoryGame(
+        territoryStore,
+        drawingStorage.territoryCaptures,
+        territoryOwnerProvider(accountRegistration),
+        onFailure = onTerritoryFailure
     )
 }

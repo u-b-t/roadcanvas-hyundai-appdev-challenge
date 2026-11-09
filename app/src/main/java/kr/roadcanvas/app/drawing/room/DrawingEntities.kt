@@ -144,3 +144,22 @@ data class ArtworkPublicationEntity(
     @ColumnInfo(name = "artwork_id") val artworkId: String,
     val status: String
 )
+
+/**
+ * 땅따먹기 획득. 칸은 쉼표로 이은 geohash7 문자열이다. 서버에 반영한 뒤에만 칸 분류 수가 있다.
+ * 완료 기록을 지워도 서버 반영을 이어가도록 외래 키를 두지 않는다.
+ */
+@Entity(
+    tableName = "territory_capture",
+    indices = [Index("drawing_id", unique = true), Index("status", "created_at")]
+)
+data class TerritoryCaptureEntity(
+    @PrimaryKey @ColumnInfo(name = "capture_id") val captureId: String,
+    @ColumnInfo(name = "drawing_id") val drawingId: Long,
+    val cells: String,
+    @ColumnInfo(name = "created_at") val createdAtMillis: Long,
+    val status: String,
+    @ColumnInfo(name = "new_cells") val newCells: Int?,
+    @ColumnInfo(name = "stolen_cells") val stolenCells: Int?,
+    @ColumnInfo(name = "own_cells") val ownCells: Int?
+)
