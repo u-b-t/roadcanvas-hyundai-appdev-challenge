@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
@@ -19,7 +20,7 @@ import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
 import kr.roadcanvas.app.MainActivity
-import kr.roadcanvas.app.modeselect.MODE_SELECT_TITLE
+import kr.roadcanvas.app.modeselect.HOME_SCREEN_TAG
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
 import kr.roadcanvas.app.navigation.Routes
 import kr.roadcanvas.app.splash.APP_NAME
@@ -86,12 +87,15 @@ class AppLaunchSteps(private val ruleHolder: ComposeRuleHolder) {
         }
     }
 
-    @Then("모드 선택 화면이 나타나는 동안 시작 화면의 커버 이미지가 화면 전체에 남아 있다")
+    @Then("메인 화면이 나타나는 동안 시작 화면의 커버 이미지가 화면 전체에 남아 있다")
     fun assertSplashCoverStaysDuringTransition() {
-        // 가상 시계를 조금씩 진행해 모드 선택 화면이 처음 구성된 때를 잡는다. 이때는 나타나는 효과가 막 시작된 상태다.
+        // 가상 시계를 조금씩 진행해 메인 화면이 처음 구성된 때를 잡는다. 이때는 나타나는 효과가 막 시작된 상태다.
         var waited = 0L
-        while (composeRule.onAllNodesWithText(MODE_SELECT_TITLE).fetchSemanticsNodes().isEmpty()) {
-            assertTrue("모드 선택 화면이 나타나지 않았다", waited < WAIT_TIMEOUT_MILLIS)
+        while (composeRule.onAllNodes(
+                hasTestTag(HOME_SCREEN_TAG)
+            ).fetchSemanticsNodes().isEmpty()
+        ) {
+            assertTrue("메인 화면이 나타나지 않았다", waited < WAIT_TIMEOUT_MILLIS)
             composeRule.mainClock.advanceTimeByFrame()
             waited += FRAME_MILLIS
         }

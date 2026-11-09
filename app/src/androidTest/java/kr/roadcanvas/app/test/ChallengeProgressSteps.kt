@@ -33,8 +33,7 @@ import kr.roadcanvas.app.challenge.progressTitleOf
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
-import kr.roadcanvas.app.modeselect.CIRCLE_CHALLENGE_NAME
-import kr.roadcanvas.app.modeselect.MODE_SELECT_TITLE
+import kr.roadcanvas.app.modeselect.CIRCLE_START_LABEL
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
 import kr.roadcanvas.app.recording.RecordingPermissions
 import kr.roadcanvas.app.recording.RecordingState
@@ -70,8 +69,7 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
     @Given("동그라미 챌린지 진행 화면에서 시작을 누른다")
     fun pressStart() {
         openApp()
-        waitForText(MODE_SELECT_TITLE)
-        composeRule.onNode(hasText(CIRCLE_CHALLENGE_NAME) and hasClickAction()).performClick()
+        composeRule.clickHomeButton(CIRCLE_START_LABEL)
         waitForText(CIRCLE_READY_TITLE)
         waitUntil { fakeContainer.locationProvider.subscriberCount.value > 0 }
         runBlocking { fakeContainer.locationProvider.sendLocation(LocationSample(0.0, 0.0, 0L)) }

@@ -26,7 +26,7 @@ import kr.roadcanvas.app.drawing.CompletedDrawingSummary
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.StorageResult
-import kr.roadcanvas.app.modeselect.MODE_SELECT_TITLE
+import kr.roadcanvas.app.modeselect.HOME_SCREEN_TAG
 import kr.roadcanvas.app.mydrawings.MY_DRAWINGS_ITEM_SCORE_TAG
 import kr.roadcanvas.app.mydrawings.MY_DRAWINGS_LIST_TAG
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
@@ -64,8 +64,8 @@ class FreeDrawingSteps(
             navController = rememberNavController()
             RoadCanvasNavHost(navController = navController, splashDurationMillis = 0L)
         }
-        // 실제 앱과 같은 뒤로 가기 흐름을 위해 모드 선택 위에 연다.
-        waitForText(MODE_SELECT_TITLE)
+        // 실제 앱과 같은 뒤로 가기 흐름을 위해 메인 화면 위에 연다.
+        composeRule.waitForHome()
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             navController.navigate(Routes.FREE_READY)
         }
@@ -150,7 +150,7 @@ class FreeDrawingSteps(
         val scores = hasTestTag(MY_DRAWINGS_ITEM_SCORE_TAG) and
             hasAnyAncestor(hasTestTag(MY_DRAWINGS_LIST_TAG))
         waitUntil {
-            composeRule.onAllNodesWithText(MODE_SELECT_TITLE).fetchSemanticsNodes().isEmpty() &&
+            composeRule.onAllNodes(hasTestTag(HOME_SCREEN_TAG)).fetchSemanticsNodes().isEmpty() &&
                 composeRule.onAllNodes(hasTestTag(MY_DRAWINGS_LIST_TAG))
                     .fetchSemanticsNodes().isNotEmpty()
         }

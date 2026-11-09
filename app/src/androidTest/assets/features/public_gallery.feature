@@ -11,12 +11,12 @@ Feature: 공개 작품 목록과 투표
   - [#82 공개 자유그림 목록과 투표 화면 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/82)
   - [#108 영토 지도 현재 위치 중심과 공개 작품 지도 배치](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/108)
 
-  Scenario: 모드 선택에서 공개 작품 목록으로 이동해 이름, 닉네임, 경로 썸네일과 표 수를 본다
+  Scenario: 메인 화면에서 공개 작품 목록으로 이동해 이름, 닉네임, 경로 썸네일과 표 수를 본다
     Given 서버에 공개 작품이 있다
       | 작품 ID | 이름     | 닉네임        | 생성 순서 | 경로 점 | 표 수 |
       | a1    | 한강 고래  | 드라이버-aaaa | 1     | 25   | 3   |
       | a2    | 남산 별    | 드라이버-bbbb | 2     | 25   | 0   |
-    And 모드 선택 화면을 연다
+    And 메인 화면을 연다
     When "공개 작품" 버튼을 누른다
     Then 목록의 "한강 고래" 작품에 "드라이버-aaaa"가 표시된다
     And 목록의 "한강 고래" 작품에 "3표"가 표시된다

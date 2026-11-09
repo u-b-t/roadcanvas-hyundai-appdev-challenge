@@ -10,7 +10,6 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ApplicationProvider
@@ -33,7 +32,6 @@ import kr.roadcanvas.app.drawing.StorageResult
 import kr.roadcanvas.app.drawing.TERRITORY_AREA_METRIC
 import kr.roadcanvas.app.map.RoutePoint as MapPoint
 import kr.roadcanvas.app.map.fake.FakeRouteMapComponent
-import kr.roadcanvas.app.modeselect.MODE_SELECT_TITLE
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
 import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.TerritoryCalculator
@@ -154,10 +152,7 @@ class TerritoryMapSteps(
         TestScreens.launchContent {
             RoadCanvasNavHost(navController = rememberNavController(), splashDurationMillis = 0L)
         }
-        waitFor(hasText(MODE_SELECT_TITLE))
-        val button = hasText(TERRITORY_MAP_LABEL) and hasClickAction()
-        waitFor(button)
-        composeRule.onNode(button).performClick()
+        composeRule.clickHomeButton(TERRITORY_MAP_LABEL)
         waitFor(hasText(TERRITORY_MAP_TITLE))
         composeRule.waitForIdle()
     }

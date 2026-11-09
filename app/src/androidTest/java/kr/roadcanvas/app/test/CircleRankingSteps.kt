@@ -5,13 +5,11 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
-import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ApplicationProvider
@@ -22,14 +20,13 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import kr.roadcanvas.app.RoadCanvasApplication
-import kr.roadcanvas.app.circleranking.CIRCLE_RANKING_LABEL
 import kr.roadcanvas.app.circleranking.CIRCLE_RANKING_ROW_TAG
 import kr.roadcanvas.app.circleranking.CIRCLE_RANKING_TITLE
 import kr.roadcanvas.app.circleranking.CircleRankingEntry
 import kr.roadcanvas.app.circleranking.MY_CIRCLE_OUTSIDE_ROW_TAG
 import kr.roadcanvas.app.circleranking.MY_CIRCLE_RANKING_ROW_TAG
 import kr.roadcanvas.app.circleranking.MY_CIRCLE_RECORD_TAG
-import kr.roadcanvas.app.modeselect.MODE_SELECT_TITLE
+import kr.roadcanvas.app.modeselect.CIRCLE_RANKING_HOME_LABEL
 import kr.roadcanvas.app.navigation.RoadCanvasNavHost
 import kr.roadcanvas.app.vehicle.fake.FakeAppContainer
 import org.junit.Assert.assertEquals
@@ -99,16 +96,13 @@ class CircleRankingSteps(private val ruleHolder: ComposeRuleHolder) {
         store.countFailure = true
     }
 
-    @Given("모드 선택에서 동그라미 챌린지 순위 화면을 연다")
+    @Given("메인 화면에서 동그라미 챌린지 순위 화면을 연다")
     fun openRanking() {
         composeRule.mainClock.autoAdvance = true
         TestScreens.launchContent {
             RoadCanvasNavHost(navController = rememberNavController(), splashDurationMillis = 0L)
         }
-        val button = hasText(CIRCLE_RANKING_LABEL) and hasClickAction()
-        waitFor(hasText(MODE_SELECT_TITLE))
-        waitFor(button)
-        composeRule.onNode(button).performClick()
+        composeRule.clickHomeButton(CIRCLE_RANKING_HOME_LABEL)
         waitFor(hasText(CIRCLE_RANKING_TITLE))
         composeRule.waitForIdle()
     }

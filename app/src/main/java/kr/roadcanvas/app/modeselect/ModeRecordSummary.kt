@@ -16,7 +16,7 @@ import kr.roadcanvas.app.territory.TerritoryGame
 const val NO_RECORD_SUMMARY = "아직 기록이 없어요"
 
 /**
- * 모드 선택 카드에 보여줄 내 최근 기록 요약.
+ * 메인 화면 모드 섹션에 보여줄 내 최근 기록 요약.
  * [circleBestScore]는 동그라미 최고 점수, [freeDrawingCount]와 [territoryCount]는 기기에 저장한 기록 수다.
  * [territoryCells]는 서버에서 읽은 내 칸 수이며 읽지 못했으면 null이다.
  */
@@ -27,7 +27,7 @@ data class ModeRecordSummary(
     val territoryCells: Long? = null
 )
 
-/** [mode] 카드에 보여줄 한 줄 요약 */
+/** [mode] 섹션에 보여줄 한 줄 요약 */
 fun ModeRecordSummary.textFor(mode: DrawingMode): String = when (mode) {
     DrawingMode.CIRCLE -> circleBestScore?.let { "최고 ${it}점" } ?: NO_RECORD_SUMMARY
     DrawingMode.FREE_DRAWING ->
@@ -65,7 +65,7 @@ class ModeRecordSummaryLoader(
         (territoryGame.myCellCount() as? TerritoryCall.Success)?.value
 }
 
-/** 모드 선택 화면에 들어올 때마다 요약을 다시 읽는다. 기기 기록을 읽는 동안은 null이다. */
+/** 메인 화면에 들어올 때마다 요약을 다시 읽는다. 기기 기록을 읽는 동안은 null이다. */
 @Composable
 fun rememberModeRecordSummary(): State<ModeRecordSummary?> {
     val container = LocalContext.current.appContainer
