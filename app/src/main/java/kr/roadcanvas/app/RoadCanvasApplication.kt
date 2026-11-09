@@ -11,6 +11,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kr.roadcanvas.app.account.AccountState
+import kr.roadcanvas.app.artwork.AccountArtworkAuthorProvider
+import kr.roadcanvas.app.artwork.FirestoreArtworkStore
+import kr.roadcanvas.app.artwork.UnavailableArtworkAuthorProvider
+import kr.roadcanvas.app.artwork.UnavailableArtworkStore
 import kr.roadcanvas.app.di.AppContainer
 import kr.roadcanvas.app.di.DefaultAppContainer
 import kr.roadcanvas.app.drawing.room.DrawingDatabase
@@ -79,20 +83,28 @@ open class RoadCanvasApplication : Application() {
     }
 
     /** 테스트용 Application은 이 함수를 바꿔 대체 구현을 주입한다. */
-    protected open fun createContainer(): AppContainer = DefaultAppContainer(
-        VehicleIntegrationSelection.parse(
-            location = BuildConfig.VEHICLE_LOCATION,
-            driving = BuildConfig.VEHICLE_DRIVING,
-            simulatedRoute = BuildConfig.VEHICLE_SIM_ROUTE
-        ),
-        drawingStorage = DrawingDatabase.create(this).toStorage(),
-        pleosLocationProvider = { PleosLocationProvider.create(this) },
-        carUxRestrictionsClient = { AndroidCarUxRestrictionsClient(this) },
-        mapAuth = mapAuth,
-        recordingRunner = { ServiceRecordingRunner(this) },
-        onRecordingStorageFailure = { Log.w(TAG, "경로 점을 저장하지 못했습니다.", it) },
-        onArtworkFailure = { Log.w(TAG, "작품 공개 요청이 실패했습니다.", it) }
-    )
+    protected open fun createContainer(): AppContainer {
+        // google-services.json 없이 빌드했으면 작품 공개는 항상 계정 확인 실패로 안내한다.
+        val firebase = FirebaseApp.getApps(this).isNotEmpty()
+        return DefaultAppContainer(
+            VehicleIntegrationSelection.parse(
+                location = BuildConfig.VEHICLE_LOCATION,
+                driving = BuildConfig.VEHICLE_DRIVING,
+                simulatedRoute = BuildConfig.VEHICLE_SIM_ROUTE
+            ),
+            drawingStorage = DrawingDatabase.create(this).toStorage(),
+            pleosLocationProvider = { PleosLocationProvider.create(this) },
+            carUxRestrictionsClient = { AndroidCarUxRestrictionsClient(this) },
+            mapAuth = mapAuth,
+            recordingRunner = { ServiceRecordingRunner(this) },
+            onRecordingStorageFailure = { Log.w(TAG, "경로 점을 저장하지 못했습니다.", it) },
+            onArtworkFailure = { Log.w(TAG, "작품 공개 요청이 실패했습니다.", it) },
+            artworkStore = if (firebase) FirestoreArtworkStore() else UnavailableArtworkStore,
+            artworkAuthorProvider = {
+                if (firebase) AccountArtworkAuthorProvider(it) else UnavailableArtworkAuthorProvider
+            }
+        )
+    }
 }
 
 val Context.appContainer: AppContainer

@@ -33,7 +33,8 @@ import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteGenerator
  * Pleos 위치 구현은 Context가 필요하므로 Application이 [pleosLocationProvider]로 만들어 넘긴다.
  * [carUxRestrictionsClient]는 AAOS 주행 규제를 고른 경우에만 만든다.
  * 기록 서비스도 Context가 필요하므로 [recordingRunner]로 받아 처음 쓸 때 만든다.
- * 작품 공개는 서버와 익명 인증이 연결되기 전까지 [artworkStore]와 [artworkAuthorProvider]가 항상 실패한다.
+ * 작품 공개는 Firebase 설정이 있을 때만 Application이 [artworkStore]와 [artworkAuthorProvider]를 넘기며,
+ * 기본값은 항상 실패한다. 작성자는 [accountRegistration]의 익명 계정으로 만든다.
  */
 class DefaultAppContainer(
     selection: VehicleIntegrationSelection,
@@ -45,7 +46,9 @@ class DefaultAppContainer(
     recordingRunner: () -> RecordingRunner = { error("기록 실행기가 주어지지 않았습니다.") },
     onRecordingStorageFailure: (Throwable) -> Unit = {},
     artworkStore: ArtworkStore = UnavailableArtworkStore,
-    artworkAuthorProvider: ArtworkAuthorProvider = UnavailableArtworkAuthorProvider,
+    artworkAuthorProvider: (AccountRegistration) -> ArtworkAuthorProvider = {
+        UnavailableArtworkAuthorProvider
+    },
     onArtworkFailure: (Throwable) -> Unit = {}
 ) : AppContainer {
     override val accountRegistration = AccountRegistration(FirebaseAccountProvider())
@@ -88,7 +91,7 @@ class DefaultAppContainer(
     override val artworkPublisher = ArtworkPublisher(
         drawingStorage.publications,
         artworkStore,
-        artworkAuthorProvider,
+        artworkAuthorProvider(accountRegistration),
         onFailure = onArtworkFailure
     )
 }
