@@ -72,7 +72,6 @@ class PublicGallerySteps(private val ruleHolder: ComposeRuleHolder) {
     }
 
     @Given("작성자가 {string} 작품을 비공개로 바꿨다")
-    @When("작성자가 {string} 작품을 비공개로 바꿨다")
     fun unpublish(artworkId: String) {
         store.setPublished(artworkId, published = false)
     }
@@ -105,7 +104,6 @@ class PublicGallerySteps(private val ruleHolder: ComposeRuleHolder) {
     }
 
     @Given("공개 작품 화면을 연다")
-    @When("공개 작품 화면을 연다")
     fun openGallery() {
         composeRule.mainClock.autoAdvance = true
         TestScreens.launchContent {
