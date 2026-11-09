@@ -87,6 +87,8 @@
 - 닫힘 허용 거리 50m(`TERRITORY_CLOSURE_TOLERANCE_METERS`)와 최소 면적 5,000m²(`TERRITORY_MIN_AREA_SQUARE_METERS`)는 잠정값이다. 유효 위치값이 10개 미만이거나 0.5m 이내 연속 점을 합친 뒤 서로 다른 지점이 셋 미만이면 판정 불가다.
 - 끝점이 허용 거리 안이면 끝점과 시작점을 곧게 이어 닫는다. 경로 중간에 고리가 있어도 끝점이 돌아오지 않으면 닫히지 않은 것으로 본다.
 - 닫힌 경로는 앞서 지난 구간과 교차하는 점이나 앞서 지난 꼭짓점에 0.5m 이내로 다시 온 점에서 고리로 나누고, 면적이 가장 큰 고리 하나만 영역으로 한다. 그래서 8자는 큰 쪽 고리만, 같은 길을 여러 바퀴 돌면 한 바퀴만 차지하고, 작은 고리와 같은 구간을 갔다 온 곁가지는 영역을 넓히지 않는다. 구간이 이전 꼭짓점을 스치거나 평행하게 겹치는 경우는 교차로 보지 않는다. 규칙은 `TerritoryCalculatorTest`가 고정한다.
+- 화면은 모드 선택의 땅따먹기 항목에서 다른 모드와 같은 준비 → 진행 → 결과 흐름을 쓴다. 진행 화면은 동그라미 챌린지처럼 출발점까지 거리를 보여준다. 결과 화면(`TerritoryResultScreen`)은 차지한 경계를 `RouteMapOptions.filledArea`(네이버 `PolygonOverlay`, 꼭짓점 3개 이상)로 채워 그리고 면적(`formatArea`, 1km² 미만은 m², 이상은 km²)과 둘레를 보여준다. `Claimed`가 아니면 이유(`territoryFailureText`)를 안내하고 저장하지 않는다(`ChallengeResult.savable`).
+- 차지한 면적과 둘레는 완료 기록 세부 지표 `territoryAreaSquareMeters`·`territoryPerimeterMeters`로 저장해 스키마를 바꾸지 않았다. 목록 요약은 면적 지표 하나만 함께 읽어(`CompletedDrawingSummary.territoryAreaSquareMeters`) 점수 자리에 보여주고, 상세 지도의 채운 영역은 저장한 경로를 같은 판정으로 다시 계산한다(`territoryBoundaryOf`).
 
 ## 빌드와 실행
 
