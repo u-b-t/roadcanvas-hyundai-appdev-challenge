@@ -13,6 +13,9 @@ class RoutesTest {
         assertEquals("freeResult/1/2", Routes.result(DrawingMode.FREE_DRAWING, 1, 2))
         assertEquals(Routes.CIRCLE_RESULT, Routes.resultPattern(DrawingMode.CIRCLE))
         assertEquals(Routes.FREE_RESULT, Routes.resultPattern(DrawingMode.FREE_DRAWING))
+        assertEquals(Routes.TERRITORY_READY, Routes.ready(DrawingMode.TERRITORY))
+        assertEquals("territoryResult/1/2", Routes.result(DrawingMode.TERRITORY, 1, 2))
+        assertEquals(Routes.TERRITORY_RESULT, Routes.resultPattern(DrawingMode.TERRITORY))
     }
 
     @Test
