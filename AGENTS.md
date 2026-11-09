@@ -127,16 +127,18 @@
 ## Pleos Connect Emulator
 
 - Pleos Connect Emulator **v2.1.0**, Android API 34를 사용한다. AVD는 Cold Boot와 RAM 4GB로 설정한다. AVD 이름과 이미지 아키텍처는 각 환경에서 확인한다.
-- `ANDROID_HOME`이 Android SDK 경로를 가리키도록 설정하고, 다음 명령으로 실행 및 연결을 확인한다.
+- 로컬 에뮬레이터는 `scripts/dev-emulator.sh`로 띄운다. 단계를 손으로 실행하다 GPS 연동을 빠뜨린 적이 있어 한 명령으로 묶었다. macOS 기본 bash 3.2에서 동작하고 `ANDROID_HOME`이 없으면 흔한 SDK 경로를 찾는다.
 
 ```sh
-"$ANDROID_HOME/emulator/emulator" -list-avds
-"$ANDROID_HOME/emulator/emulator" -avd <AVD이름> -no-snapshot
-# 다른 터미널에서
-"$ANDROID_HOME/platform-tools/adb" devices
-"$ANDROID_HOME/platform-tools/adb" install -r app/build/outputs/apk/debug/app-debug.apk
-"$ANDROID_HOME/platform-tools/adb" shell am start -n kr.roadcanvas.app/.MainActivity
+scripts/dev-emulator.sh up --apk app/build/outputs/apk/debug/app-debug.apk   # --avd <이름> --port 5554
+scripts/dev-emulator.sh status
+scripts/dev-emulator.sh down
 ```
+
+- `up`은 실행 중인 에뮬레이터가 없으면 남은 잠금 파일과 크래시 보고 DB를 정리하고 `-crash-report-mode disabled`로 콜드 부팅한 뒤 `sys.boot_completed` 1, user 0 `RUNNING_UNLOCKED`, `car_service` found를 확인한다. 이어서 `adb forward tcp:8088 tcp:8088`, APK를 지정하면 설치와 사용자 10에게 대략적인 위치·알림·Pleos 위치 권한 부여, `console-gps-bridge.py`와 qemu 메모리 감시를 백그라운드로 실행한다. 다시 실행해도 이미 실행 중인 것은 다시 띄우지 않는다. `--avd`가 없으면 `config.ini`에 pleos가 들어간 AVD 하나를 고른다.
+- 메모리 감시는 1분마다 qemu RSS를 기록하고 8GB를 넘으면 로그와 macOS 알림으로 경고한다. qemu가 43GB까지 늘어난 누수가 있었다. 자동 재시작은 하지 않으므로 경고를 보면 `down` 후 `up`한다.
+- `status`는 에뮬레이터, car_service, 콘솔 활성, 기어, GPS 연동, 메모리 감시, qemu 메모리를 한 줄씩 보여 주고 빠진 항목은 `!`로 표시한다. `down`은 GPS 연동과 메모리 감시를 멈추고 에뮬레이터를 종료한다. 로그와 pid 파일은 `~/.roadcanvas-dev-emulator/<포트>/`에 있다.
+- 직접 실행할 때는 `"$ANDROID_HOME/emulator/emulator" -avd <AVD이름> -no-snapshot`으로 띄우고 `adb install -r`, `adb shell am start -n kr.roadcanvas.app/.MainActivity`를 쓴다.
 
 - 첫 부팅에는 시간이 걸릴 수 있다. `adb shell getprop sys.boot_completed`가 `1`이면 부팅이 끝난 것이다.
 - 에뮬레이터가 여러 대 연결돼 있으면 `adb -s <serial>`로 대상을 지정한다.
@@ -153,17 +155,13 @@
 
 요청 주소와 파라미터는 [OpenAPI 명세](docs/pleos-console/openapi-v2.1.0.json)와 [요청 방법](docs/pleos-console/README.md)을 사용하고, 검증 범위와 미해결 사항은 [항목별 검증 결과](docs/pleos-console/verification-v2.1.0.md)를 확인한다. 요청이 실패하거나 명세와 다를 때만 실행 중인 콘솔의 `/vehicle/catalog`과 페이지 코드를 확인하고 명세를 갱신한다.
 
-에뮬레이터가 실행 중일 때 별도 터미널에서 아래 명령을 실행하고 브라우저에서 <http://127.0.0.1:8088/>을 연다. `ANDROID_HOME`은 해당 터미널에도 설정해야 한다.
-
-```sh
-"$ANDROID_HOME/platform-tools/adb" forward tcp:8088 tcp:8088
-```
+`scripts/dev-emulator.sh up`이 포트(`adb forward tcp:8088 tcp:8088`)를 연결하므로 브라우저에서 <http://127.0.0.1:8088/>을 연다. 스크립트 없이 띄운 에뮬레이터는 위 `adb forward`를 직접 실행한다.
 
 - 콘솔 페이지를 열어둬야 차량 상태 입력이 활성화된다. 닫힌 상태에서 기어 변경을 시도하면 `503 emulator_inactive`가 반환되는 것을 확인했다.
 - P·R·N·D, 가속·브레이크와 스티어링 각도를 조작할 수 있다. 주행 화면은 D 선택 후 ACCEL을 길게 눌러 시험한다.
 - 주행 상태 검증이 필요하면 대상 에뮬레이터와 현재 차량 상태를 먼저 확인한다. Virtual Console을 열고 기어를 D로 변경한 뒤, 콘솔 표시와 앱의 실제 반응을 모두 확인한다. D 변경만으로 속도가 생기지는 않으므로 속도가 필요한 경우에만 ACCEL을 조작한다. 테스트 종료 후 직접 변경한 기어·페달 값은 가능한 한 원래 상태로 복원한다.
 - 브라우저 조작 도구가 없으면 현재 버전에서 확인된 콘솔의 비공식 로컬 HTTP 인터페이스를 사용할 수 있다. `GET /vehicle/state`에서 `gear.bridge_ready`와 `gear.actual.value`를 확인하고, `PUT /vehicle/gear?gear=Drive` 또는 `gear=Park`로 변경한 뒤 상태를 다시 조회한다. 이 인터페이스는 SDK의 공식 API가 아니므로 버전마다 달라질 수 있다.
-- Virtual Console은 위치(GNSS)를 바꾸지 않는다. 콘솔로 주행해도 FusedLocation 위치는 그대로다. 콘솔 주행을 위치로 이어 시험하려면 콘솔 페이지를 열어 둔 채 `python3 scripts/console-gps-bridge.py --adb "$ANDROID_HOME/platform-tools/adb"`를 실행한다. 0.5초마다 `/vehicle/state`의 기어·속도·핸들 각도를 읽어 위치를 계산하고 `adb emu geo fix`로 보낸다. D는 전진, R은 후진, P·N은 정지다. 시작 위치는 `--lat`, `--lon`, `--heading`으로 정하고 핸들 방향이 반대면 `--invert-steering`을 쓴다. 콘솔 페이지가 비활성(`controls.emulator_active`가 false)이면 위치를 보내지 않는다. 콘솔의 비공식 인터페이스에 의존하는 개발용 도구다.
+- Virtual Console은 위치(GNSS)를 바꾸지 않는다. 콘솔로 주행해도 FusedLocation 위치는 그대로다. 콘솔 주행을 위치로 이어 시험하려면 콘솔 페이지를 열어 둔다. `scripts/dev-emulator.sh up`이 `scripts/console-gps-bridge.py`를 백그라운드로 실행하며, 스크립트 없이 쓰려면 `python3 scripts/console-gps-bridge.py --adb "$ANDROID_HOME/platform-tools/adb"`를 실행한다. 0.5초마다 `/vehicle/state`의 기어·속도·핸들 각도를 읽어 위치를 계산하고 `adb emu geo fix`로 보낸다. D는 전진, R은 후진, P·N은 정지다. 시작 위치는 `--lat`, `--lon`, `--heading`으로 정하고 핸들 방향이 반대면 `--invert-steering`을 쓴다. 콘솔 페이지가 비활성(`controls.emulator_active`가 false)이면 위치를 보내지 않는다. 콘솔의 비공식 인터페이스에 의존하는 개발용 도구다.
 - 브라우저 페이지가 열려 있지 않으면 로컬 인터페이스를 사용할 때 `POST /browser/session?client=<고유식별자>`를 1초 간격으로 보내 연결을 유지해야 한다. 확인된 콘솔의 세션 제한은 3초다. 테스트가 끝나면 `POST /browser/session?client=<고유식별자>&closing=1`로 자신이 만든 세션만 닫는다. 이미 사용 중인 다른 세션은 건드리지 않는다. `/vehicle/state`의 `bridge_ready`가 false이거나 요청이 실패하면 성공으로 간주하지 말고 오류를 기록한다.
 - 이 앱은 DO를 선언해 D에서도 플랫폼 제한 화면이 뜨지 않고 진행 화면 외의 화면은 앱의 정차 안내가 보인다. DO를 선언하지 않은 앱이나 디버그 전용 화면처럼 D에서 표시 제한되는 화면이라면 그 제한 화면을 결과로 보고, 주행 중 기능을 사용했다고 주장하지 않는다. 스크린샷도 요청한 화면이 실제로 보이는지 확인한다.
 - P 상태에서 왼쪽 위 Theme 버튼으로 Highway와 Forest를 전환한다. Highway에서는 1인칭과 3인칭을 선택할 수 있다. 교차로 좌회전·우회전이나 실제 경로 주행 기능은 확인되지 않았다.
