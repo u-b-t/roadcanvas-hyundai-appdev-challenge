@@ -19,6 +19,7 @@ class CarUxRestrictionsDrivingRestrictionProviderTest {
     private fun TestScope.subscribe(): CarUxRestrictionsDrivingRestrictionProvider {
         val provider = CarUxRestrictionsDrivingRestrictionProvider(client, backgroundScope)
         provider.restriction.launchIn(backgroundScope)
+        provider.basis.launchIn(backgroundScope)
         return provider
     }
 
@@ -94,6 +95,86 @@ class CarUxRestrictionsDrivingRestrictionProviderTest {
 
         assertFalse(client.connected.value)
         assertEquals(DrivingRestriction.UNKNOWN, provider.restriction.value)
+    }
+
+    @Test
+    fun `주행 상태가 있으면 주행 상태로 판단하고 IDLING은 조작 가능이다`() {
+        val restrictionOf = CarUxRestrictionsDrivingRestrictionProvider::drivingRestrictionOf
+        for (requires in listOf(true, false, null)) {
+            assertEquals(
+                DrivingRestriction.UNRESTRICTED,
+                restrictionOf(CarDrivingState.PARKED, requires)
+            )
+            assertEquals(
+                DrivingRestriction.UNRESTRICTED,
+                restrictionOf(CarDrivingState.IDLING, requires)
+            )
+            assertEquals(
+                DrivingRestriction.RESTRICTED,
+                restrictionOf(CarDrivingState.MOVING, requires)
+            )
+            assertEquals(
+                DrivingRestriction.UNKNOWN,
+                restrictionOf(CarDrivingState.UNKNOWN, requires)
+            )
+        }
+    }
+
+    @Test
+    fun `주행 상태가 없으면 주행 최적화 필요 여부로 판단한다`() {
+        val restrictionOf = CarUxRestrictionsDrivingRestrictionProvider::drivingRestrictionOf
+        assertEquals(DrivingRestriction.RESTRICTED, restrictionOf(null, true))
+        assertEquals(DrivingRestriction.UNRESTRICTED, restrictionOf(null, false))
+        assertEquals(DrivingRestriction.UNKNOWN, restrictionOf(null, null))
+    }
+
+    @Test
+    fun `주행 상태 값 변환은 알 수 없는 값을 UNKNOWN으로 본다`() {
+        assertEquals(CarDrivingState.UNKNOWN, CarDrivingState.fromEventValue(-1))
+        assertEquals(CarDrivingState.PARKED, CarDrivingState.fromEventValue(0))
+        assertEquals(CarDrivingState.IDLING, CarDrivingState.fromEventValue(1))
+        assertEquals(CarDrivingState.MOVING, CarDrivingState.fromEventValue(2))
+        assertEquals(CarDrivingState.UNKNOWN, CarDrivingState.fromEventValue(7))
+    }
+
+    @Test
+    fun `D에서 멈춰 주행 최적화가 필요해도 IDLING이면 조작 가능이다`() = runTest(UnconfinedTestDispatcher()) {
+        client.currentRequiresDistractionOptimization = true
+        client.currentDrivingState = CarDrivingState.IDLING
+
+        val provider = subscribe()
+
+        assertEquals(DrivingRestriction.UNRESTRICTED, provider.restriction.value)
+        assertEquals("주행 상태 IDLING", provider.basis.value)
+
+        client.notifyDrivingState(CarDrivingState.MOVING)
+        assertEquals(DrivingRestriction.RESTRICTED, provider.restriction.value)
+
+        client.notifyDrivingState(CarDrivingState.UNKNOWN)
+        assertEquals(DrivingRestriction.UNKNOWN, provider.restriction.value)
+    }
+
+    @Test
+    fun `주행 상태를 받을 수 없으면 UX 규제로 판단한다`() = runTest(UnconfinedTestDispatcher()) {
+        client.currentDrivingState = null
+        client.currentRequiresDistractionOptimization = true
+
+        val provider = subscribe()
+
+        assertEquals(DrivingRestriction.RESTRICTED, provider.restriction.value)
+        assertEquals("UX 규제", provider.basis.value)
+    }
+
+    @Test
+    fun `연결이 끊기면 받은 주행 상태도 버리고 확인 불가가 된다`() = runTest(UnconfinedTestDispatcher()) {
+        client.currentDrivingState = CarDrivingState.PARKED
+        val provider = subscribe()
+        assertEquals(DrivingRestriction.UNRESTRICTED, provider.restriction.value)
+
+        client.disconnectService()
+
+        assertEquals(DrivingRestriction.UNKNOWN, provider.restriction.value)
+        assertEquals(null, provider.basis.value)
     }
 
     @Test

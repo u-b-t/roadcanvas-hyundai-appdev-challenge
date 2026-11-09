@@ -16,6 +16,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kr.roadcanvas.app.vehicle.DrivingRestriction
 import kr.roadcanvas.app.vehicle.aaos.AndroidCarUxRestrictionsClient
+import kr.roadcanvas.app.vehicle.aaos.CarDrivingState
 import kr.roadcanvas.app.vehicle.aaos.CarUxRestrictionsClient
 import kr.roadcanvas.app.vehicle.aaos.CarUxRestrictionsDrivingRestrictionProvider
 import kr.roadcanvas.app.vehicle.fake.FakeCarUxRestrictionsClient
@@ -38,6 +39,12 @@ class DrivingRestrictionSteps {
     @Given("Car 서비스가 주행 규제 값을 알려준다")
     fun serviceProvidesValues() {
         fakeClient.currentRequiresDistractionOptimization = false
+    }
+
+    @Given("Car 서비스가 주행 상태와 주행 최적화 필요 여부 {string}를 알려준다")
+    fun serviceProvidesDrivingState(name: String) {
+        fakeClient.currentRequiresDistractionOptimization = requirementOf(name)
+        fakeClient.currentDrivingState = CarDrivingState.PARKED
     }
 
     @Given("Car 서비스의 현재 주행 최적화 필요 여부가 {string}이다")
@@ -81,6 +88,11 @@ class DrivingRestrictionSteps {
     @When("플랫폼이 주행 최적화 필요 여부를 {string}로 알린다")
     fun notifyRequirement(name: String) {
         fakeClient.notifyChanged(requirementOf(name))
+    }
+
+    @When("플랫폼이 주행 상태를 {string}로 알린다")
+    fun notifyDrivingState(name: String) {
+        fakeClient.notifyDrivingState(CarDrivingState.valueOf(name))
     }
 
     @When("Car 서비스 연결이 끊긴다")

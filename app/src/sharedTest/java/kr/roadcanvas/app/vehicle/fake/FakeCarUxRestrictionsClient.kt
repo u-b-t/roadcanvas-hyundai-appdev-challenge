@@ -3,12 +3,16 @@ package kr.roadcanvas.app.vehicle.fake
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kr.roadcanvas.app.vehicle.aaos.CarDrivingState
 import kr.roadcanvas.app.vehicle.aaos.CarUxRestrictionsClient
 
 /** 테스트에서 Car 서비스 연결과 `CarUxRestrictions` 값을 원하는 시점에 바꾸는 대체 구현 */
 class FakeCarUxRestrictionsClient : CarUxRestrictionsClient {
     /** 연결할 때 리스너에 바로 줄 현재 값. null이면 첫 값을 주지 않는다. */
     var currentRequiresDistractionOptimization: Boolean? = false
+
+    /** 연결할 때 리스너에 바로 줄 주행 상태. null이면 주행 상태를 받을 수 없는 환경처럼 주지 않는다. */
+    var currentDrivingState: CarDrivingState? = null
 
     /** 연결 시도에서 던질 예외 */
     var connectFailure: Exception? = null
@@ -35,6 +39,7 @@ class FakeCarUxRestrictionsClient : CarUxRestrictionsClient {
         this.listener = listener
         mutableConnected.value = true
         currentRequiresDistractionOptimization?.let { listener.onUxRestrictionsChanged(it) }
+        currentDrivingState?.let { listener.onDrivingStateChanged(it) }
         return AutoCloseable {
             this.listener = null
             mutableConnected.value = false
@@ -45,6 +50,12 @@ class FakeCarUxRestrictionsClient : CarUxRestrictionsClient {
     fun notifyChanged(requiresDistractionOptimization: Boolean) {
         currentRequiresDistractionOptimization = requiresDistractionOptimization
         listener?.onUxRestrictionsChanged(requiresDistractionOptimization)
+    }
+
+    /** 플랫폼이 바뀐 주행 상태를 알린 것처럼 동작한다. */
+    fun notifyDrivingState(drivingState: CarDrivingState) {
+        currentDrivingState = drivingState
+        listener?.onDrivingStateChanged(drivingState)
     }
 
     /** Car 서비스 연결이 끊긴 것처럼 동작한다. */

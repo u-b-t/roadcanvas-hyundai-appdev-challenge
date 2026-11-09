@@ -1,11 +1,26 @@
 Feature: 주행 규제
-  앱은 플랫폼이 알려주는 CarUxRestrictions로 화면 조작 가능 여부를 판단한다.
+  앱은 플랫폼이 알려주는 주행 상태로 화면 조작 가능 여부를 판단한다.
+  D에서 멈춘 상태(IDLING)도 정차로 본다. 주행 상태를 받을 수 없으면 CarUxRestrictions로 판단한다.
   확인할 수 없는 상태는 정차로 취급하지 않는다.
 
   Issues:
   - [#13 CarUxRestrictions 주행 규제 구현 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/13)
+  - [#119 D에서 멈춘 상태를 정차로 보도록 주행 상태 기준 변경](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/119)
 
-  Scenario Outline: 플랫폼 주행 규제 값을 앱의 주행 규제 상태로 바꾼다
+  Scenario Outline: 플랫폼 주행 상태로 앱의 주행 규제 상태를 정한다
+    Given Car 서비스가 주행 상태와 주행 최적화 필요 여부 "필요"를 알려준다
+    And 앱이 AAOS 주행 규제를 구독하고 있다
+    When 플랫폼이 주행 상태를 "<주행 상태>"로 알린다
+    Then AAOS 주행 규제 상태는 "<상태>"이다
+
+    Examples:
+      | 주행 상태   | 상태    |
+      | PARKED  | 조작 가능 |
+      | IDLING  | 조작 가능 |
+      | MOVING  | 조작 제한 |
+      | UNKNOWN | 확인 불가 |
+
+  Scenario Outline: 주행 상태를 받을 수 없으면 주행 최적화 필요 여부로 판단한다
     Given Car 서비스가 주행 규제 값을 알려준다
     And 앱이 AAOS 주행 규제를 구독하고 있다
     When 플랫폼이 주행 최적화 필요 여부를 "<필요 여부>"로 알린다

@@ -10,8 +10,9 @@ import android.os.Looper
 import android.util.Log
 
 /**
- * `Car.createCar`로 Car 서비스에 연결해 `CarUxRestrictionsManager`에 리스너를 등록한다.
- * 자동차용 기기가 아니거나 Car API를 쓸 수 없으면 확인 불가로 알린다.
+ * `Car.createCar`로 Car 서비스에 연결해 `CarUxRestrictionsManager`와 `CarDrivingStateManager`에
+ * 리스너를 등록한다. 자동차용 기기가 아니거나 Car API를 쓸 수 없으면 확인 불가로 알린다.
+ * 주행 상태를 받지 못하면 주행 상태 없이 `CarUxRestrictions`만 전달한다.
  */
 class AndroidCarUxRestrictionsClient(context: Context) : CarUxRestrictionsClient {
     private val context = context.applicationContext
@@ -38,6 +39,7 @@ class AndroidCarUxRestrictionsClient(context: Context) : CarUxRestrictionsClient
         private val listener: CarUxRestrictionsClient.Listener
     ) : AutoCloseable {
         private var manager: CarUxRestrictionsManager? = null
+        private var drivingState: CarDrivingStateReflection? = null
         private val car: Car = Car.createCar(
             context,
             Handler(Looper.getMainLooper()),
@@ -57,6 +59,10 @@ class AndroidCarUxRestrictionsClient(context: Context) : CarUxRestrictionsClient
                 uxManager.currentCarUxRestrictions?.let {
                     deliver(it.isRequiresDistractionOptimization)
                 }
+                drivingState = CarDrivingStateReflection.register(car) { state ->
+                    Log.i(TAG, "drivingState=$state")
+                    listener.onDrivingStateChanged(state)
+                }
             } catch (e: Exception) {
                 Log.w(TAG, "주행 규제 리스너를 등록하지 못했습니다.", e)
                 unregister(notify = true)
@@ -72,6 +78,8 @@ class AndroidCarUxRestrictionsClient(context: Context) : CarUxRestrictionsClient
         private fun unregister(notify: Boolean) {
             runCatching { manager?.unregisterListener() }
             manager = null
+            drivingState?.close()
+            drivingState = null
             if (notify) listener.onUnavailable()
         }
 
