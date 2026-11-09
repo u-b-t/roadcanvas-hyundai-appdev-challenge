@@ -4,4 +4,7 @@ package kr.roadcanvas.app.vehicle
 object VehiclePermissions {
     /** Pleos FusedLocation SDK 위치 권한 */
     const val FUSED_LOCATION = "pleos.car.permission.FUSED_LOCATION"
+
+    /** AAOS `PERF_VEHICLE_SPEED`를 읽는 위험(실행 중 요청) 권한 */
+    const val CAR_SPEED = "android.car.permission.CAR_SPEED"
 }

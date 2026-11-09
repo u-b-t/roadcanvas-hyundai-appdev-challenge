@@ -3,6 +3,7 @@ package kr.roadcanvas.app.recording
 import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Build
+import kr.roadcanvas.app.vehicle.VehiclePermissions
 
 /** 기록 서비스를 시작하기 전에 요청할 실행 중 권한 */
 object RecordingPermissions {
@@ -10,6 +11,8 @@ object RecordingPermissions {
      * Android 14부터 위치 타입 포그라운드 서비스는 Android 위치 권한이 있어야 시작할 수 있다.
      * Pleos 위치 권한은 이 조건을 채우지 않으므로 대략적인 위치 권한을 함께 요청한다.
      * 알림 권한은 기록 중 알림을 보여주는 데만 쓰며, 거절해도 기록은 한다.
+     * 차량 속도 권한은 D에서 멈춘 상태를 정차로 판단하는 데 쓰며, 거절하면 UX 규제로 판단한다.
+     * 자동차용 기기가 아니면 권한이 정의되지 않아 요청해도 거절된 것으로 끝난다.
      */
     // 권한 이름은 문자열 상수로 복사되며 [sdkInt]로 지원하는 버전에서만 쓴다.
     @SuppressLint("InlinedApi")
@@ -20,5 +23,6 @@ object RecordingPermissions {
         if (sdkInt >= Build.VERSION_CODES.TIRAMISU) {
             add(Manifest.permission.POST_NOTIFICATIONS)
         }
+        add(VehiclePermissions.CAR_SPEED)
     }
 }

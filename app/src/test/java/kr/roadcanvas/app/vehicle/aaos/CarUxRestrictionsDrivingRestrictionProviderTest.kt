@@ -98,65 +98,89 @@ class CarUxRestrictionsDrivingRestrictionProviderTest {
     }
 
     @Test
-    fun `주행 상태가 있으면 주행 상태로 판단하고 IDLING은 조작 가능이다`() {
+    fun `P이면 속도와 UX 규제에 관계없이 조작 가능이다`() {
         val restrictionOf = CarUxRestrictionsDrivingRestrictionProvider::drivingRestrictionOf
-        for (requires in listOf(true, false, null)) {
-            assertEquals(
-                DrivingRestriction.UNRESTRICTED,
-                restrictionOf(CarDrivingState.PARKED, requires)
-            )
-            assertEquals(
-                DrivingRestriction.UNRESTRICTED,
-                restrictionOf(CarDrivingState.IDLING, requires)
-            )
-            assertEquals(
-                DrivingRestriction.RESTRICTED,
-                restrictionOf(CarDrivingState.MOVING, requires)
-            )
-            assertEquals(
-                DrivingRestriction.UNKNOWN,
-                restrictionOf(CarDrivingState.UNKNOWN, requires)
-            )
+        for (stopped in listOf(true, false, null)) {
+            for (requires in listOf(true, false, null)) {
+                assertEquals(
+                    DrivingRestriction.UNRESTRICTED,
+                    restrictionOf(CarGear.PARK, stopped, requires)
+                )
+            }
         }
     }
 
     @Test
-    fun `주행 상태가 없으면 주행 최적화 필요 여부로 판단한다`() {
+    fun `P가 아니면 속도로 판단하고 멈췄으면 조작 가능이다`() {
         val restrictionOf = CarUxRestrictionsDrivingRestrictionProvider::drivingRestrictionOf
-        assertEquals(DrivingRestriction.RESTRICTED, restrictionOf(null, true))
-        assertEquals(DrivingRestriction.UNRESTRICTED, restrictionOf(null, false))
-        assertEquals(DrivingRestriction.UNKNOWN, restrictionOf(null, null))
+        for (gear in listOf(CarGear.DRIVE, CarGear.REVERSE, CarGear.NEUTRAL, null)) {
+            for (requires in listOf(true, false, null)) {
+                assertEquals(DrivingRestriction.UNRESTRICTED, restrictionOf(gear, true, requires))
+                assertEquals(DrivingRestriction.RESTRICTED, restrictionOf(gear, false, requires))
+            }
+        }
     }
 
     @Test
-    fun `주행 상태 값 변환은 알 수 없는 값을 UNKNOWN으로 본다`() {
-        assertEquals(CarDrivingState.UNKNOWN, CarDrivingState.fromEventValue(-1))
-        assertEquals(CarDrivingState.PARKED, CarDrivingState.fromEventValue(0))
-        assertEquals(CarDrivingState.IDLING, CarDrivingState.fromEventValue(1))
-        assertEquals(CarDrivingState.MOVING, CarDrivingState.fromEventValue(2))
-        assertEquals(CarDrivingState.UNKNOWN, CarDrivingState.fromEventValue(7))
+    fun `P가 아니고 속도를 모르면 주행 최적화 필요 여부로 판단한다`() {
+        val restrictionOf = CarUxRestrictionsDrivingRestrictionProvider::drivingRestrictionOf
+        for (gear in listOf(CarGear.DRIVE, null)) {
+            assertEquals(DrivingRestriction.RESTRICTED, restrictionOf(gear, null, true))
+            assertEquals(DrivingRestriction.UNRESTRICTED, restrictionOf(gear, null, false))
+            assertEquals(DrivingRestriction.UNKNOWN, restrictionOf(gear, null, null))
+        }
     }
 
     @Test
-    fun `D에서 멈춰 주행 최적화가 필요해도 IDLING이면 조작 가능이다`() = runTest(UnconfinedTestDispatcher()) {
+    fun `1km_h 미만은 멈춘 것으로 보고 후진 속도는 절댓값으로 본다`() {
+        val isStopped = CarUxRestrictionsDrivingRestrictionProvider::isStopped
+        assertTrue(isStopped(0f))
+        assertTrue(isStopped(0.27f))
+        assertTrue(isStopped(-0.27f))
+        assertFalse(isStopped(0.28f))
+        assertFalse(isStopped(-1f))
+        assertFalse(isStopped(5f))
+    }
+
+    @Test
+    fun `VehicleGear 값을 기어로 바꾸고 수동 단수는 D로 본다`() {
+        assertEquals(CarGear.NEUTRAL, CarGear.fromVehicleGear(0x1))
+        assertEquals(CarGear.REVERSE, CarGear.fromVehicleGear(0x2))
+        assertEquals(CarGear.PARK, CarGear.fromVehicleGear(0x4))
+        assertEquals(CarGear.DRIVE, CarGear.fromVehicleGear(0x8))
+        assertEquals(CarGear.DRIVE, CarGear.fromVehicleGear(0x10))
+        assertEquals(CarGear.DRIVE, CarGear.fromVehicleGear(0x1000))
+        assertEquals(null, CarGear.fromVehicleGear(0))
+        assertEquals(null, CarGear.fromVehicleGear(0x3))
+        assertEquals(null, CarGear.fromVehicleGear(0x2000))
+    }
+
+    @Test
+    fun `D에서 멈춰 주행 최적화가 필요해도 속도가 0이면 조작 가능이다`() = runTest(UnconfinedTestDispatcher()) {
         client.currentRequiresDistractionOptimization = true
-        client.currentDrivingState = CarDrivingState.IDLING
+        client.currentGear = CarGear.DRIVE
+        client.currentSpeedMetersPerSecond = 0f
 
         val provider = subscribe()
 
         assertEquals(DrivingRestriction.UNRESTRICTED, provider.restriction.value)
-        assertEquals("주행 상태 IDLING", provider.basis.value)
+        assertEquals("기어·속도 (D, 정지)", provider.basis.value)
 
-        client.notifyDrivingState(CarDrivingState.MOVING)
+        client.notifySpeed(5f)
         assertEquals(DrivingRestriction.RESTRICTED, provider.restriction.value)
+        assertEquals("기어·속도 (D, 이동)", provider.basis.value)
 
-        client.notifyDrivingState(CarDrivingState.UNKNOWN)
-        assertEquals(DrivingRestriction.UNKNOWN, provider.restriction.value)
+        client.notifySpeed(null)
+        assertEquals(DrivingRestriction.RESTRICTED, provider.restriction.value)
+        assertEquals("UX 규제", provider.basis.value)
+
+        client.notifyGear(CarGear.PARK)
+        assertEquals(DrivingRestriction.UNRESTRICTED, provider.restriction.value)
+        assertEquals("기어·속도 (P)", provider.basis.value)
     }
 
     @Test
-    fun `주행 상태를 받을 수 없으면 UX 규제로 판단한다`() = runTest(UnconfinedTestDispatcher()) {
-        client.currentDrivingState = null
+    fun `기어와 속도를 받을 수 없으면 UX 규제로 판단한다`() = runTest(UnconfinedTestDispatcher()) {
         client.currentRequiresDistractionOptimization = true
 
         val provider = subscribe()
@@ -166,8 +190,9 @@ class CarUxRestrictionsDrivingRestrictionProviderTest {
     }
 
     @Test
-    fun `연결이 끊기면 받은 주행 상태도 버리고 확인 불가가 된다`() = runTest(UnconfinedTestDispatcher()) {
-        client.currentDrivingState = CarDrivingState.PARKED
+    fun `연결이 끊기면 받은 기어와 속도도 버리고 확인 불가가 된다`() = runTest(UnconfinedTestDispatcher()) {
+        client.currentGear = CarGear.PARK
+        client.currentSpeedMetersPerSecond = 0f
         val provider = subscribe()
         assertEquals(DrivingRestriction.UNRESTRICTED, provider.restriction.value)
 
