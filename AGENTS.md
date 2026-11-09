@@ -84,11 +84,20 @@
 ## 땅따먹기 판정
 
 - 주행 경로가 둘러싼 영역은 `kr.roadcanvas.app.score.TerritoryCalculator`가 판정하고 결과는 `TerritoryResult`(`Claimed` 면적·경계 다각형·둘레, `NotClosed` 시작점과 끝점 거리, `TooSmall` 면적, `InsufficientPoints`)다. 모드는 `DrawingMode.TERRITORY`(키 `territory`, 점수 없음, 이름 입력 불필요)다. 좌표 변환은 동그라미 점수와 같은 `LocalPlane.kt`의 출발점 기준 지역 평면 좌표(m)를 쓴다.
-- 닫힘 허용 거리 50m(`TERRITORY_CLOSURE_TOLERANCE_METERS`)와 최소 면적 5,000m²(`TERRITORY_MIN_AREA_SQUARE_METERS`)는 잠정값이다. 유효 위치값이 10개 미만이거나 0.5m 이내 연속 점을 합친 뒤 서로 다른 지점이 셋 미만이면 판정 불가다.
+- 닫힘 허용 거리 50m(`TERRITORY_CLOSURE_TOLERANCE_METERS`)와 최소 면적 5,000m²(`TERRITORY_MIN_AREA_SQUARE_METERS`)는 #103에서 확정했다. 유효 위치값이 10개 미만이거나 0.5m 이내 연속 점을 합친 뒤 서로 다른 지점이 셋 미만이면 판정 불가다.
 - 끝점이 허용 거리 안이면 끝점과 시작점을 곧게 이어 닫는다. 경로 중간에 고리가 있어도 끝점이 돌아오지 않으면 닫히지 않은 것으로 본다.
 - 닫힌 경로는 앞서 지난 구간과 교차하는 점이나 앞서 지난 꼭짓점에 0.5m 이내로 다시 온 점에서 고리로 나누고, 면적이 가장 큰 고리 하나만 영역으로 한다. 그래서 8자는 큰 쪽 고리만, 같은 길을 여러 바퀴 돌면 한 바퀴만 차지하고, 작은 고리와 같은 구간을 갔다 온 곁가지는 영역을 넓히지 않는다. 구간이 이전 꼭짓점을 스치거나 평행하게 겹치는 경우는 교차로 보지 않는다. 규칙은 `TerritoryCalculatorTest`가 고정한다.
 - 화면은 모드 선택의 땅따먹기 항목에서 다른 모드와 같은 준비 → 진행 → 결과 흐름을 쓴다. 진행 화면은 동그라미 챌린지처럼 출발점까지 거리를 보여준다. 결과 화면(`TerritoryResultScreen`)은 차지한 경계를 `RouteMapOptions.filledArea`(네이버 `PolygonOverlay`, 꼭짓점 3개 이상)로 채워 그리고 면적(`formatArea`, 1km² 미만은 m², 이상은 km²)과 둘레를 보여준다. `Claimed`가 아니면 이유(`territoryFailureText`)를 안내하고 저장하지 않는다(`ChallengeResult.savable`).
 - 차지한 면적과 둘레는 완료 기록 세부 지표 `territoryAreaSquareMeters`·`territoryPerimeterMeters`로 저장해 스키마를 바꾸지 않았다. 목록 요약은 면적 지표 하나만 함께 읽어(`CompletedDrawingSummary.territoryAreaSquareMeters`) 점수 자리에 보여주고, 상세 지도의 채운 영역은 저장한 경로를 같은 판정으로 다시 계산한다(`territoryBoundaryOf`).
+
+## 서버 땅따먹기
+
+- 기기에서 차지한 영역을 geohash7 칸(서울 기준 약 121m x 153m)으로 바꿔 Firestore에 제출한다. 규칙, 데이터 계약, 제약은 [서버 땅따먹기](docs/firebase-territory.md)를 따른다. 화면은 `AppContainer.territoryGame`(`kr.roadcanvas.app.territory.TerritoryGame`)만 쓰고, 서버는 `TerritoryStore`(Firebase 설정이 있으면 `FirestoreTerritoryStore`, 없으면 `UnavailableTerritoryStore`) 뒤에 둔다.
+- 칸 변환(`territoryCellsOf`)은 다각형 안에 중심이 들어오는 칸을 고르고, 없으면 무게중심 칸 1개다. 400칸(`TERRITORY_MAX_CELLS_PER_CAPTURE`)을 넘으면 획득하지 않는다. 면적은 칸 수 x 칸 평균 면적(`territoryAreaOf`)이다.
+- 나중에 커밋된 획득이 이기고, 보호 시간 없이 다른 사용자의 칸을 빼앗는다. 경합으로 거부(`PERMISSION_DENIED`)되면 같은 획득 ID로 최대 5번 실행한다. 반영하지 못한 획득은 Room `territory_capture`(DB 버전 6)에 남겨 앱 실행·결과 화면·영토 화면 진입 때 다시 제출하고, 만든 지 24시간이 지나면 포기한다.
+- 순위 `territoryOwners/{uid}`는 획득 트랜잭션에서 함께 갱신하고 상위 10명을 보여 준다. 지도는 화면 범위의 geohash6 접두어로 최대 300칸을 읽는다.
+- 서버 검증(Cloud Functions)이 없어 클라이언트가 보낸 칸과 순위 칸 수를 믿는다. 수정한 클라이언트는 아무 칸이나 획득할 수 있다.
+- 운영 규칙 변경은 `firebase/territory-verification`에서 `npm run test:rules`로 에뮬레이터 시험을 통과한 뒤 `npx firebase-tools deploy --only firestore:rules --project roadcanvas-f9f2a`로 규칙만 배포한다.
 
 ## 빌드와 실행
 
@@ -108,7 +117,7 @@
 - 앱은 Firebase 익명 인증으로 사용자를 만들고 `users/{uid}`에 자동 닉네임(`드라이버-<UID 앞 8자>`)을 저장한다. 인증은 `AppContainer.accountRegistration`(`kr.roadcanvas.app.account`)이 맡고, 실패하면 앱 실행 중 30초 간격으로 다시 시도한다. 앱 데이터를 지우거나 기기를 바꾸면 익명 계정은 복구할 수 없다.
 - Firebase 콘솔에서 받은 `app/google-services.json`은 각 환경에 두고 커밋하지 않는다(`.gitignore`). 파일이 없으면 Google Services 플러그인을 적용하지 않고 빌드하며 앱은 인증을 건너뛰고 기기 저장만 쓴다. CI는 파일 없이 빌드하고 테스트한다. androidTest는 `FakeAppContainer`의 대체 인증을 쓴다.
 - 공개 작품 목록·상세·투표는 `AppContainer.publicGallery`(`kr.roadcanvas.app.gallery.PublicGallery`)를 쓴다. 서버 접근은 `PublicArtworkStore` 뒤에 두고, Firebase 설정이 있으면 `FirestorePublicArtworkStore`, 없으면 항상 연결 실패인 `UnavailablePublicArtworkStore`를 쓴다. 테스트는 `app/src/sharedTest/`의 `FakePublicArtworkStore`로 비공개 전환, 빠진 청크, 연결 실패와 응답만 잃은 투표를 주입한다. 목록은 표 수와 경로 썸네일을 화면에 보인 항목만 조회하고, 투표 전에는 본인 투표 문서를 먼저 확인한다. 서버 데이터 없이 화면을 보려면 debug 빌드에서 `adb shell am start -n kr.roadcanvas.app/.debug.PublicGalleryPreviewActivity`로 샘플 작품 세 개를 연다.
-- 땅따먹기 소유권 후보는 [땅따먹기 소유권 모델 검증](docs/firebase-territory-ownership.md)에 있다. 검증은 `firebase/territory-verification/`에서 `npm ci` 후 `npm run verify`로 Firestore·Auth 에뮬레이터(`demo-` 프로젝트)에서만 실행하고, 그곳의 `territory.rules`는 운영에 배포하지 않는다.
+- 땅따먹기 소유권 후보 비교는 [땅따먹기 소유권 모델 검증](docs/firebase-territory-ownership.md)에 있고, 확정한 계약은 [서버 땅따먹기](docs/firebase-territory.md)에 있다. 검증은 `firebase/territory-verification/`에서 `npm ci` 후 `npm run verify`로 Firestore·Auth 에뮬레이터(`demo-` 프로젝트)에서만 실행하고, 그곳의 `territory.rules`는 운영에 배포하지 않는다.
 - 서버 데이터 구조와 규칙은 [Firebase 클라이언트 계약](docs/firebase-client.md), Google 로그인 설정과 Pleos 제약은 [Firebase Google 로그인 설정](docs/firebase-google-login.md)을 따른다. 인증 제공자는 루트 `firebase.json`에서 함께 관리한다.
 
 ## Pleos Connect Emulator

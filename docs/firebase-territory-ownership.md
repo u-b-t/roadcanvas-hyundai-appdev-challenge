@@ -1,6 +1,6 @@
 # 땅따먹기 소유권 모델 검증
 
-[땅따먹기 서버 설계 전제](firebase-territory-planning.md)의 질문 중 영역 표현, 지도 범위 조회, 동시 변경을 Cloud Functions 없이 Firestore 규칙과 클라이언트 트랜잭션만으로 처리할 수 있는지 Firebase Local Emulator Suite에서 확인했다. 운영 Firebase(`roadcanvas-f9f2a`)에는 규칙·인덱스·데이터를 배포하거나 쓰지 않았다. 아래 컬렉션과 규칙은 계약 **후보**이며 `firebase/firestore.rules`에 넣지 않았다. 게임 규칙을 정한 뒤 별도 이슈에서 확정한다.
+[땅따먹기 서버 설계 전제](firebase-territory-planning.md)의 질문 중 영역 표현, 지도 범위 조회, 동시 변경을 Cloud Functions 없이 Firestore 규칙과 클라이언트 트랜잭션만으로 처리할 수 있는지 Firebase Local Emulator Suite에서 확인했다. 운영 Firebase(`roadcanvas-f9f2a`)에는 규칙·인덱스·데이터를 배포하거나 쓰지 않았다. 아래 컬렉션과 규칙은 계약 **후보**다. #103에서 후보 A를 채택해 게임 규칙과 함께 확정했고, 확정한 계약과 운영 규칙은 [서버 땅따먹기](firebase-territory.md)에 있다.
 
 ## 결론
 
