@@ -11,6 +11,8 @@
 # 정리하지 않으므로 다음 작업이 재사용한다. macOS 기본 bash 3.2에서 동작해야 한다.
 # 콜드 부팅 전에는 강제 종료로 남은 크래시 보고 DB와 AVD 잠금 파일을 지우고, 크래시 보고 동의
 # 창이 뜨지 않도록 -crash-report-mode disabled로 실행한다.
+# 러너에 화면(GUI 세션)이 없으면 창을 만들지 못해 종료하므로 화면 유무와 관계없이 -no-window와
+# 소프트웨어 렌더링(-gpu swiftshader_indirect)으로 띄운다.
 set -euo pipefail
 
 SERIAL='emulator-5554'
@@ -206,6 +208,7 @@ cold_boot() {
   # 새 세션으로 분리해 단계와 작업이 끝나도 에뮬레이터가 남게 한다.
   RUNNER_TRACKING_ID='' nohup perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die "exec: $!\n"' \
     "$emulator" -avd "$avd" -no-snapshot -port "$PORT" -crash-report-mode disabled \
+    -no-window -gpu swiftshader_indirect \
     < /dev/null > "$EMULATOR_LOG" 2>&1 &
   sleep 5
   with_timeout "$ADB_TIMEOUT" "$adb" start-server > /dev/null 2>&1 || true
