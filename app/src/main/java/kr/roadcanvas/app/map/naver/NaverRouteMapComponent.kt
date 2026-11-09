@@ -184,6 +184,7 @@ private class RouteOverlays {
         when (state) {
             is RouteMapState.CurrentLocation -> {
                 detachRoute()
+                cells.show(map, state.cells)
                 showLocation(map, state.point, cameraInsets)
             }
             is RouteMapState.Explore -> {

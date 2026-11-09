@@ -97,6 +97,7 @@
 - 나중에 커밋된 획득이 이기고, 보호 시간 없이 다른 사용자의 칸을 빼앗는다. 경합으로 거부(`PERMISSION_DENIED`)되면 같은 획득 ID로 최대 5번 실행한다. 반영하지 못한 획득은 Room `territory_capture`(DB 버전 6)에 남겨 앱 실행·결과 화면·영토 화면 진입 때 다시 제출하고, 만든 지 24시간이 지나면 포기한다.
 - 순위 `territoryOwners/{uid}`는 획득 트랜잭션에서 함께 갱신하고 상위 10명을 보여 준다. 지도는 화면 범위의 geohash6 접두어로 최대 300칸을 읽는다.
 - 화면: 땅따먹기 결과와 내 그림 상세는 `TerritoryCaptureController`로 서버 반영 상태(제출 중, 반영됨, 대기(오프라인), 실패, 영역이 너무 큼, 반영하지 못함)를 보여 주고 대기·실패 기록은 다시 제출한다. 결과 화면은 이 기록을 먼저 제출한 뒤 다른 미제출 획득을 다시 제출한다. 영토 지도(`kr.roadcanvas.app.territorymap`, 모드 선택과 땅따먹기 결과에서 진입)는 진입·새로고침 때 미제출 획득을 다시 제출하고, 지도 이동이 끝날 때 화면 범위의 칸을 `RouteMapOptions.cells`로 내 칸(파랑)과 다른 사용자 칸(주황)으로 그리며 내 보유 칸·면적과 상위 10명 순위를 보여 준다. 정차 중에만 보인다. 서버 없이 보려면 debug 빌드에서 `adb shell am start -n kr.roadcanvas.app/.debug.TerritoryMapPreviewActivity`로 샘플 칸을 연다.
+- 땅따먹기 준비 화면은 현재 위치 주변 600m(`NEARBY_TERRITORY_RADIUS_METERS`)의 칸을 `TerritoryGame.nearbyTerritory`로 읽어 지도에 내 칸·다른 사용자 칸으로 그리고 요약하며, 300m 넘게 움직이면 다시 읽는다. 진행 화면은 3초(`TERRITORY_ESTIMATE_REFRESH_MILLIS`)마다 경로가 늘었을 때만 `territoryEstimateOf`로 끝점을 출발점에 이어 닫은 예상 영역·면적·칸 수를 계산한다(닫힘 거리·최소 면적은 따지지 않는다). 출발점을 떠났다가 200m·50m 안으로 돌아오면(`startApproachOf`) 거리를 강조하고 `AppContainer.voiceGuide`(시스템 TTS, 엔진·한국어가 없으면 건너뜀)로 한 번씩 읽는다. 음성 안내는 땅따먹기 준비 화면에서 끄며 SharedPreferences `voice_guide`에 보관한다.
 - 서버 검증(Cloud Functions)이 없어 클라이언트가 보낸 칸과 순위 칸 수를 믿는다. 수정한 클라이언트는 아무 칸이나 획득할 수 있다.
 - 운영 규칙 변경은 `firebase/territory-verification`에서 `npm run test:rules`로 에뮬레이터 시험을 통과한 뒤 `npx firebase-tools deploy --only firestore:rules --project roadcanvas-f9f2a`로 규칙만 배포한다.
 

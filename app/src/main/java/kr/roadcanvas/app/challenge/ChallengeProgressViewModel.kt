@@ -2,15 +2,21 @@ package kr.roadcanvas.app.challenge
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.drawing.StorageResult
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingRequest
@@ -24,13 +30,16 @@ const val PROGRESS_REFRESH_MILLIS = 1_000L
 /**
  * 진행 화면의 기록 상태를 구독하고 종료·포기를 처리한다.
  * 기록 자체는 [RecordingRunner]가 화면과 상관없이 실행하므로, 화면이 멈추면 화면 갱신만 멈춘다.
+ * 땅따먹기 예상 영역은 [estimateMillis]마다 경로가 늘었을 때만 [estimateDispatcher]에서 다시 계산한다.
  */
 class ChallengeProgressViewModel(
     private val recorder: ChallengeRecorder,
     private val runner: RecordingRunner,
     private val drivingRestrictionProvider: DrivingRestrictionProvider,
     private val clock: () -> Long = System::currentTimeMillis,
-    refreshMillis: Long = PROGRESS_REFRESH_MILLIS
+    refreshMillis: Long = PROGRESS_REFRESH_MILLIS,
+    estimateMillis: Long = TERRITORY_ESTIMATE_REFRESH_MILLIS,
+    estimateDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
     init {
         // 프로세스가 다시 만들어져 진행 화면이 바로 복원되면 저장된 기록을 이어간다.
@@ -45,12 +54,28 @@ class ChallengeProgressViewModel(
         }
     }
 
+    private val territoryPath = flow {
+        while (true) {
+            val recording = recorder.state.value as? RecordingState.Recording
+            emit(recording?.path?.takeIf { recording.mode == DrawingMode.TERRITORY })
+            delay(estimateMillis)
+        }
+    }
+
+    // 경로가 길수록 계산이 오래 걸리므로 화면 갱신과 따로, 경로가 늘었을 때만 계산한다.
+    private val territoryEstimate = territoryPath
+        .distinctUntilChangedBy { it?.size }
+        .map { path ->
+            path?.let { withContext(estimateDispatcher) { territoryEstimateOf(it) } }
+        }
+
     // 경로와 경과 시간은 갱신 시점에만 읽어 화면 갱신을 1초에 한 번으로 제한한다.
     val uiState: StateFlow<ChallengeProgressUiState> = combine(
         now,
-        drivingRestrictionProvider.restriction
-    ) { nowMillis, restriction ->
-        challengeProgressOf(recorder.state.value, restriction, nowMillis)
+        drivingRestrictionProvider.restriction,
+        territoryEstimate
+    ) { nowMillis, restriction, estimate ->
+        challengeProgressOf(recorder.state.value, restriction, nowMillis, estimate)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(),

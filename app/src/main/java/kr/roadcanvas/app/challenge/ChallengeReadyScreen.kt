@@ -29,6 +29,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -44,9 +45,12 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.shopl.sdg_resource.R as SdgR
 import kr.roadcanvas.app.appContainer
 import kr.roadcanvas.app.drawing.DrawingMode
+import kr.roadcanvas.app.map.MapCell
 import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RoutePoint
+import kr.roadcanvas.app.territory.NearbyTerritory
+import kr.roadcanvas.app.territory.text
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
@@ -63,6 +67,12 @@ const val FREE_DRAWING_GOAL = "달린 길이 그대로 그림이 돼요"
 const val TERRITORY_GOAL = "한 바퀴 돌아 출발점으로 오면 둘러싼 땅을 차지해요"
 const val CHALLENGE_RULE_START_STOP = "정차한 뒤 시작하고 끝내요"
 const val CHALLENGE_RULE_NO_PAUSE = "도중에 일시정지할 수 없어요"
+
+const val VOICE_GUIDE_ON_LABEL = "음성 안내 켜짐"
+const val VOICE_GUIDE_OFF_LABEL = "음성 안내 꺼짐"
+
+/** 땅따먹기 준비 화면의 주변 영토 요약 테스트 태그 */
+const val NEARBY_TERRITORY_TAG = "nearby_territory"
 
 /** 목표·진행 방법 안내 문장 옆 아이콘의 테스트 태그 */
 const val READY_GUIDE_ICON_TAG = "ready_guide_icon"
@@ -122,7 +132,8 @@ fun ChallengeReadyRoute(
                 val container = context.appContainer
                 ChallengeReadyViewModel(
                     container.locationProvider,
-                    container.drivingRestrictionProvider
+                    container.drivingRestrictionProvider,
+                    container.territoryGame.takeIf { mode == DrawingMode.TERRITORY }
                 )
             }
         }
@@ -130,6 +141,9 @@ fun ChallengeReadyRoute(
     // 화면이 멈추면 구독자가 없어져 위치와 주행 규제 구독도 해제된다.
     val status by viewModel.status.collectAsStateWithLifecycle()
     val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
+    val nearbyTerritory by viewModel.nearbyTerritory.collectAsStateWithLifecycle()
+    val voiceGuide = context.appContainer.voiceGuide
+    val voiceGuideEnabled by voiceGuide.enabled.collectAsStateWithLifecycle()
 
     var requestedPermissions by rememberSaveable { mutableStateOf(emptyList<String>()) }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -159,7 +173,10 @@ fun ChallengeReadyRoute(
         onRetry = viewModel::retry,
         modifier = modifier,
         currentLocation = currentLocation?.let { RoutePoint(it.latitude, it.longitude) },
-        mode = mode
+        mode = mode,
+        nearbyTerritory = nearbyTerritory,
+        voiceGuideEnabled = voiceGuideEnabled.takeIf { mode == DrawingMode.TERRITORY },
+        onVoiceGuideChange = voiceGuide::setEnabled
     )
 }
 
@@ -174,10 +191,19 @@ fun ChallengeReadyScreen(
     modifier: Modifier = Modifier,
     currentLocation: RoutePoint? = null,
     onShowBlockedNotice: () -> Boolean = { false },
-    mode: DrawingMode = DrawingMode.CIRCLE
+    mode: DrawingMode = DrawingMode.CIRCLE,
+    nearbyTerritory: NearbyTerritory? = null,
+    voiceGuideEnabled: Boolean? = null,
+    onVoiceGuideChange: (Boolean) -> Unit = {}
 ) {
     // 차량의 차단 안내를 띄우지 못하면 앱 안에서 같은 내용을 안내한다.
     var showBlockedNotice by rememberSaveable { mutableStateOf(false) }
+    val nearbyCells = (nearbyTerritory as? NearbyTerritory.Loaded)?.cells
+    val nearbyMapCells = remember(nearbyCells) {
+        nearbyCells.orEmpty().map { cell ->
+            MapCell(cell.bounds.corners.map { RoutePoint(it.latitude, it.longitude) }, cell.mine)
+        }
+    }
 
     DriverSideOverlay(
         background = {
@@ -185,7 +211,8 @@ fun ChallengeReadyScreen(
                 points = listOfNotNull(currentLocation),
                 options = RouteMapOptions(
                     showCurrentLocation = true,
-                    contentPadding = driverSideOverlayContentPadding()
+                    contentPadding = driverSideOverlayContentPadding(),
+                    cells = nearbyMapCells
                 ),
                 modifier = Modifier.fillMaxSize()
             )
@@ -204,6 +231,22 @@ fun ChallengeReadyScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                     readyGuidesOf(mode).forEach { (icon, guide) ->
                         GuideRow(icon = icon, text = guide)
+                    }
+                    nearbyTerritory?.let {
+                        KeepWordsText(
+                            text = it.text,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.testTag(NEARBY_TERRITORY_TAG)
+                        )
+                    }
+                    voiceGuideEnabled?.let { enabled ->
+                        CarButton(
+                            text = if (enabled) VOICE_GUIDE_ON_LABEL else VOICE_GUIDE_OFF_LABEL,
+                            onClick = { onVoiceGuideChange(!enabled) },
+                            style = CarButtonStyle.Line,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }

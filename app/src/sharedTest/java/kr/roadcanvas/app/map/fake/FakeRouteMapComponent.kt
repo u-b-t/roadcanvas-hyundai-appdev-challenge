@@ -79,10 +79,15 @@ class FakeRouteMapComponent : RouteMapComponent {
                 val mine = state.cells.count { it.mine }
                 "대체 영토 지도 · 내 칸 ${mine}개 · 다른 사용자 칸 ${state.cells.size - mine}개"
             }
-            is RouteMapState.CurrentLocation -> if (state.point == null) {
-                "대체 경로 지도 · 현재 위치 없음"
-            } else {
-                "대체 경로 지도 · 현재 위치 표시"
+            is RouteMapState.CurrentLocation -> {
+                val location = if (state.point == null) "현재 위치 없음" else "현재 위치 표시"
+                val mine = state.cells.count { it.mine }
+                val cells = if (state.cells.isEmpty()) {
+                    ""
+                } else {
+                    " · 내 칸 ${mine}개 · 다른 사용자 칸 ${state.cells.size - mine}개"
+                }
+                "대체 경로 지도 · $location$cells"
             }
             else -> state.notice.orEmpty()
         }

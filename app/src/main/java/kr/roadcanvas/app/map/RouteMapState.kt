@@ -91,8 +91,9 @@ sealed interface RouteMapState {
         override val notice = "경로를 그리려면 위치가 2개 이상 필요합니다."
     }
 
-    /** 경로 대신 현재 위치를 표시한다. 아직 위치를 받지 못했으면 [point]가 null이다. */
-    data class CurrentLocation(val point: RoutePoint?) : RouteMapState {
+    /** 경로 대신 현재 위치를 표시한다. 아직 위치를 받지 못했으면 [point]가 null이다. [cells]를 함께 그린다. */
+    data class CurrentLocation(val point: RoutePoint?, val cells: List<MapCell> = emptyList()) :
+        RouteMapState {
         override val notice: String? = null
     }
 
@@ -135,7 +136,10 @@ sealed interface RouteMapState {
         ): RouteMapState = when {
             authState is MapAuthState.KeyMissing -> KeyMissing
             authState is MapAuthState.Failed -> AuthFailed(authState.errorCode)
-            options.showCurrentLocation -> CurrentLocation(points.lastOrNull())
+            options.showCurrentLocation -> CurrentLocation(
+                points.lastOrNull(),
+                options.drawableCells
+            )
             options.explore != null && points.isEmpty() -> Explore(
                 center = options.explore.center,
                 zoom = options.explore.zoom,
