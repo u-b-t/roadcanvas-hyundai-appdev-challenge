@@ -37,7 +37,8 @@ data class RouteCircle(val center: RoutePoint, val radiusMeters: Double) {
  * [filledArea]가 있으면 그 꼭짓점을 이은 다각형을 반투명하게 채워 경로 아래에 그린다. 땅따먹기로 차지한 영역을 보여줄 때 쓴다.
  * 첫 점을 끝에 반복하지 않으며, 꼭짓점이 [RouteMapState.MIN_AREA_POINTS]개보다 적으면 그리지 않는다.
  * [cells]는 땅따먹기 칸처럼 여러 개를 함께 채워 그리는 다각형이다. 내 칸과 다른 사용자 칸을 다른 색으로 그린다.
- * [explore]가 있고 경로가 없으면 경로 대신 그 위치에서 지도를 둘러보는 화면으로 그린다. 카메라는 처음 한 번만 옮긴다.
+ * [explore]가 있고 경로가 없으면 경로 대신 그 위치에서 지도를 둘러보는 화면으로 그린다. 카메라는 [explore]가 바뀔 때만 옮긴다.
+ * 둘러보기에서도 [currentPosition]이 있으면 내 위치로 표시한다.
  * [onVisibleBoundsChange]는 카메라 이동이 끝날 때마다 [contentPadding]을 뺀 지도 화면 범위를 받는다.
  */
 data class RouteMapOptions(
@@ -56,8 +57,15 @@ data class RouteMapOptions(
 /** 지도에 채워 그리는 칸 하나. [corners]는 첫 점을 끝에 반복하지 않는다. [mine]이면 내 칸 색으로 그린다. */
 data class MapCell(val corners: List<RoutePoint>, val mine: Boolean)
 
-/** 경로 없이 [center]를 [zoom] 확대 수준으로 처음 보여주는 지도 둘러보기 */
-data class MapExplore(val center: RoutePoint, val zoom: Double = DEFAULT_ZOOM) {
+/**
+ * 경로 없이 [center]를 [zoom] 확대 수준으로 처음 보여주는 지도 둘러보기.
+ * 같은 [center]로 카메라를 다시 옮기려면 [moveId]를 바꾼다.
+ */
+data class MapExplore(
+    val center: RoutePoint,
+    val zoom: Double = DEFAULT_ZOOM,
+    val moveId: Long = 0
+) {
     companion object {
         /** 서울 기준 화면 가로가 약 2km라 칸(약 120m)과 주변 도로가 함께 보이는 정도다. */
         const val DEFAULT_ZOOM = 15.5
@@ -97,9 +105,13 @@ sealed interface RouteMapState {
         override val notice: String? = null
     }
 
-    /** 경로 없이 [center]에서 지도를 둘러보며 [cells]를 그린다. */
-    data class Explore(val center: RoutePoint, val zoom: Double, val cells: List<MapCell>) :
-        RouteMapState {
+    /** 경로 없이 [center]에서 지도를 둘러보며 [cells]를 그린다. [moveId]가 바뀌면 카메라를 다시 옮긴다. */
+    data class Explore(
+        val center: RoutePoint,
+        val zoom: Double,
+        val cells: List<MapCell>,
+        val moveId: Long = 0
+    ) : RouteMapState {
         override val notice: String? = null
     }
 
@@ -143,7 +155,8 @@ sealed interface RouteMapState {
             options.explore != null && points.isEmpty() -> Explore(
                 center = options.explore.center,
                 zoom = options.explore.zoom,
-                cells = options.drawableCells
+                cells = options.drawableCells,
+                moveId = options.explore.moveId
             )
             points.size < MIN_ROUTE_POINTS -> NotEnoughPoints(points.lastOrNull())
             options.inProgress -> Route(

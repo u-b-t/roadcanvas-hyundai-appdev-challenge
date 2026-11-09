@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import java.util.Locale
 import kotlin.math.roundToInt
 import kr.roadcanvas.app.map.CurrentPosition
 import kr.roadcanvas.app.map.MapAuthState
@@ -26,7 +27,8 @@ import kr.roadcanvas.app.map.showsCurrentPosition
 
 /**
  * 네트워크와 지도 SDK 없이 경로 지도 표시 상태를 글로 보여주는 대체 컴포넌트.
- * 둘러보기 위치가 정해지면 카메라 이동이 끝난 것처럼 그 위치를 가운데 둔 [VISIBLE_SPAN_DEGREES] 범위를 한 번 알린다.
+ * 둘러보기 위치나 이동 번호가 바뀌면 카메라 이동이 끝난 것처럼 그 위치를 가운데 둔 [VISIBLE_SPAN_DEGREES] 범위를 알리고,
+ * 둘러보기 중심을 글로 보여준다.
  */
 class FakeRouteMapComponent : RouteMapComponent {
     @Composable
@@ -44,6 +46,7 @@ class FakeRouteMapComponent : RouteMapComponent {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 RouteMapNotice(describe(state))
+                (state as? RouteMapState.Explore)?.let { RouteMapNotice(describeCenter(it.center)) }
                 options.currentPosition?.takeIf { state.showsCurrentPosition }?.let {
                     RouteMapNotice(describe(it))
                 }
@@ -91,6 +94,10 @@ class FakeRouteMapComponent : RouteMapComponent {
             }
             else -> state.notice.orEmpty()
         }
+
+        /** 둘러보기 카메라 중심. 위도·경도를 소수점 다섯째 자리(약 1m)까지 보여준다. */
+        fun describeCenter(center: RoutePoint): String =
+            "대체 지도 중심 · %.5f, %.5f".format(Locale.ROOT, center.latitude, center.longitude)
 
         /** 현재 위치 표시. 진행 방향은 가장 가까운 정수 각도로 보여준다. */
         fun describe(position: CurrentPosition): String {
