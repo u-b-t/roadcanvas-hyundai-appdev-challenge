@@ -98,6 +98,7 @@
 
 - 앱은 Firebase 익명 인증으로 사용자를 만들고 `users/{uid}`에 자동 닉네임(`드라이버-<UID 앞 8자>`)을 저장한다. 인증은 `AppContainer.accountRegistration`(`kr.roadcanvas.app.account`)이 맡고, 실패하면 앱 실행 중 30초 간격으로 다시 시도한다. 앱 데이터를 지우거나 기기를 바꾸면 익명 계정은 복구할 수 없다.
 - Firebase 콘솔에서 받은 `app/google-services.json`은 각 환경에 두고 커밋하지 않는다(`.gitignore`). 파일이 없으면 Google Services 플러그인을 적용하지 않고 빌드하며 앱은 인증을 건너뛰고 기기 저장만 쓴다. CI는 파일 없이 빌드하고 테스트한다. androidTest는 `FakeAppContainer`의 대체 인증을 쓴다.
+- 공개 작품 목록·상세·투표는 `AppContainer.publicGallery`(`kr.roadcanvas.app.gallery.PublicGallery`)를 쓴다. 서버 접근은 `PublicArtworkStore` 뒤에 두고, Firebase 설정이 있으면 `FirestorePublicArtworkStore`, 없으면 항상 연결 실패인 `UnavailablePublicArtworkStore`를 쓴다. 테스트는 `app/src/sharedTest/`의 `FakePublicArtworkStore`로 비공개 전환, 빠진 청크, 연결 실패와 응답만 잃은 투표를 주입한다. 목록은 표 수와 경로 썸네일을 화면에 보인 항목만 조회하고, 투표 전에는 본인 투표 문서를 먼저 확인한다. 서버 데이터 없이 화면을 보려면 debug 빌드에서 `adb shell am start -n kr.roadcanvas.app/.debug.PublicGalleryPreviewActivity`로 샘플 작품 세 개를 연다.
 - 서버 데이터 구조와 규칙은 [Firebase 클라이언트 계약](docs/firebase-client.md), Google 로그인 설정과 Pleos 제약은 [Firebase Google 로그인 설정](docs/firebase-google-login.md)을 따른다. 인증 제공자는 루트 `firebase.json`에서 함께 관리한다.
 
 ## Pleos Connect Emulator

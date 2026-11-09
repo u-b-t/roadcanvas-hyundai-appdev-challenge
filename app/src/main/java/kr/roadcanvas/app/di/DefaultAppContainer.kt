@@ -1,6 +1,7 @@
 package kr.roadcanvas.app.di
 
 import kr.roadcanvas.app.account.AccountRegistration
+import kr.roadcanvas.app.account.AccountState
 import kr.roadcanvas.app.account.FirebaseAccountProvider
 import kr.roadcanvas.app.artwork.ArtworkAuthorProvider
 import kr.roadcanvas.app.artwork.ArtworkPublisher
@@ -10,6 +11,9 @@ import kr.roadcanvas.app.artwork.UnavailableArtworkStore
 import kr.roadcanvas.app.drawing.CompletedDrawingRepository
 import kr.roadcanvas.app.drawing.DrawingStorage
 import kr.roadcanvas.app.drawing.InProgressDrawingRepository
+import kr.roadcanvas.app.gallery.PublicArtworkStore
+import kr.roadcanvas.app.gallery.PublicGallery
+import kr.roadcanvas.app.gallery.UnavailablePublicArtworkStore
 import kr.roadcanvas.app.map.MapAuth
 import kr.roadcanvas.app.map.RouteMapComponent
 import kr.roadcanvas.app.map.naver.NaverRouteMapComponent
@@ -35,6 +39,7 @@ import kr.roadcanvas.app.vehicle.simulated.SimulatedRouteGenerator
  * 기록 서비스도 Context가 필요하므로 [recordingRunner]로 받아 처음 쓸 때 만든다.
  * 작품 공개는 Firebase 설정이 있을 때만 Application이 [artworkStore]와 [artworkAuthorProvider]를 넘기며,
  * 기본값은 항상 실패한다. 작성자는 [accountRegistration]의 익명 계정으로 만든다.
+ * 공개 작품은 Firebase 설정이 있을 때만 Application이 [publicArtworkStore]로 서버 저장소를 넘긴다.
  */
 class DefaultAppContainer(
     selection: VehicleIntegrationSelection,
@@ -49,7 +54,9 @@ class DefaultAppContainer(
     artworkAuthorProvider: (AccountRegistration) -> ArtworkAuthorProvider = {
         UnavailableArtworkAuthorProvider
     },
-    onArtworkFailure: (Throwable) -> Unit = {}
+    onArtworkFailure: (Throwable) -> Unit = {},
+    publicArtworkStore: PublicArtworkStore = UnavailablePublicArtworkStore,
+    onGalleryFailure: (Throwable) -> Unit = {}
 ) : AppContainer {
     override val accountRegistration = AccountRegistration(FirebaseAccountProvider())
 
@@ -93,5 +100,11 @@ class DefaultAppContainer(
         artworkStore,
         artworkAuthorProvider(accountRegistration),
         onFailure = onArtworkFailure
+    )
+
+    override val publicGallery = PublicGallery(
+        publicArtworkStore,
+        currentUid = { (accountRegistration.state.value as? AccountState.Ready)?.account?.uid },
+        onFailure = onGalleryFailure
     )
 }

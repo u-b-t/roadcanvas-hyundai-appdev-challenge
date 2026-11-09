@@ -2,6 +2,8 @@
     <application>
         <!-- 경로 지도 확인용 디버그 전용 화면. adb로 직접 실행하며 앱 화면 흐름에는 넣지 않는다. -->
         <activity android:name=".debug.RouteMapPreviewActivity" android:exported="true" />
+        <!-- 서버 없이 샘플 작품으로 공개 작품 목록·상세를 확인하는 디버그 전용 화면. adb로 직접 실행한다. -->
+        <activity android:name=".debug.PublicGalleryPreviewActivity" android:exported="true" />
         <!-- 내 그림 화면 확인용 샘플 기록을 저장하고 바로 닫는 디버그 전용 화면. adb로 직접 실행한다. -->
         <activity
             android:name=".debug.SeedDrawingsActivity"

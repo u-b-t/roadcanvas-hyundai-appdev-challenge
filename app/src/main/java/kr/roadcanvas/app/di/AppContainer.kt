@@ -4,6 +4,7 @@ import kr.roadcanvas.app.account.AccountRegistration
 import kr.roadcanvas.app.artwork.ArtworkPublisher
 import kr.roadcanvas.app.drawing.CompletedDrawingRepository
 import kr.roadcanvas.app.drawing.InProgressDrawingRepository
+import kr.roadcanvas.app.gallery.PublicGallery
 import kr.roadcanvas.app.map.RouteMapComponent
 import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingRunner
@@ -23,4 +24,5 @@ interface AppContainer {
     val challengeRecorder: ChallengeRecorder
     val recordingRunner: RecordingRunner
     val artworkPublisher: ArtworkPublisher
+    val publicGallery: PublicGallery
 }
