@@ -27,6 +27,7 @@ import kr.roadcanvas.app.challenge.DISTANCE_TO_START_LABEL
 import kr.roadcanvas.app.challenge.FINISH_LABEL
 import kr.roadcanvas.app.challenge.FREE_DRAWING_RESULT_TITLE
 import kr.roadcanvas.app.challenge.START_LABEL
+import kr.roadcanvas.app.challenge.TERRITORY_RESULT_TITLE
 import kr.roadcanvas.app.challenge.TURN_PROGRESS_LABEL
 import kr.roadcanvas.app.challenge.progressTitleOf
 import kr.roadcanvas.app.drawing.DrawingMode
@@ -122,7 +123,8 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
 
     private val resultTitles = mapOf(
         DrawingMode.CIRCLE to CIRCLE_RESULT_TITLE,
-        DrawingMode.FREE_DRAWING to FREE_DRAWING_RESULT_TITLE
+        DrawingMode.FREE_DRAWING to FREE_DRAWING_RESULT_TITLE,
+        DrawingMode.TERRITORY to TERRITORY_RESULT_TITLE
     )
 
     @Given("진행 중 기록 저장이 실패하도록 설정되어 있다")
@@ -280,7 +282,7 @@ class ChallengeProgressSteps(private val ruleHolder: ComposeRuleHolder) {
         waitUntil { fakeContainer.locationProvider.subscriberCount.value == 0 }
     }
 
-    private fun openApp() {
+    fun openApp() {
         composeRule.mainClock.autoAdvance = true
         scenario = TestScreens.launchContent {
             RoadCanvasNavHost(navController = rememberNavController(), splashDurationMillis = 0L)
