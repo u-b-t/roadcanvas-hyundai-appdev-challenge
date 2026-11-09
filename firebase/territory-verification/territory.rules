@@ -1,0 +1,87 @@
+rules_version = '2';
+// 땅따먹기 소유권 모델 검증 전용 규칙이다. 에뮬레이터(demo- 프로젝트)에서만 쓰고 운영 Firebase에 배포하지 않는다.
+// 운영 규칙은 firebase/firestore.rules이며 이 파일의 컬렉션을 포함하지 않는다.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function nextVersion() {
+      return request.resource.data.version == (resource == null ? 1 : resource.data.version + 1);
+    }
+
+    // 격자 모델: 획득 기록. 획득 ID가 중복 제출 식별자이며 한 번만 만들 수 있다.
+    match /territoryCaptures/{captureId} {
+      allow read: if signedIn();
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly(['ownerUid', 'createdAt', 'cells', 'cellCount']) &&
+        request.resource.data.keys().hasAll(['ownerUid', 'createdAt', 'cells', 'cellCount']) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.cells is list &&
+        request.resource.data.cells.size() > 0 && request.resource.data.cells.size() <= 499 &&
+        request.resource.data.cellCount == request.resource.data.cells.size();
+      allow update, delete: if false;
+    }
+
+    // 격자 모델: 칸별 현재 소유자. 같은 요청에서 만든 본인 획득 기록이 이 칸을 포함해야 하고 version을 1씩 올린다.
+    function validCell(cellId, data) {
+      let capture = getAfter(/databases/$(database)/documents/territoryCaptures/$(data.captureId)).data;
+      return data.keys().hasOnly(['ownerUid', 'captureId', 'capturedAt', 'version', 'gh6']) &&
+        data.keys().hasAll(['ownerUid', 'captureId', 'capturedAt', 'version', 'gh6']) &&
+        cellId.size() == 7 && data.gh6 == cellId[0:6] &&
+        data.ownerUid == request.auth.uid && data.capturedAt == request.time &&
+        capture.ownerUid == request.auth.uid && capture.createdAt == request.time &&
+        cellId in capture.cells;
+    }
+    match /territoryCells/{cellId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && validCell(cellId, request.resource.data) && nextVersion();
+      allow delete: if false;
+    }
+
+    // 비교용: territoryCells에서 version 조건만 뺀 칸. 동시 트랜잭션 실패 원인을 가르는 데만 쓴다.
+    match /territoryCellsNoVersion/{cellId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && validCell(cellId, request.resource.data);
+      allow delete: if false;
+    }
+
+    // 비교용: 버전 조건 없이 덮어쓰는 칸. 오프라인 재전송의 덮어쓰기 위험을 보여 주는 데만 쓴다.
+    match /laxCells/{cellId} {
+      allow read, write: if signedIn();
+    }
+
+    // 정확한 도형 모델: 소유 도형. 형상과 축소 여부는 규칙에서 검증할 수 없다.
+    match /territoryShapes/{shapeId} {
+      allow read: if signedIn();
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly(['ownerUid', 'captureId', 'geometryJson', 'cover', 'version']) &&
+        request.resource.data.ownerUid == request.auth.uid && request.resource.data.version == 1 &&
+        request.resource.data.geometryJson is string && request.resource.data.geometryJson.size() <= 500000 &&
+        request.resource.data.cover is list && request.resource.data.cover.size() <= 30;
+      allow update: if signedIn() &&
+        request.resource.data.keys().hasOnly(['ownerUid', 'captureId', 'geometryJson', 'cover', 'version']) &&
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.geometryJson is string && request.resource.data.geometryJson.size() <= 500000 &&
+        nextVersion();
+      allow delete: if signedIn();
+    }
+
+    // 정확한 도형 모델: geohash6 지역별 도형 ID 색인. 트랜잭션이 이 문서를 읽고 써서 같은 지역의 획득을 직렬화한다.
+    match /territoryRegions/{regionId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() &&
+        request.resource.data.keys().hasOnly(['shapeIds', 'version']) &&
+        request.resource.data.shapeIds is list && request.resource.data.shapeIds.size() <= 500 &&
+        nextVersion();
+      allow delete: if false;
+    }
+
+    match /territoryShapeCaptures/{captureId} {
+      allow read: if signedIn();
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly(['ownerUid', 'createdAt']) &&
+        request.resource.data.ownerUid == request.auth.uid && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+  }
+}
