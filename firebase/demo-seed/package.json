@@ -1,0 +1,13 @@
+{
+  "name": "roadcanvas-demo-seed",
+  "private": true,
+  "type": "module",
+  "description": "데모용 사용자, 공개 작품, 땅따먹기 영토와 동그라미 순위를 운영 Firebase에 앱과 같은 클라이언트 경로(익명 인증)로 넣는다. docs/firebase-demo-seed.md 참고.",
+  "scripts": {
+    "seed": "node seed.mjs",
+    "unseed": "node unseed.mjs"
+  },
+  "dependencies": {
+    "firebase": "13.2.0"
+  }
+}
