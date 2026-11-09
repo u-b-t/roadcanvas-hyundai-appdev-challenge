@@ -1,6 +1,7 @@
 package kr.roadcanvas.app.challenge
 
 import kr.roadcanvas.app.score.TerritoryResult
+import kr.roadcanvas.app.territory.TerritoryLoss
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -41,5 +42,19 @@ class TerritoryResultTextTest {
     @Test
     fun `차지했으면 이유가 없다`() {
         assertNull(territoryFailureText(TerritoryResult.Claimed(6_000.0, emptyList(), 300.0)))
+    }
+
+    @Test
+    fun `빼앗은 상대를 칸 수와 함께 안내하고 빼앗은 칸이 없으면 안내하지 않는다`() {
+        assertEquals(
+            "드라이버-a님에게서 3칸, 드라이버-b님에게서 1칸을 빼앗았어요",
+            territoryLossText(
+                listOf(
+                    TerritoryLoss("a", "드라이버-a", listOf("c1", "c2", "c3")),
+                    TerritoryLoss("b", "드라이버-b", listOf("c4"))
+                )
+            )
+        )
+        assertNull(territoryLossText(emptyList()))
     }
 }

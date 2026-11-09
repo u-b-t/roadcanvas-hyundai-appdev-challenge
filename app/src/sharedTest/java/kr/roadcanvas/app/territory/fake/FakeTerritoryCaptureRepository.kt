@@ -21,8 +21,10 @@ class FakeTerritoryCaptureRepository : TerritoryCaptureRepository {
             .sortedBy { it.createdAtMillis }
     }
 
-    override suspend fun save(capture: StoredTerritoryCapture) =
-        result { captures[capture.captureId] = capture }
+    /** 기기 DB처럼 반영 결과는 칸 수만 보관한다. */
+    override suspend fun save(capture: StoredTerritoryCapture) = result {
+        captures[capture.captureId] = capture.copy(outcome = capture.outcome?.countsOnly())
+    }
 
     fun reset() {
         captures.clear()

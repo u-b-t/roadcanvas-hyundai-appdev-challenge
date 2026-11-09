@@ -3,6 +3,7 @@ package kr.roadcanvas.app.challenge
 import java.util.Locale
 import kotlin.math.roundToLong
 import kr.roadcanvas.app.score.TerritoryResult
+import kr.roadcanvas.app.territory.TerritoryLoss
 
 const val AREA_LABEL = "면적"
 const val PERIMETER_LABEL = "둘레"
@@ -31,4 +32,10 @@ fun territoryFailureText(result: TerritoryResult): String? = when (result) {
         "둘러싼 면적 ${formatArea(result.areaSquareMeters)}이 " +
             "최소 ${formatArea(result.minAreaSquareMeters)}보다 작아요"
     TerritoryResult.InsufficientPoints -> "기록한 위치가 부족해 영역을 판정할 수 없어요"
+}
+
+/** 빼앗은 상대 안내. 예: `드라이버-a님에게서 3칸, 드라이버-b님에게서 1칸을 빼앗았어요`. 빼앗은 칸이 없으면 null이다. */
+fun territoryLossText(losses: List<TerritoryLoss>): String? {
+    if (losses.isEmpty()) return null
+    return losses.joinToString(", ") { "${it.nickname}님에게서 ${it.cells.size}칸" } + "을 빼앗았어요"
 }

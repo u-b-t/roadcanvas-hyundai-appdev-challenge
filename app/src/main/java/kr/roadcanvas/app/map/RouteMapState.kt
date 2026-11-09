@@ -54,8 +54,41 @@ data class RouteMapOptions(
     val onVisibleBoundsChange: ((MapBounds) -> Unit)? = null
 )
 
-/** 지도에 채워 그리는 칸 하나. [corners]는 첫 점을 끝에 반복하지 않는다. [mine]이면 내 칸 색으로 그린다. */
-data class MapCell(val corners: List<RoutePoint>, val mine: Boolean)
+/**
+ * 지도에 채워 그리는 칸 하나. [corners]는 첫 점을 끝에 반복하지 않는다. [mine]이면 내 칸 색으로 그린다.
+ * [style]은 땅따먹기 결과처럼 칸을 나눠 강조할 때 쓰고, [label]이 있으면 칸 가운데에 글자로 표시한다.
+ */
+data class MapCell(
+    val corners: List<RoutePoint>,
+    val mine: Boolean,
+    val style: MapCellStyle = MapCellStyle.DEFAULT,
+    val label: String? = null
+) {
+    /** 꼭짓점의 가운데. [label]을 이 위치에 둔다. */
+    val center: RoutePoint
+        get() = RoutePoint(
+            corners.map { it.latitude }.average(),
+            corners.map { it.longitude }.average()
+        )
+}
+
+/** 칸을 그리는 방식. [fitCamera]이면 전체 경로 보기에서 칸 전체가 화면에 들어오게 맞춘다. */
+enum class MapCellStyle(val fitCamera: Boolean) {
+    /** 내 칸과 다른 사용자 칸을 같은 진하기로 그린다. */
+    DEFAULT(false),
+
+    /** 이번에 새로 차지한 칸. 내 칸 색으로 진하게 그린다. */
+    CAPTURED(true),
+
+    /** 이번에 다른 사용자에게서 빼앗은 칸. 내 칸 색에 굵은 강조 테두리를 두른다. */
+    STOLEN(true),
+
+    /** 이번 영역 안에서 이미 내 칸이던 칸. 내 칸 색으로 옅게 그린다. */
+    KEPT(true),
+
+    /** 결과 영역 주변 칸. 흐리게 그린다. */
+    FAINT(false)
+}
 
 /**
  * 경로 없이 [center]를 [zoom] 확대 수준으로 처음 보여주는 지도 둘러보기.
@@ -128,10 +161,12 @@ sealed interface RouteMapState {
 
         /**
          * 전체 경로 보기에서 화면에 들어와야 하는 좌표. 기준 원이 있으면 원을 감싸는 꼭짓점도 넣는다.
-         * 채운 영역은 경로에서 만든 꼭짓점이라 경로 안에 들어 있다.
+         * 채운 영역은 경로에서 만든 꼭짓점이라 경로 안에 들어 있다. 결과 영역의 칸([MapCellStyle.fitCamera])은
+         * 경로 밖으로 조금 나갈 수 있어 꼭짓점을 넣는다.
          */
         val boundsPoints: List<RoutePoint>
-            get() = points + circle?.boundsCorners().orEmpty()
+            get() = points + circle?.boundsCorners().orEmpty() +
+                cells.filter { it.style.fitCamera }.flatMap { it.corners }
     }
 
     companion object {

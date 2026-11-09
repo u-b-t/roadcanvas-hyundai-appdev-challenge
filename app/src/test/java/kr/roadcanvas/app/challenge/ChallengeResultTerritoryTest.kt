@@ -12,16 +12,24 @@ import kr.roadcanvas.app.drawing.RoutePoint
 import kr.roadcanvas.app.drawing.fake.FakeCompletedDrawingRepository
 import kr.roadcanvas.app.drawing.fake.FakeInProgressDrawingRepository
 import kr.roadcanvas.app.recording.ChallengeRecorder
+import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.TerritoryCalculator
 import kr.roadcanvas.app.score.TerritoryResult
 import kr.roadcanvas.app.score.TestPaths
+import kr.roadcanvas.app.territory.Geohash
+import kr.roadcanvas.app.territory.ResultCell
+import kr.roadcanvas.app.territory.ResultCellKind
+import kr.roadcanvas.app.territory.TERRITORY_CELL_PRECISION
 import kr.roadcanvas.app.territory.TerritoryCaptureState
+import kr.roadcanvas.app.territory.TerritoryCell
+import kr.roadcanvas.app.territory.TerritoryCellsResult
 import kr.roadcanvas.app.territory.TerritoryFailure
 import kr.roadcanvas.app.territory.TerritoryGame
 import kr.roadcanvas.app.territory.TerritorySyncUiState
 import kr.roadcanvas.app.territory.fake.FakeTerritoryCaptureRepository
 import kr.roadcanvas.app.territory.fake.FakeTerritoryOwnerProvider
 import kr.roadcanvas.app.territory.fake.FakeTerritoryStore
+import kr.roadcanvas.app.territory.territoryCellsOf
 import kr.roadcanvas.app.vehicle.fake.FakeLocationProvider
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -59,11 +67,12 @@ class ChallengeResultTerritoryTest {
 
     private suspend fun finish(
         mode: DrawingMode,
-        savedStateHandle: SavedStateHandle = SavedStateHandle()
+        savedStateHandle: SavedStateHandle = SavedStateHandle(),
+        radius: Double = 50.0
     ): ChallengeResultViewModel {
         inProgress.start(mode, START)
         inProgress.appendPoints(
-            TestPaths.circle(50.0).mapIndexed { i, it ->
+            TestPaths.circle(radius).mapIndexed { i, it ->
                 RoutePoint(it.latitude, it.longitude, START + i * 1_000L)
             }
         )
@@ -88,6 +97,54 @@ class ChallengeResultTerritoryTest {
         val submitted = viewModel.capture as TerritoryCaptureState.Submitted
         assertTrue(submitted.outcome.newCells > 0)
         assertEquals(listOf("capture-1"), store.submitRequests)
+    }
+
+    @Test
+    fun `결과 칸은 빼앗은 칸, 이미 내 칸, 새 칸과 주변 다른 사용자 칸으로 나눈다`() = runTest(dispatcher) {
+        val boundary = (
+            TerritoryCalculator().calculate(
+                TestPaths.circle(200.0)
+            ) as TerritoryResult.Claimed
+            )
+            .boundary
+        val cells = (territoryCellsOf(boundary) as TerritoryCellsResult.Cells).cells
+        val north = boundary.maxOf { it.latitude } +
+            Geohash.latitudeSpan(TERRITORY_CELL_PRECISION) * 0.75
+        val outside = Geohash.encode(
+            GeoPoint(north, boundary.map { it.longitude }.average()),
+            TERRITORY_CELL_PRECISION
+        )
+        store.putCells("other", "드라이버-other", cells.take(2) + outside)
+        store.putCells(FakeTerritoryOwnerProvider.DEFAULT_OWNER.uid, "나", cells.drop(2).take(1))
+
+        val result = finish(DrawingMode.TERRITORY, radius = 200.0).resultCells.value!!
+
+        assertEquals(
+            cells.take(2).map { ResultCell(it, ResultCellKind.STOLEN, "드라이버-other") },
+            result.captured.filter { it.kind == ResultCellKind.STOLEN }
+        )
+        assertEquals(
+            listOf(cells[2]),
+            result.captured.filter { it.kind == ResultCellKind.KEPT }.map { it.id }
+        )
+        assertEquals(cells.size - 3, result.captured.count { it.kind == ResultCellKind.CAPTURED })
+        assertEquals(listOf(TerritoryCell(outside, "other", mine = false)), result.nearby)
+    }
+
+    @Test
+    fun `서버에 연결하지 못하면 차지한 칸만 나누지 않고 그린다`() = runTest(dispatcher) {
+        store.networkFailure = true
+
+        val result = finish(DrawingMode.TERRITORY).resultCells.value!!
+
+        assertTrue(result.captured.isNotEmpty())
+        assertTrue(result.captured.all { it.kind == ResultCellKind.CAPTURED })
+        assertTrue(result.nearby.isEmpty())
+    }
+
+    @Test
+    fun `땅따먹기가 아니면 결과 칸이 없다`() = runTest(dispatcher) {
+        assertNull(finish(DrawingMode.CIRCLE).resultCells.value)
     }
 
     @Test

@@ -140,10 +140,8 @@ class TerritoryCaptureSyncSteps {
 
     @Then("새로 차지한 칸 {int}개, 빼앗은 칸 {int}개, 이미 내 칸 {int}개로 반영된다")
     fun assertOutcome(new: Int, stolen: Int, own: Int) {
-        assertEquals(
-            TerritoryCaptureState.Submitted(TerritoryCaptureOutcome(new, stolen, own)),
-            lastState
-        )
+        val outcome = (lastState as TerritoryCaptureState.Submitted).outcome
+        assertEquals(TerritoryCaptureOutcome(new, stolen, own), outcome.countsOnly())
         assertEquals(lastState, currentState())
     }
 

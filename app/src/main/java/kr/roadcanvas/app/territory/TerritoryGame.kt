@@ -90,6 +90,12 @@ class TerritoryGame(
     val inFlight: StateFlow<Set<String>> = mutableInFlight.asStateFlow()
 
     /**
+     * 이 실행에서 반영한 획득 ID별 결과. 이전 소유자별 빼앗은 칸은 기기에 저장하지 않으므로
+     * 기기에서 다시 읽은 상태에 이 값을 쓴다. 프로세스가 다시 만들어지면 칸 수만 남는다.
+     */
+    private val detailedOutcomes = MutableStateFlow(emptyMap<String, TerritoryCaptureOutcome>())
+
+    /**
      * 완료 기록 [drawingId]의 차지한 영역 [claimed]를 획득으로 제출한다. 같은 기록은 처음 만든 획득을 다시 쓴다.
      * 서버에 반영하지 못해도 기기에 저장했으면 [TerritoryCaptureState.Pending]을 돌려준다.
      * 기기에 저장하지 못하면 [TerritoryFailure.STORAGE]이며 제출하지 않는다.
@@ -177,7 +183,9 @@ class TerritoryGame(
 
     private fun stateOf(capture: StoredTerritoryCapture): TerritoryCaptureState = when {
         capture.status == CaptureSyncStatus.SUBMITTED && capture.outcome != null ->
-            TerritoryCaptureState.Submitted(capture.outcome)
+            TerritoryCaptureState.Submitted(
+                detailedOutcomes.value[capture.captureId] ?: capture.outcome
+            )
         capture.status == CaptureSyncStatus.EXPIRED || expired(capture) ->
             TerritoryCaptureState.Expired(capture.cells.size)
         capture.captureId in mutableInFlight.value ->
@@ -207,6 +215,7 @@ class TerritoryGame(
                 is TerritoryCall.Failure ->
                     TerritoryCaptureState.Pending(capture.cells.size, result.reason)
                 is TerritoryCall.Success -> {
+                    detailedOutcomes.update { it + (capture.captureId to result.value) }
                     save(capture.copy(status = CaptureSyncStatus.SUBMITTED, outcome = result.value))
                     TerritoryCaptureState.Submitted(result.value)
                 }

@@ -1,5 +1,6 @@
 package kr.roadcanvas.app.territory.fake
 
+import kr.roadcanvas.app.account.defaultNickname
 import kr.roadcanvas.app.territory.StoredTerritoryCell
 import kr.roadcanvas.app.territory.StoredTerritoryOwner
 import kr.roadcanvas.app.territory.TERRITORY_QUERY_PRECISION
@@ -9,6 +10,7 @@ import kr.roadcanvas.app.territory.TerritoryFailure
 import kr.roadcanvas.app.territory.TerritoryOwner
 import kr.roadcanvas.app.territory.TerritoryStore
 import kr.roadcanvas.app.territory.TerritoryStoreException
+import kr.roadcanvas.app.territory.territoryCaptureOutcomeOf
 
 /** 서버에 반영된 획득 기록 */
 data class FakeTerritoryCapture(
@@ -68,24 +70,18 @@ class FakeTerritoryStore : TerritoryStore {
         }
         captures[request.captureId]?.let { existing ->
             if (existing.ownerUid != owner.uid) denied()
-            return existing.outcome
+            // 서버 획득 기록에는 칸 수만 남는다.
+            return existing.outcome.countsOnly()
         }
-        var new = 0
-        var stolen = 0
-        var own = 0
-        request.cells.forEach { cell ->
-            when (val previous = cellOwners[cell]) {
-                null -> new++
-                owner.uid -> own++
-                else -> {
-                    stolen++
-                    adjust(previous, null, -1)
-                }
-            }
-            cellOwners[cell] = owner.uid
+        val previousOwners = request.cells.associateWith { cellOwners[it] }
+        val outcome = territoryCaptureOutcomeOf(owner.uid, previousOwners) { uid ->
+            owners[uid]?.nickname ?: defaultNickname(uid)
         }
-        adjust(owner.uid, owner.nickname, (new + stolen).toLong())
-        val outcome = TerritoryCaptureOutcome(new, stolen, own)
+        previousOwners.values.filterNotNull()
+            .filter { it != owner.uid }
+            .forEach { adjust(it, null, -1) }
+        request.cells.forEach { cellOwners[it] = owner.uid }
+        adjust(owner.uid, owner.nickname, (outcome.newCells + outcome.stolenCells).toLong())
         captures[request.captureId] = FakeTerritoryCapture(owner.uid, request.cells, outcome)
         if (loseNextSubmitResponse) {
             loseNextSubmitResponse = false

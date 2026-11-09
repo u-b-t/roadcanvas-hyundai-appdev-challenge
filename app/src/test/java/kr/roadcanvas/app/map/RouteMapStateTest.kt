@@ -192,6 +192,29 @@ class RouteMapStateTest {
     }
 
     @Test
+    fun `결과 영역 칸은 전체 경로 보기에 넣고 주변 칸은 넣지 않는다`() {
+        val captured = MapCell(
+            listOf(RoutePoint(1.0, 1.0), RoutePoint(1.0, 2.0), RoutePoint(2.0, 2.0)),
+            mine = true,
+            style = MapCellStyle.STOLEN,
+            label = "드라이버-a"
+        )
+        val faint = MapCell(
+            listOf(RoutePoint(9.0, 9.0), RoutePoint(9.0, 10.0), RoutePoint(10.0, 10.0)),
+            mine = false,
+            style = MapCellStyle.FAINT
+        )
+        val state = RouteMapState.of(
+            route,
+            RouteMapOptions(cells = listOf(faint, captured)),
+            MapAuthState.Configured
+        ) as RouteMapState.Route
+
+        assertEquals(listOf(faint, captured), state.cells)
+        assertEquals(route + captured.corners, state.boundsPoints)
+    }
+
+    @Test
     fun `둘러보기 위치가 없고 경로도 없으면 위치가 부족하다고 안내한다`() {
         val state = RouteMapState.of(emptyList(), RouteMapOptions(), MapAuthState.Configured)
 

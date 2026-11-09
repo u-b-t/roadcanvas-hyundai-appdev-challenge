@@ -11,6 +11,7 @@ import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.TransactionOptions
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
+import kr.roadcanvas.app.account.defaultNickname
 
 private const val CAPTURES = "territoryCaptures"
 private const val CELLS = "territoryCells"
@@ -27,6 +28,7 @@ private const val REQUEST_TIMEOUT_MILLIS = 30_000L
 
 /**
  * Firestore 땅따먹기 저장소. 서버 계약과 규칙은 docs/firebase-territory.md를 따른다.
+ * 이전 소유자별 빼앗은 칸은 트랜잭션에서 읽은 칸과 순위 문서로 만들어 응답에만 담고 획득 기록에는 쓰지 않는다.
  *
  * 획득은 온라인 트랜잭션 하나로 반영한다. 획득 기록을 먼저 읽어 이미 있으면 그때 결과를 돌려주고,
  * 없으면 칸과 순위 문서를 모두 읽은 뒤 획득 기록 생성, 칸 소유자 덮어쓰기(version +1), 보유 칸 수 증감을 함께 쓴다.
@@ -54,11 +56,6 @@ class FirestoreTerritoryStore(
 
                 val cells = cellRefs.map { transaction.get(it) }
                 val previousOwners = cells.map { it.getString("ownerUid") }
-                val outcome = TerritoryCaptureOutcome(
-                    newCells = previousOwners.count { it == null },
-                    stolenCells = previousOwners.count { it != null && it != owner.uid },
-                    ownCells = previousOwners.count { it == owner.uid }
-                )
                 val stolenByOwner = previousOwners.filterNotNull()
                     .filter { it != owner.uid }
                     .groupingBy { it }
@@ -66,6 +63,10 @@ class FirestoreTerritoryStore(
                 val victims = stolenByOwner.keys.associateWith {
                     transaction.get(firestore.collection(OWNERS).document(it))
                 }
+                val outcome = territoryCaptureOutcomeOf(
+                    owner.uid,
+                    request.cells.zip(previousOwners).toMap()
+                ) { uid -> victims[uid]?.getString("nickname") ?: defaultNickname(uid) }
                 val ownerCount = transaction.get(ownerRef).getLong("cellCount") ?: 0L
 
                 transaction.set(
