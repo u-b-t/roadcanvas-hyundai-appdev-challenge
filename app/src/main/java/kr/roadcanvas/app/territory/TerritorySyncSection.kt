@@ -119,8 +119,17 @@ private fun CaptureDetail(capture: TerritoryCaptureState) {
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             val outcome = capture.outcome
-            CountRow(NEW_CELLS_LABEL, formatCells(outcome.newCells.toLong()))
-            CountRow(STOLEN_CELLS_LABEL, formatCells(outcome.stolenCells.toLong()))
+            // 새로 차지하거나 빼앗은 칸이 있으면 강조한다.
+            CountRow(
+                NEW_CELLS_LABEL,
+                formatCells(outcome.newCells.toLong()),
+                highlight = outcome.newCells > 0
+            )
+            CountRow(
+                STOLEN_CELLS_LABEL,
+                formatCells(outcome.stolenCells.toLong()),
+                highlight = outcome.stolenCells > 0
+            )
             CountRow(OWN_CELLS_LABEL, formatCells(outcome.ownCells.toLong()))
             CountRow(
                 CAPTURED_AREA_LABEL,
@@ -137,7 +146,7 @@ private fun CaptureDetail(capture: TerritoryCaptureState) {
 }
 
 @Composable
-private fun CountRow(label: String, value: String) {
+private fun CountRow(label: String, value: String, highlight: Boolean = false) {
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,
@@ -145,9 +154,25 @@ private fun CountRow(label: String, value: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f)
         )
-        Text(text = value, style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = value,
+            style = if (highlight) {
+                MaterialTheme.typography.titleLarge
+            } else {
+                MaterialTheme.typography.titleMedium
+            },
+            color = if (highlight) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+            modifier = if (highlight) Modifier.testTag(highlightedCountTag(label)) else Modifier
+        )
     }
 }
+
+/** 강조한 칸 수 값의 테스트 태그 */
+fun highlightedCountTag(label: String) = "highlightedCount:$label"
 
 @Composable
 private fun Message(text: String) {

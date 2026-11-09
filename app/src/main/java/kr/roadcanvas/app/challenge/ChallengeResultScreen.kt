@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -174,6 +175,7 @@ fun ChallengeResultScreen(
                 ),
                 modifier = Modifier.fillMaxSize()
             )
+            ResultCelebrationLayer(circleCelebrationOf(state))
         },
         controls = {
             // 내용이 화면 높이를 넘으면 결과 카드만 스크롤하고 버튼은 항상 보이게 둔다.
@@ -231,7 +233,14 @@ fun ChallengeResultScreen(
 
 @Composable
 private fun ResultSummary(result: ChallengeResult, bestComparison: BestRecordComparison?) {
-    Text(text = "${result.score?.score ?: 0}점", style = MaterialTheme.typography.displayMedium)
+    val score = result.score?.score ?: 0
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(text = "${score}점", style = MaterialTheme.typography.displayMedium)
+        if (isBestRecord(score, bestComparison)) BestRecordBadge()
+    }
     bestComparison?.let {
         Text(
             text = it.text,

@@ -62,6 +62,7 @@ fun FreeDrawingResultScreen(
                 ),
                 modifier = Modifier.fillMaxSize()
             )
+            ResultCelebrationLayer(rememberPublishCelebration(publishState?.status))
         },
         controls = {
             // 내용이 화면 높이를 넘으면 결과 카드만 스크롤하고 버튼은 항상 보이게 둔다.
