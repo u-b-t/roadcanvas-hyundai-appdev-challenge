@@ -5,6 +5,7 @@ Feature: 앱 시작
   메인 화면이 같은 배경 위에서 나타난다. 시작 화면은 2초를 넘지 않는 1.2초 동안 보여준다.
 
   Issues:
+  - [#151 앱 시작 화면 재표시 검사에서 홈 제목과 구분](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/151)
   - [#1 Pleos 에뮬레이터에서 기본 앱 실행](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/1)
   - [#10 앱 시작 및 스플래시 화면 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/10)
   - [#50 내 그림·스플래시·정차 안내 화면에 SDG 적용](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/50)
