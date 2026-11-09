@@ -32,10 +32,11 @@
 - 로컬 에뮬레이터 두 대(`emulator-5554`, `emulator-5556`)로 동시에 실행할 수 있다. `-port`로 포트를 나눠 띄우고(예: `emulator -avd <AVD> -port 5556 -no-snapshot`), 같은 AVD는 동시에 두 번 띄울 수 없으므로 AVD를 하나 더 만든다. 실행마다 `ANDROID_SERIAL=emulator-5554 python3 scripts/run-device-tests.py --feature ...`처럼 기기를 지정한다. 같은 작업 디렉터리에서 두 실행을 동시에 하면 빌드 출력과 결과 파일이 겹치므로 실행마다 다른 worktree를 쓴다. 앱은 기기마다 따로 설치되며 다른 worktree에서 빌드한 설치본은 서명이 같아 덮어쓸 수 있다.
 - Vehicle SDK 사용 시 도메인 capability, 필요한 권한 및 오류 처리를 확인한다. 실차 지원 여부를 에뮬레이터 결과만으로 단정하지 않는다. 키와 토큰은 소스나 Git에 넣지 않는다.
 - GitHub Actions는 PR과 `main` push에서 GitHub 호스팅 러너로 ktlint·Android Lint·앱과 Android 테스트 APK 빌드를 실행하고, `mac-mini` self-hosted 러너에서 단위 테스트와 Pleos UI 테스트를 실행한다. 러너가 오프라인이면 해당 작업은 대기한다. CI 결과가 실제로 실행되기 전에는 통과했다고 주장하지 않는다.
-- 두 워크플로는 PR 단위 `concurrency`로 같은 PR의 새 push가 이전 실행을 취소한다. Android 워크플로의 main push는 취소하지 않는다. Pleos UI test의 main push는 그룹 하나로 묶어 새 main push가 진행 중이거나 대기 중인 이전 main 실행을 취소하므로 최신 main만 전체 UI 테스트를 끝까지 실행한다. 맥미니 CI의 PR 실행은 지금처럼 전체 시나리오를 실행한다.
+- 두 워크플로는 PR 단위 `concurrency`로 같은 PR의 새 push가 이전 실행을 취소한다. main push는 두 워크플로 모두 워크플로별 그룹 하나로 묶어 새 main push가 진행 중이거나 대기 중인 이전 main 실행을 취소하므로 최신 main만 빌드·단위 테스트·전체 UI 테스트를 끝까지 실행한다. 맥미니 CI의 PR 실행은 지금처럼 전체 시나리오를 실행한다.
 - UI 테스트 작업은 `scripts/ci-emulator.sh`로 에뮬레이터를 관리한다. `prepare`는 실행 중인 에뮬레이터가 `sys.boot_completed` 1, user 0 `RUNNING_UNLOCKED`, `service check car_service` found이면 재사용하고, 부팅 후 90초가 지나도 하나라도 아니면 종료한 뒤 콜드 부팅해 같은 조건을 다시 확인한다. 테스트가 실패하면 `recover`가 로그에서 `System has crashed`·`DeadSystemException`을 찾거나 상태를 확인해 재시작한다. 작업 결과는 실패로 남는다. 판정한 상태는 `[ci-emulator]` 로그에 남는다. 에뮬레이터 GNSS HAL이 위치 구독 해제에서 멈추면 워치독이 system_server를 종료하고, 이후 `sys.boot_completed`는 1이지만 user 0이 `RUNNING_LOCKED`이고 `car_service`가 없는 상태로 남는 것을 맥미니에서 확인했다.
 - 콜드 부팅 전에는 실행 중인 에뮬레이터가 없을 때만 강제 종료로 남은 AVD 잠금 파일(`~/.android/avd/<AVD>.avd/*.lock`)과 크래시 보고 DB(`/tmp/android-$USER/emu-crash-*.db`)를 지운다. 크래시 보고 DB는 모든 AVD가 함께 쓰므로 다른 에뮬레이터가 실행 중이면 남긴다. 크래시 보고 DB가 남아 있으면 다음 실행이 동의 창(`Showing crashdialog to get consent.`)에서 adb 포트를 열지 않고 멈추는 것을 맥북에서 확인했다. 그래서 `-crash-report-mode disabled`로 실행하고, 콜드 부팅 중 에뮬레이터 로그에 `crashdialog`가 나오면 시간 초과를 기다리지 않고 `[ci-emulator]` 로그에 남긴 뒤 실패한다.
 - 맥미니에 화면(GUI 세션)이 없으면 창 모드 에뮬레이터가 `Fatal: Cannot create window: no screens available`로 종료하는 것을 확인했다. CI는 화면 유무와 관계없이 `-no-window -gpu swiftshader_indirect`로 헤드리스 콜드 부팅하고, 소프트웨어 렌더링 부하를 줄이려고 `-no-audio -no-boot-anim`을 함께 쓴다. RAM(4GB)과 코어 수는 Pleos 서비스 안정성을 확인하지 않아 바꾸지 않았다.
+- qemu는 실행하는 동안 메모리를 계속 늘린다(맥미니에서 띄운 지 48분째 8.1GB, 그중 약 7GB가 압축·스왑). `ps` RSS는 압축된 메모리를 빼서 작게 보이므로 `top`의 MEM(물리 점유량)으로 판정한다. `ci-emulator.sh`는 `prepare`와 UI 테스트 뒤 `check-memory` 단계에서 qemu 메모리가 `PLEOS_EMULATOR_MEMORY_LIMIT_MB`(기본 3072)를 넘으면 종료하고 콜드 부팅하며, 판정한 메모리·압축·RSS 값을 `[ci-emulator]` 로그에 남긴다. 렌더링 옵션은 `PLEOS_EMULATOR_GPU`로 바꿀 수 있고 옵션별 측정 결과는 [에뮬레이터 메모리 측정](docs/emulator-memory.md)에 있다. 테스트 뒤 콜드 부팅이 더해질 수 있어 UI 테스트 작업 시간 제한은 50분이다.
 - CI가 띄운 에뮬레이터는 `RUNNER_TRACKING_ID`를 비우고 새 세션으로 분리해 작업이 끝나도 남고 다음 작업이 재사용한다. 에뮬레이터 로그는 맥미니의 `/tmp/pleos-ci-emulator.log`에 있다.
 - 단위 테스트 커버리지는 `./gradlew :app:unitTestCoverageReport`로 JaCoCo XML과 HTML을 생성한다. CI는 단위 테스트 커버리지와 JUnit 결과를 `unit` 플래그로, UI 테스트 JUnit 결과를 `ui` 플래그로 Codecov에 업로드한다. 테스트가 실패해도 생성된 결과를 업로드하며, CI 실패는 유지한다. 단위 테스트가 없으면 단위 테스트 커버리지 보고서는 생성되지 않는다. 커버리지 수집은 테스트 성공이나 Gherkin 시나리오 검증을 대신하지 않는다. UI 테스트 커버리지 수집은 아직 설정되지 않았다.
 
@@ -141,7 +142,7 @@ scripts/dev-emulator.sh down
 ```
 
 - `up`은 실행 중인 에뮬레이터가 없으면 남은 잠금 파일과 크래시 보고 DB를 정리하고 `-crash-report-mode disabled`로 콜드 부팅한 뒤 `sys.boot_completed` 1, user 0 `RUNNING_UNLOCKED`, `car_service` found를 확인한다. 이어서 `adb forward tcp:8088 tcp:8088`, APK를 지정하면 설치와 사용자 10에게 대략적인 위치·알림·Pleos 위치 권한 부여, `console-gps-bridge.py`와 qemu 메모리 감시를 백그라운드로 실행한다. 다시 실행해도 이미 실행 중인 것은 다시 띄우지 않는다. `--avd`가 없으면 `config.ini`에 pleos가 들어간 AVD 하나를 고른다.
-- 메모리 감시는 1분마다 qemu RSS를 기록하고 8GB를 넘으면 로그와 macOS 알림으로 경고한다. qemu가 43GB까지 늘어난 누수가 있었다. 자동 재시작은 하지 않으므로 경고를 보면 `down` 후 `up`한다.
+- 메모리 감시는 1분마다 qemu 메모리(`top` MEM, 압축·스왑 포함)를 기록하고 6GB를 넘으면 로그와 macOS 알림으로 경고한다. qemu가 43GB까지 늘어난 누수가 있었다. 자동 재시작은 하지 않으므로 경고를 보면 `down` 후 `up`한다.
 - `status`는 에뮬레이터, car_service, 콘솔 활성, 기어, GPS 연동, 메모리 감시, qemu 메모리를 한 줄씩 보여 주고 빠진 항목은 `!`로 표시한다. `down`은 GPS 연동과 메모리 감시를 멈추고 에뮬레이터를 종료한다. 로그와 pid 파일은 `~/.roadcanvas-dev-emulator/<포트>/`에 있다.
 - 직접 실행할 때는 `"$ANDROID_HOME/emulator/emulator" -avd <AVD이름> -no-snapshot`으로 띄우고 `adb install -r`, `adb shell am start -n kr.roadcanvas.app/.MainActivity`를 쓴다.
 

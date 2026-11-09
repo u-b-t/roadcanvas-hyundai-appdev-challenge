@@ -11,7 +11,8 @@
 #     GPS 연동과 메모리 감시를 멈추고 에뮬레이터를 종료한다.
 #
 # 로그와 pid 파일은 ${ROADCANVAS_DEV_DIR:-~/.roadcanvas-dev-emulator}/<포트>/에 둔다.
-# 메모리 감시는 1분마다 qemu RSS를 기록하고 8GB를 넘으면 로그와 macOS 알림으로 경고한다.
+# 메모리 감시는 1분마다 qemu 메모리(압축·스왑으로 밀려난 메모리 포함)를 기록하고 6GB를 넘으면
+# 로그와 macOS 알림으로 경고한다.
 # 자동 재시작은 하지 않는다. macOS 기본 bash 3.2에서 동작해야 한다.
 set -euo pipefail
 
@@ -31,7 +32,7 @@ EXISTING_BOOT_TIMEOUT=300
 # 부팅 완료 뒤 user 0 잠금 해제와 car_service 등록을 기다리는 시간
 SERVICE_GRACE=90
 MEMORY_INTERVAL=60
-MEMORY_LIMIT_KB=$((8 * 1024 * 1024))
+MEMORY_LIMIT_KB=$((6 * 1024 * 1024))
 CRASH_DIALOG_PATTERN='crashdialog'
 CRASH_DB_DIR="/tmp/android-${USER:-$(id -un)}"
 
@@ -295,12 +296,26 @@ start_memory_watch() {
   log "메모리 감시 시작: pid $! (로그 $MEMORY_LOG)"
 }
 
-# qemu RSS 합계(KB). 없으면 빈 값.
-qemu_rss_kb() {
-  local pids
+# qemu 메모리 합계(KB). 없으면 빈 값. top의 MEM은 압축·스왑으로 밀려난 메모리를 포함한다.
+# ps RSS는 압축된 메모리를 빼서 누수가 커져도 작게 보인다.
+qemu_memory_kb() {
+  local pids pid
   pids=$(qemu_pids)
   [ -n "$pids" ] || return 0
-  ps -o rss= -p "$(echo "$pids" | paste -sd, -)" 2>/dev/null | awk '{ sum += $1 } END { if (NR) print sum }'
+  for pid in $pids; do
+    top -l 1 -pid "$pid" -stats pid,mem 2>/dev/null | awk -v pid="$pid" '$1 == pid { print $2 }'
+  done | awk '
+    {
+      value = $1
+      gsub(/[+-]$/, "", value)
+      unit = substr(value, length(value))
+      number = value + 0
+      if (unit == "G") number *= 1024 * 1024
+      else if (unit == "M") number *= 1024
+      else if (unit == "B") number /= 1024
+      sum += number
+    }
+    END { if (NR) printf "%d\n", sum }'
 }
 
 format_kb() { awk -v kb="$1" 'BEGIN { printf "%.1fGB", kb / 1024 / 1024 }'; }
@@ -309,7 +324,7 @@ watch_memory() {
   local rss warned=0 message
   echo "$(date '+%F %T') 감시 시작: 포트 $PORT, 경고 기준 $(format_kb "$MEMORY_LIMIT_KB")"
   while true; do
-    rss=$(qemu_rss_kb)
+    rss=$(qemu_memory_kb)
     if [ -z "$rss" ]; then
       echo "$(date '+%F %T') qemu 프로세스가 없어 감시를 끝냅니다."
       exit 0
@@ -380,7 +395,7 @@ status() {
   fi
   if pid=$(running_pid "$BRIDGE_PID" console-gps-bridge.py); then ok 'GPS 연동' "실행 중 pid $pid"; else bad 'GPS 연동' '꺼짐'; fi
   if pid=$(running_pid "$MEMORY_PID" watch-memory); then ok '메모리 감시' "실행 중 pid $pid"; else bad '메모리 감시' '꺼짐'; fi
-  rss=$(qemu_rss_kb)
+  rss=$(qemu_memory_kb)
   if [ -z "$rss" ]; then
     bad 'qemu 메모리' '프로세스 없음'
   elif [ "$rss" -gt "$MEMORY_LIMIT_KB" ]; then
