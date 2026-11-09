@@ -63,6 +63,48 @@ object TestPaths {
         return toGeo(recorded.dropLast(1) + line(recorded.last(), recorded.first()))
     }
 
+    /**
+     * 반지름 [radius]인 원을 돌다가 출발점까지 [gapMeters]를 남기고 멈춘 경로.
+     * 시작점과 끝점의 직선 거리가 [gapMeters]다.
+     */
+    fun openCircle(radius: Double, gapMeters: Double): List<GeoPoint> {
+        val missingAngle = 2 * kotlin.math.asin(gapMeters / (2 * radius))
+        return toGeo(arc(radius, 2 * PI - missingAngle, 1.0))
+    }
+
+    /**
+     * 출발점에서 교차하는 8자. 오른쪽 고리 폭 [rightWidth], 왼쪽 고리 폭 [leftWidth], 높이 [height]이며
+     * 고리 면적은 각각 폭×높이×2/3이다. 교차점이 아닌 오른쪽 끝에서 출발한다.
+     */
+    fun figureEight(rightWidth: Double, leftWidth: Double, height: Double): List<GeoPoint> {
+        val count = 400
+        val local = (0..count).map { i ->
+            val t = PI / 2 + 2 * PI * i / count
+            val x = sin(t)
+            (if (x >= 0) rightWidth else leftWidth) * x to height * sin(t) * cos(t)
+        }
+        return toGeo(local)
+    }
+
+    /** 반지름 [radius]인 원 1바퀴 중간, 원 바깥에 반지름 [loopRadius]인 작은 고리를 한 번 돌고 원래 길로 이어 간다. */
+    fun circleWithSmallLoop(radius: Double, loopRadius: Double): List<GeoPoint> {
+        val half = arc(radius, PI, 1.0)
+        val (px, py) = half.last()
+        // 원의 맨 왼쪽에서 진행 방향(남쪽)을 유지한 채 바깥쪽으로 시계 방향 작은 원을 돈다.
+        val loop = arc(loopRadius, 2 * PI, -1.0).map { (x, y) -> x + px to y + py }
+        val rest = arc(radius, 2 * PI, 1.0).let { it.subList(it.size / 2, it.size) }
+        return toGeo(half + loop + rest)
+    }
+
+    /** 반지름 [radius]인 원 1바퀴 중간에 바깥쪽으로 [spurLength]만큼 같은 길을 갔다가 돌아온다. */
+    fun circleWithSpur(radius: Double, spurLength: Double): List<GeoPoint> {
+        val half = arc(radius, PI, 1.0)
+        val (px, py) = half.last()
+        val out = line(px to py, px - spurLength to py)
+        val rest = arc(radius, 2 * PI, 1.0).let { it.subList(it.size / 2, it.size) }
+        return toGeo(half + out.drop(1) + out.reversed().drop(1) + rest.drop(1))
+    }
+
     /** 한 자리에서 [count]번 기록한 위치. */
     fun stationary(count: Int): List<GeoPoint> =
         List(count) { GeoPoint(BASE_LATITUDE, BASE_LONGITUDE) }

@@ -81,6 +81,13 @@
 - 종료하지 않은 진행 중 기록이 저장되어 있으면 앱을 다시 실행할 때 진행 화면으로 가서 이어서 기록한다. 종료하면 위치 구독을 멈추고 진행 중 기록에 종료 시각(`ended_at`, DB 버전 2)만 남긴 채 시작·종료 시각을 결과 화면 경로 인자로 넘긴다. 결과 화면은 완료 기록 저장에 성공한 뒤 진행 중 기록을 지운다.
 - 결과 화면(`ChallengeResultViewModel`)은 저장한 완료 기록 ID를 `SavedStateHandle`에 남겨 화면이나 프로세스가 다시 만들어져도 한 번만 저장한다. 저장에 실패하면 진행 중 기록을 남기고 다시 저장 버튼을 보인다. 앱을 다시 열면 `ChallengeRecorder.unsavedFinish()`로 저장하지 못한 결과를 찾아 결과 화면으로 간다. 같은 프로세스면 메모리의 종료 상태를, 프로세스가 종료된 뒤면 저장된 종료 시각을 쓴다. 종료한 기록은 진행 화면이나 기록 서비스가 이어서 기록하지 않는다. 완료 기록을 저장한 뒤 진행 중 기록을 지우기 전에 프로세스가 종료됐으면 결과 화면이 같은 모드·완료 시각의 기록(`CompletedDrawingRepository.findId`)을 찾아 다시 저장하지 않는다. androidTest에서는 `FakeAppContainer.restartProcess()`로 저장소만 남기고 기록 세션을 새로 만들어 프로세스 재생성을 흉내 낸다.
 
+## 땅따먹기 판정
+
+- 주행 경로가 둘러싼 영역은 `kr.roadcanvas.app.score.TerritoryCalculator`가 판정하고 결과는 `TerritoryResult`(`Claimed` 면적·경계 다각형·둘레, `NotClosed` 시작점과 끝점 거리, `TooSmall` 면적, `InsufficientPoints`)다. 모드는 `DrawingMode.TERRITORY`(키 `territory`, 점수 없음, 이름 입력 불필요)다. 좌표 변환은 동그라미 점수와 같은 `LocalPlane.kt`의 출발점 기준 지역 평면 좌표(m)를 쓴다.
+- 닫힘 허용 거리 50m(`TERRITORY_CLOSURE_TOLERANCE_METERS`)와 최소 면적 5,000m²(`TERRITORY_MIN_AREA_SQUARE_METERS`)는 잠정값이다. 유효 위치값이 10개 미만이거나 0.5m 이내 연속 점을 합친 뒤 서로 다른 지점이 셋 미만이면 판정 불가다.
+- 끝점이 허용 거리 안이면 끝점과 시작점을 곧게 이어 닫는다. 경로 중간에 고리가 있어도 끝점이 돌아오지 않으면 닫히지 않은 것으로 본다.
+- 닫힌 경로는 앞서 지난 구간과 교차하는 점이나 앞서 지난 꼭짓점에 0.5m 이내로 다시 온 점에서 고리로 나누고, 면적이 가장 큰 고리 하나만 영역으로 한다. 그래서 8자는 큰 쪽 고리만, 같은 길을 여러 바퀴 돌면 한 바퀴만 차지하고, 작은 고리와 같은 구간을 갔다 온 곁가지는 영역을 넓히지 않는다. 구간이 이전 꼭짓점을 스치거나 평행하게 겹치는 경우는 교차로 보지 않는다. 규칙은 `TerritoryCalculatorTest`가 고정한다.
+
 ## 빌드와 실행
 
 - JDK 17 이상과 Android SDK 플랫폼 35가 필요하다. 앱의 `minSdk`는 28, `targetSdk`는 34다.
