@@ -2,7 +2,7 @@
 # CI에서 Pleos 에뮬레이터를 준비하고, 망가진 에뮬레이터를 재시작한다.
 #
 #   scripts/ci-emulator.sh prepare
-#     실행 중인 에뮬레이터가 건강하면 재사용하고, 아니면 종료한 뒤 콜드 부팅한다.
+#     실행 중인 Pleos 에뮬레이터를 종료한 뒤 매번 콜드 부팅한다.
 #   scripts/ci-emulator.sh recover <로그 파일 또는 디렉터리>...
 #     테스트 실패 후 시스템 크래시 흔적이 있거나 상태가 나쁘면 재시작한다.
 #   scripts/ci-emulator.sh check-memory
@@ -10,12 +10,12 @@
 #
 # 건강한 상태: sys.boot_completed가 1, user 0이 RUNNING_UNLOCKED, car_service가 found.
 # 새 에뮬레이터는 RUNNER_TRACKING_ID를 비우고 새 세션으로 분리해 띄운다. 러너가 작업 종료 때
-# 정리하지 않으므로 다음 작업이 재사용한다. macOS 기본 bash 3.2에서 동작해야 한다.
+# 정리하지 않으므로 다음 작업에서 종료한다. macOS 기본 bash 3.2에서 동작해야 한다.
 # 콜드 부팅 전에는 강제 종료로 남은 크래시 보고 DB와 AVD 잠금 파일을 지우고, 크래시 보고 동의
 # 창이 뜨지 않도록 -crash-report-mode disabled로 실행한다.
 # 러너에 화면(GUI 세션)이 없으면 창을 만들지 못해 종료하므로 화면 유무와 관계없이 -no-window와
 # 소프트웨어 렌더링(-gpu swiftshader_indirect)으로 띄우고, 쓰지 않는 오디오와 부팅 애니메이션을 끈다.
-# qemu는 실행하는 동안 메모리를 계속 늘리므로 prepare와 테스트 후 qemu 메모리가 기준
+# qemu는 실행하는 동안 메모리를 계속 늘리므로 테스트 후 qemu 메모리가 기준
 # (PLEOS_EMULATOR_MEMORY_LIMIT_MB, 기본 3072)을 넘으면 종료하고 콜드 부팅한다.
 set -euo pipefail
 
@@ -23,8 +23,6 @@ SERIAL='emulator-5554'
 PORT=5554
 EMULATOR_LOG=${PLEOS_EMULATOR_LOG:-/tmp/pleos-ci-emulator.log}
 ADB_TIMEOUT=20
-# 이미 실행 중인 에뮬레이터가 부팅을 마칠 때까지 기다리는 시간
-EXISTING_BOOT_TIMEOUT=300
 # 새로 콜드 부팅한 에뮬레이터가 부팅을 마칠 때까지 기다리는 시간
 COLD_BOOT_TIMEOUT=600
 # 부팅 완료 뒤 user 0 잠금 해제와 car_service 등록을 기다리는 시간
@@ -208,7 +206,9 @@ stop_emulator() {
     return 0
   fi
   log "에뮬레이터 종료: pid $(echo "$pids" | tr '\n' ' ')"
-  adb_device emu kill > /dev/null 2>&1 || true
+  if [ "$(adb_device emu avd name 2>/dev/null | tr -d '\r' | head -1 || true)" = "$avd" ]; then
+    adb_device emu kill > /dev/null 2>&1 || true
+  fi
   for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
     if [ -z "$(emulator_pids)" ]; then
       break
@@ -289,20 +289,18 @@ prepare() {
   if [ -n "$others" ]; then
     fail "다른 에뮬레이터가 실행 중입니다: $others"
   fi
-  if [ -z "$(emulator_pids)" ]; then
-    log '실행 중인 Pleos 에뮬레이터가 없습니다.'
-    cold_boot
-    return 0
+  if [ -n "$(emulator_pids)" ]; then
+    local active_avd
+    active_avd=$(adb_device emu avd name 2>/dev/null | tr -d '\r' | head -1 || true)
+    if [ -n "$active_avd" ] && [ "$active_avd" != "$avd" ]; then
+      fail "${SERIAL}은 다른 AVD를 사용하고 있습니다: $active_avd"
+    fi
+    log '이전 Pleos 에뮬레이터를 종료합니다.'
+    stop_emulator
+  elif with_timeout "$ADB_TIMEOUT" "$adb" devices | awk '{print $1}' | grep -qx "$SERIAL"; then
+    fail "${SERIAL}을 다른 에뮬레이터가 사용하고 있습니다."
   fi
-  log '실행 중인 Pleos 에뮬레이터 상태를 확인합니다.'
-  if ! check_memory; then
-    restart "qemu 메모리 ${MEMORY_MB}MB가 기준 ${MEMORY_LIMIT_MB}MB 초과"
-    return 0
-  fi
-  if wait_for_health "$EXISTING_BOOT_TIMEOUT"; then
-    return 0
-  fi
-  restart "비정상 상태 $HEALTH_STATE"
+  cold_boot
 }
 
 recover() {
