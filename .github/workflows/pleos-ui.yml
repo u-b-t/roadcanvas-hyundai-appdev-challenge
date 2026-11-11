@@ -49,7 +49,36 @@ jobs:
       - name: Run Cucumber UI tests
         id: tests
         shell: bash
-        run: python3 scripts/run-device-tests.py 2>&1 | tee "$RUNNER_TEMP/ui-test.log"
+        run: |
+          # 시스템이 크래시하면 logcat 버퍼가 사라질 수 있어 실행 중 관련 로그를 보관한다.
+          "$ANDROID_HOME/platform-tools/adb" -s "$ANDROID_SERIAL" logcat -v threadtime -s ActivityManager ActivityTaskManager WindowManager Watchdog AndroidRuntime > "$RUNNER_TEMP/ui-system.log" 2>&1 &
+          logcat_pid=$!
+          trap 'kill "$logcat_pid" 2>/dev/null || true; wait "$logcat_pid" 2>/dev/null || true' EXIT
+          set -o pipefail
+          if python3 scripts/run-device-tests.py 2>&1 | tee "$RUNNER_TEMP/ui-test.log"; then
+            exit 0
+          else
+            status=$?
+            echo '::group::최근 시스템 로그'
+            tail -2000 "$RUNNER_TEMP/ui-system.log" || true
+            echo '::endgroup::'
+            exit "$status"
+          fi
+      - name: Capture device diagnostics after UI failure
+        if: ${{ failure() && steps.tests.outcome == 'failure' }}
+        shell: bash
+        run: |
+          adb="$ANDROID_HOME/platform-tools/adb"
+          # 각 조회는 기기가 응답하지 않아도 제한 시간 뒤 종료한다. 원래 테스트 실패는 유지한다.
+          capture() {
+            echo "::group::$*"
+            perl -e 'alarm 20; exec @ARGV or die "exec: $!\n"' "$adb" -s "$ANDROID_SERIAL" "$@" || echo "조회 실패: $*"
+            echo '::endgroup::'
+          }
+          capture get-state
+          capture shell dumpsys activity activities
+          capture shell dumpsys window windows
+          capture logcat -d -t 2000 -s ActivityManager ActivityTaskManager WindowManager Watchdog AndroidRuntime
       - name: Find UI test results
         id: results
         if: ${{ !cancelled() }}
