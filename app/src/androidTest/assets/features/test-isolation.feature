@@ -5,6 +5,7 @@ Feature: UI 테스트 격리
 
   Issues:
   - [#159 Pleos UI 전체 테스트의 화면 생명주기 실패와 기기 중단 조사](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/159)
+  - [#160 Pleos GNSS 수집 중지 시 system_server 워치독 조사](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/160)
   - [#33 Pleos UI 테스트의 간헐적 Compose 화면 미발견 실패 해결](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/33)
 
   Scenario: 화면을 닫자마자 다시 열어도 새 화면이 가려지지 않는다

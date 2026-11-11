@@ -30,6 +30,8 @@ jobs:
         run: python3 -m unittest scripts/test_ci_emulator.py
       - name: Check DrivingView isolation
         run: python3 -m unittest scripts/test_ci_drivingview.py
+      - name: Check CI location isolation
+        run: python3 -m unittest scripts/test_ci_location.py
       - name: Remove previous build outputs
         run: ./gradlew :app:clean --no-daemon
       - name: Prepare Pleos emulator
@@ -57,7 +59,7 @@ jobs:
           logcat_pid=$!
           trap 'kill "$logcat_pid" 2>/dev/null || true; wait "$logcat_pid" 2>/dev/null || true' EXIT
           set -o pipefail
-          if python3 scripts/ci_drivingview.py -- python3 scripts/run-device-tests.py 2>&1 | tee "$RUNNER_TEMP/ui-test.log"; then
+          if python3 scripts/ci_drivingview.py -- python3 scripts/ci_location.py -- python3 scripts/run-device-tests.py 2>&1 | tee "$RUNNER_TEMP/ui-test.log"; then
             exit 0
           else
             status=$?
