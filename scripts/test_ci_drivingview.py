@@ -61,6 +61,12 @@ class DrivingViewGuardTest(unittest.TestCase):
         self.assertEqual(self.calls, [])
         self.assertTrue(self.state_file.exists())
 
+    def test_interruption_restores_original_setting(self):
+        with patch.object(guard.subprocess, 'run', side_effect=KeyboardInterrupt):
+            with self.assertRaises(KeyboardInterrupt):
+                guard.run(['tests'])
+        self.assertFalse(self.state_file.exists())
+
     def test_restore_failure_keeps_saved_state(self):
         self.state_file.write_text(json.dumps({'serial': 'emulator-5554', 'state': '0'}))
         with patch.object(guard, 'adb', side_effect=OSError('unavailable')):
