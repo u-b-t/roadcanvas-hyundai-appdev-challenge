@@ -5,6 +5,7 @@ Feature: 주행 규제
   확인할 수 없는 상태는 정차로 취급하지 않는다.
 
   Issues:
+  - [#150 주행 규제 기어와 속도 시나리오 단계 연결 수정](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/150)
   - [#13 CarUxRestrictions 주행 규제 구현 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/13)
   - [#119 D에서 멈춘 상태를 정차로 보도록 주행 상태 기준 변경](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/119)
   - [#131 주행 상태 판단을 기어·속도 기준으로 바꿔 D 정차 인정](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/131)

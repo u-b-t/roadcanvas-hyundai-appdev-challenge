@@ -84,7 +84,7 @@ class DrivingRestrictionSteps {
         fakeClient.notifyChanged(requirementOf(name))
     }
 
-    @When("플랫폼이 기어 {string}와 속도 {double}km/h를 알린다")
+    @When("플랫폼이 기어 {string}와 속도 {double}km\\/h를 알린다")
     fun notifyGearAndSpeed(gear: String, kilometersPerHour: Double) {
         fakeClient.notifyGear(gearOf(gear))
         fakeClient.notifySpeed((kilometersPerHour / 3.6).toFloat())
