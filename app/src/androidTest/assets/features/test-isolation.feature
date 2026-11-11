@@ -4,6 +4,7 @@ Feature: UI 테스트 격리
   두 번째와 세 번째 시나리오는 순서대로 실행되어 앞 시나리오가 남긴 상태가 정리되는지 확인한다.
 
   Issues:
+  - [#159 Pleos UI 전체 테스트의 화면 생명주기 실패와 기기 중단 조사](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/159)
   - [#33 Pleos UI 테스트의 간헐적 Compose 화면 미발견 실패 해결](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/33)
 
   Scenario: 화면을 닫자마자 다시 열어도 새 화면이 가려지지 않는다
