@@ -123,14 +123,18 @@ class PublicGallerySteps(private val ruleHolder: ComposeRuleHolder) {
     fun selectArtwork(title: String) {
         val item = listItem(title)
         waitFor(item, useUnmergedTree = true)
-        composeRule.onNode(item, useUnmergedTree = true).performClick()
+        if (composeRule.onAllNodes(selectedItem(title), useUnmergedTree = true)
+                .fetchSemanticsNodes().isEmpty()
+        ) {
+            composeRule.onNode(item, useUnmergedTree = true).performClick()
+        }
     }
 
     /** 항목을 골라 그 항목의 작품 보기 버튼으로 상세에 들어간다. */
     @When("목록에서 {string} 작품을 연다")
     fun openArtwork(title: String) {
         selectArtwork(title)
-        val open = hasText(GALLERY_OPEN_LABEL) and hasClickAction() and
+        val open = hasAnyDescendant(hasText(GALLERY_OPEN_LABEL)) and hasClickAction() and
             hasAnyAncestor(selectedItem(title))
         waitFor(open, useUnmergedTree = true)
         composeRule.onNode(open, useUnmergedTree = true).performClick()

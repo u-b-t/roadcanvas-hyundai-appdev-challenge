@@ -55,6 +55,7 @@ import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
 import kr.roadcanvas.app.ui.components.KeepWordsText
+import kr.roadcanvas.app.ui.components.NavigationIcon
 import kr.roadcanvas.app.ui.components.OverlayCard
 import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 import kr.roadcanvas.app.ui.theme.MIN_TOUCH_TARGET
@@ -113,7 +114,7 @@ const val NEXT_TOPIC_LABEL = "다른 주제"
 const val TODAY_TOPIC_TAG = "todayTopic"
 
 const val START_LABEL = "시작"
-const val BACK_TO_MODE_SELECT_LABEL = "모드 선택으로"
+const val BACK_TO_MODE_SELECT_LABEL = "홈으로"
 const val REQUEST_PERMISSION_LABEL = "권한 요청"
 const val OPEN_SETTINGS_LABEL = "설정 열기"
 const val SHOW_BLOCKED_NOTICE_LABEL = "차단 안내 보기"
@@ -279,6 +280,7 @@ fun ChallengeReadyScreen(
             )
             CarButton(
                 text = BACK_TO_MODE_SELECT_LABEL,
+                icon = NavigationIcon.Home,
                 onClick = onBack,
                 style = CarButtonStyle.Neutral,
                 modifier = Modifier.fillMaxWidth()
@@ -372,6 +374,7 @@ private fun StartCard(
         }
         CarButton(
             text = START_LABEL,
+            icon = NavigationIcon.Start,
             onClick = onStart,
             enabled = status.canStart,
             modifier = Modifier.fillMaxWidth().height(START_BUTTON_HEIGHT)

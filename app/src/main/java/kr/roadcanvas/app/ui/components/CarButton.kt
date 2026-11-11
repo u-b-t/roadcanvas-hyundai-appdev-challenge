@@ -2,7 +2,9 @@ package kr.roadcanvas.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -40,11 +42,16 @@ fun CarButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     style: CarButtonStyle = CarButtonStyle.Primary,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    icon: NavigationIcon? = null
 ) {
     val sizedModifier = modifier.sizeIn(minWidth = MIN_TOUCH_TARGET, minHeight = MIN_TOUCH_TARGET)
     val shape = SDGCornerRadius.BoxRadius.Radius16
     val label: @Composable () -> Unit = {
+        if (icon != null) {
+            NavigationButtonIcon(icon)
+            Spacer(Modifier.width(8.dp))
+        }
         Text(text = text, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
     }
     when (style) {

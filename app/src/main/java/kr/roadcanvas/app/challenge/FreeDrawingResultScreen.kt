@@ -24,6 +24,7 @@ import kr.roadcanvas.app.modeselect.MY_DRAWINGS_LABEL
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
+import kr.roadcanvas.app.ui.components.NavigationIcon
 import kr.roadcanvas.app.ui.components.OverlayCard
 import kr.roadcanvas.app.ui.components.driverSideOverlayContentPadding
 
@@ -112,12 +113,14 @@ fun FreeDrawingResultScreen(
                 )
                 CarButton(
                     text = BACK_TO_MODE_SELECT_LABEL,
+                    icon = NavigationIcon.Home,
                     onClick = onModeSelect,
                     style = CarButtonStyle.Neutral,
                     modifier = Modifier.fillMaxWidth()
                 )
                 CarButton(
                     text = MY_DRAWINGS_LABEL,
+                    icon = NavigationIcon.Drawings,
                     onClick = onMyDrawings,
                     style = CarButtonStyle.Neutral,
                     modifier = Modifier.fillMaxWidth()

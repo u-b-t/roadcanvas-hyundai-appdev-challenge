@@ -52,7 +52,6 @@ class PublicGalleryPreviewActivity : ComponentActivity() {
                             onItemVisible = viewModel::onItemVisible,
                             onSelectArtwork = viewModel::select,
                             onOpenArtwork = { navController.navigate("detail/$it") },
-                            onRefresh = viewModel::refresh,
                             onLoadMore = viewModel::loadMore,
                             onBack = ::finish
                         )

@@ -7,10 +7,17 @@ Feature: 동그라미 챌린지 준비
   주행 중에는 화면 전체를 정차 안내로 가린다(주행 중 화면 기능 참고).
 
   Issues:
+  - [#143 홈 이동 버튼과 보조 버튼 아이콘 통일 및 새로고침 제거](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/143)
   - [#17 동그라미 챌린지 준비 화면 추가](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/17)
   - [#43 주행 중 진행 화면 표시를 위한 Distraction Optimization 선언](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/43)
   - [#49 준비·진행·결과 화면을 전체 지도와 왼쪽 오버레이로 개편](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/49)
   - [#60 준비 화면 안내를 짧게 줄이고 시작 버튼 키우기](https://github.com/u-b-t/roadcanvas-hyundai-appdev-challenge/issues/60)
+
+  Scenario: 준비 화면의 시작과 홈 이동에 아이콘을 보여준다
+    Given 메인 화면을 연다
+    When "동그라미 그리기" 버튼을 누른다
+    Then "Start" 버튼 아이콘이 표시된다
+    And "Home" 버튼 아이콘이 표시된다
 
   Scenario: 챌린지의 목표와 진행 방법을 아이콘과 짧은 문장으로 안내한다
     Given 동그라미 챌린지 준비 화면을 연다
@@ -39,7 +46,7 @@ Feature: 동그라미 챌린지 준비
     And "원을 그리고 출발점으로 돌아와요"가 화면 왼쪽 조작 영역에 표시된다
     And "시작할 준비가 되었어요"가 화면 왼쪽 조작 영역에 표시된다
     And "시작" 버튼이 화면 왼쪽 조작 영역에 있다
-    And "모드 선택으로" 버튼이 화면 왼쪽 조작 영역에 있다
+    And "홈으로" 버튼이 화면 왼쪽 조작 영역에 있다
 
   Scenario: 현재 위치를 받기 전에는 위치 확인 중을 표시한다
     Given 동그라미 챌린지 준비 화면을 연다
@@ -92,7 +99,7 @@ Feature: 동그라미 챌린지 준비
 
   Scenario: 버튼으로 메인 화면으로 돌아가면 시작 조건 구독을 해제한다
     Given 동그라미 챌린지 준비 화면을 연다
-    When "모드 선택으로" 버튼을 누른다
+    When "홈으로" 버튼을 누른다
     Then 메인 화면이 표시된다
     And 시작 조건 확인 구독이 해제된다
 
