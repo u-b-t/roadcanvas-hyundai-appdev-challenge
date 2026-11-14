@@ -43,7 +43,7 @@ for (const circle of CIRCLES) {
 }
 
 for (const user of Object.values(users)) {
-  const owner = doc(user.db, 'territoryOwners', user.uid);
+  const owner = doc(user.db, 'territoryGridOwners', user.uid);
   if ((await getDoc(owner)).exists()) await updateDoc(owner, { cellCount: 0 });
   await deleteDoc(doc(user.db, 'users', user.uid));
   console.log(`사용자 ${user.key} ${user.uid}: 영토 순위 0칸, 프로필 삭제`);

@@ -146,7 +146,7 @@ data class ArtworkPublicationEntity(
 )
 
 /**
- * 땅따먹기 획득. 칸은 쉼표로 이은 geohash7 문자열이다. 서버에 반영한 뒤에만 칸 분류 수가 있다.
+ * 땅따먹기 획득. 칸은 쉼표로 이은 격자 칸 ID(`TerritoryGridCell.id`) 문자열이다. #148 이전 획득은 geohash7이다. 서버에 반영한 뒤에만 칸 분류 수가 있다.
  * 완료 기록을 지워도 서버 반영을 이어가도록 외래 키를 두지 않는다.
  */
 @Entity(

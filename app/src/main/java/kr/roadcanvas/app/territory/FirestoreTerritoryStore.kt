@@ -13,9 +13,10 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import kr.roadcanvas.app.account.defaultNickname
 
-private const val CAPTURES = "territoryCaptures"
-private const val CELLS = "territoryCells"
-private const val OWNERS = "territoryOwners"
+// geohash 칸을 쓰던 territoryCaptures·territoryCells·territoryOwners 대신 정사각형 격자용 컬렉션을 쓴다(#148).
+private const val CAPTURES = "territoryGridCaptures"
+private const val CELLS = "territoryGridCells"
+private const val OWNERS = "territoryGridOwners"
 
 /** Firestore `in` 조건에 넣을 수 있는 최대 값 수 */
 private const val IN_QUERY_MAX_VALUES = 30
@@ -89,7 +90,7 @@ class FirestoreTerritoryStore(
                             "captureId" to request.captureId,
                             "capturedAt" to FieldValue.serverTimestamp(),
                             "version" to (cell.getLong("version") ?: 0L) + 1,
-                            "gh6" to cell.id.take(TERRITORY_QUERY_PRECISION)
+                            "region" to TerritoryGrid.regionOf(cell.id)
                         )
                     )
                 }
@@ -118,14 +119,14 @@ class FirestoreTerritoryStore(
         }
     }
 
-    override suspend fun cells(prefixes: List<String>, limit: Int): List<StoredTerritoryCell> {
+    override suspend fun cells(regions: List<String>, limit: Int): List<StoredTerritoryCell> {
         val found = mutableListOf<StoredTerritoryCell>()
-        for (chunk in prefixes.distinct().chunked(IN_QUERY_MAX_VALUES)) {
+        for (chunk in regions.distinct().chunked(IN_QUERY_MAX_VALUES)) {
             val remaining = limit - found.size
             if (remaining <= 0) break
             val documents = request {
                 db().collection(CELLS)
-                    .whereIn("gh6", chunk)
+                    .whereIn("region", chunk)
                     .limit(remaining.toLong())
                     .get(Source.SERVER)
             }.documents

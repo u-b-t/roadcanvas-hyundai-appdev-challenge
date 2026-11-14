@@ -12,7 +12,7 @@ private const val REQUEST_TIMEOUT_MILLIS = 20_000L
 
 /**
  * Firestore 프로필 저장소. 오래된 캐시를 보이지 않도록 서버에서만 읽는다.
- * 닉네임은 `users/{uid}`, `leaderboards/circle/entries/{uid}`, `territoryOwners/{uid}`와
+ * 닉네임은 `users/{uid}`, `leaderboards/circle/entries/{uid}`, `territoryGridOwners/{uid}`와
  * 내 `artworks`(`ownerUid`가 나인 문서)에 있으며, 있는 문서만 한 배치로 바꾼다.
  * 서버에서 먼저 읽으므로 오프라인이면 쓰기를 대기열에 남기지 않고 연결 실패로 끝난다.
  */
@@ -22,7 +22,7 @@ class FirestoreProfileStore(
     private fun circleEntry(uid: String) =
         db().collection("leaderboards").document("circle").collection("entries").document(uid)
 
-    private fun territoryOwner(uid: String) = db().collection("territoryOwners").document(uid)
+    private fun territoryOwner(uid: String) = db().collection("territoryGridOwners").document(uid)
 
     private fun myArtworks(uid: String) = db().collection("artworks").whereEqualTo("ownerUid", uid)
 

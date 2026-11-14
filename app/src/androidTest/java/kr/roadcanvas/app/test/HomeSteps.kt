@@ -175,7 +175,7 @@ class HomeSteps(private val ruleHolder: ComposeRuleHolder) {
         fakeContainer.territoryStore.putCells(
             owner.uid,
             owner.nickname,
-            List(count) { "wydm9q$it" }
+            List(count) { "118117_${225_719 + it}" }
         )
     }
 

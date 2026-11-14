@@ -22,8 +22,8 @@ const val TERRITORY_SUBMIT_MAX_ATTEMPTS = 5
 /** 지도 조회 한 번에 읽는 최대 칸 수. 넘으면 확대하라고 안내한다. */
 const val TERRITORY_MAP_MAX_CELLS = 300
 
-/** 지도 조회 한 번에 쓰는 최대 geohash6 접두어 수. 넘으면 확대하라고 안내한다. */
-const val TERRITORY_MAP_MAX_PREFIXES = 60
+/** 지도 조회 한 번에 쓰는 최대 구역 수. 넘으면 확대하라고 안내한다. */
+const val TERRITORY_MAP_MAX_REGIONS = 60
 
 /** 순위표에 보이는 사용자 수 */
 const val TERRITORY_RANKING_SIZE = 10
@@ -97,6 +97,7 @@ class TerritoryGame(
 
     /**
      * 완료 기록 [drawingId]의 차지한 영역 [claimed]를 획득으로 제출한다. 같은 기록은 처음 만든 획득을 다시 쓴다.
+     * #148 이전에 geohash 칸으로 만든 획득은 지금 격자 칸으로 새 획득을 만들어 바꾼다.
      * 서버에 반영하지 못해도 기기에 저장했으면 [TerritoryCaptureState.Pending]을 돌려준다.
      * 기기에 저장하지 못하면 [TerritoryFailure.STORAGE]이며 제출하지 않는다.
      */
@@ -108,7 +109,9 @@ class TerritoryGame(
             is StorageResult.Failure -> return@withContext storageFailure(found.cause)
             is StorageResult.Success -> found.value
         }
-        if (existing != null) return@withContext TerritoryCall.Success(submitStored(existing))
+        if (existing != null && !existing.legacy) {
+            return@withContext TerritoryCall.Success(submitStored(existing))
+        }
         val cells = when (val result = territoryCellsOf(claimed.boundary)) {
             is TerritoryCellsResult.TooLarge ->
                 return@withContext TerritoryCall.Success(
@@ -129,11 +132,15 @@ class TerritoryGame(
         TerritoryCall.Success(submitStored(capture))
     }
 
-    /** 완료 기록 [drawingId]의 획득 상태. 획득을 만든 적이 없으면(너무 큰 영역 포함) null이다. */
+    /**
+     * 완료 기록 [drawingId]의 획득 상태. 획득을 만든 적이 없으면(너무 큰 영역 포함) null이다.
+     * #148 이전 geohash 칸 획득은 지금 격자에서 읽을 수 없어 만든 적이 없는 것처럼 null이다. 다시 [capture]하면 새로 만든다.
+     */
     suspend fun state(drawingId: Long): TerritoryCall<TerritoryCaptureState?> =
         when (val found = captures.findByDrawing(drawingId)) {
             is StorageResult.Failure -> storageFailure(found.cause)
-            is StorageResult.Success -> TerritoryCall.Success(found.value?.let(::stateOf))
+            is StorageResult.Success ->
+                TerritoryCall.Success(found.value?.takeUnless { it.legacy }?.let(::stateOf))
         }
 
     /**
@@ -151,20 +158,20 @@ class TerritoryGame(
     }
 
     /**
-     * 지도 범위 [bounds]의 칸. 범위를 덮는 geohash6 접두어로 조회한다.
-     * 접두어가 [TERRITORY_MAP_MAX_PREFIXES]개를 넘거나 칸이 [TERRITORY_MAP_MAX_CELLS]개를 넘으면
+     * 지도 범위 [bounds]의 칸. 범위를 덮는 구역으로 조회한다.
+     * 구역이 [TERRITORY_MAP_MAX_REGIONS]개를 넘거나 칸이 [TERRITORY_MAP_MAX_CELLS]개를 넘으면
      * [TerritoryMapCells.TooMany]다.
      */
     suspend fun mapCells(bounds: GeoBounds): TerritoryCall<TerritoryMapCells> = attempt {
         val tooMany = TerritoryMapCells.TooMany(TERRITORY_MAP_MAX_CELLS)
-        val prefixes =
-            Geohash.covering(bounds, TERRITORY_QUERY_PRECISION, TERRITORY_MAP_MAX_PREFIXES)
-                ?: return@attempt tooMany
+        val regions = TerritoryGrid.regionsCovering(bounds, TERRITORY_MAP_MAX_REGIONS)
+            ?: return@attempt tooMany
         val uid = owner().uid
-        val cells = store.cells(prefixes, TERRITORY_MAP_MAX_CELLS + 1)
+        val cells = store.cells(regions, TERRITORY_MAP_MAX_CELLS + 1)
         if (cells.size > TERRITORY_MAP_MAX_CELLS) return@attempt tooMany
         TerritoryMapCells.Loaded(
-            cells.map {
+            // 칸 ID 형식이 아닌 문서는 그릴 수 없어 뺀다. 규칙이 막지만 지도 전체가 실패하지 않게 한다.
+            cells.filter { TerritoryGrid.parse(it.id) != null }.map {
                 TerritoryCell(it.id, it.ownerUid, it.ownerUid == uid)
             }
         )
@@ -248,8 +255,16 @@ class TerritoryGame(
         return store.submit(owner, request)
     }
 
+    /**
+     * 반영을 포기할 획득. 기한이 지났거나 #148 이전에 만든 geohash 칸 획득이다.
+     * geohash 칸은 지금 격자 컬렉션에 제출할 수 없어 다시 제출하지 않는다.
+     */
     private fun expired(capture: StoredTerritoryCapture) =
-        clock() - capture.createdAtMillis >= TERRITORY_SUBMIT_DEADLINE_MILLIS
+        clock() - capture.createdAtMillis >= TERRITORY_SUBMIT_DEADLINE_MILLIS || capture.legacy
+
+    /** #148 이전에 geohash 칸으로 만든 획득 */
+    private val StoredTerritoryCapture.legacy: Boolean
+        get() = cells.any { TerritoryGrid.parse(it) == null }
 
     /** 서버 반영 뒤 기기 상태를 저장하지 못해도 다음 재제출이 중복으로 처리되므로 결과는 그대로 둔다. */
     private suspend fun save(capture: StoredTerritoryCapture) {

@@ -22,10 +22,10 @@ import kr.roadcanvas.app.map.RoutePoint
 import kr.roadcanvas.app.modeselect.MY_DRAWINGS_LABEL
 import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.TerritoryResult
-import kr.roadcanvas.app.territory.Geohash
 import kr.roadcanvas.app.territory.ResultCellKind
 import kr.roadcanvas.app.territory.TerritoryCaptureOutcome
 import kr.roadcanvas.app.territory.TerritoryCaptureState
+import kr.roadcanvas.app.territory.TerritoryGrid
 import kr.roadcanvas.app.territory.TerritoryResultCells
 import kr.roadcanvas.app.territory.TerritorySyncSection
 import kr.roadcanvas.app.territory.TerritorySyncUiState
@@ -170,7 +170,7 @@ internal fun mapCellsOf(cells: TerritoryResultCells): List<MapCell> {
             ResultCellKind.KEPT -> MapCellStyle.KEPT
         }
         val label = cell.previousOwner?.takeIf { labeledOwners.add(it) }
-        MapCell(Geohash.bounds(cell.id).corners.map(::routePointOf), true, style, label)
+        MapCell(TerritoryGrid.bounds(cell.id).corners.map(::routePointOf), true, style, label)
     }
     return nearby + captured
 }

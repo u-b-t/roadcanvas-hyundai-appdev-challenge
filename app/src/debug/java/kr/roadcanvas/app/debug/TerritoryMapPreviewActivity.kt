@@ -11,16 +11,15 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import kr.roadcanvas.app.appContainer
 import kr.roadcanvas.app.drawing.StorageResult
 import kr.roadcanvas.app.score.GeoPoint
-import kr.roadcanvas.app.territory.Geohash
 import kr.roadcanvas.app.territory.StoredTerritoryCapture
 import kr.roadcanvas.app.territory.StoredTerritoryCell
 import kr.roadcanvas.app.territory.StoredTerritoryOwner
-import kr.roadcanvas.app.territory.TERRITORY_CELL_PRECISION
-import kr.roadcanvas.app.territory.TERRITORY_QUERY_PRECISION
 import kr.roadcanvas.app.territory.TerritoryCaptureOutcome
 import kr.roadcanvas.app.territory.TerritoryCaptureRepository
 import kr.roadcanvas.app.territory.TerritoryCaptureRequest
 import kr.roadcanvas.app.territory.TerritoryGame
+import kr.roadcanvas.app.territory.TerritoryGrid
+import kr.roadcanvas.app.territory.TerritoryGridCell
 import kr.roadcanvas.app.territory.TerritoryOwner
 import kr.roadcanvas.app.territory.TerritoryOwnerProvider
 import kr.roadcanvas.app.territory.TerritoryStore
@@ -102,8 +101,8 @@ private class SampleTerritoryStore : TerritoryStore {
     override suspend fun submit(owner: TerritoryOwner, request: TerritoryCaptureRequest) =
         TerritoryCaptureOutcome(newCells = request.cells.size, stolenCells = 0, ownCells = 0)
 
-    override suspend fun cells(prefixes: List<String>, limit: Int) = cells
-        .filterKeys { it.take(TERRITORY_QUERY_PRECISION) in prefixes }
+    override suspend fun cells(regions: List<String>, limit: Int) = cells
+        .filterKeys { TerritoryGrid.regionOf(it) in regions }
         .map { (id, owner) -> StoredTerritoryCell(id, owner) }
         .take(limit)
 
@@ -115,16 +114,11 @@ private class SampleTerritoryStore : TerritoryStore {
         .take(limit)
 
     private fun MutableMap<String, String>.block(owner: String, rows: IntRange, cols: IntRange) {
-        val latSpan = Geohash.latitudeSpan(TERRITORY_CELL_PRECISION)
-        val lonSpan = Geohash.longitudeSpan(TERRITORY_CELL_PRECISION)
         val center = DEFAULT_TERRITORY_MAP_CENTER
+        val base = TerritoryGrid.cellOf(GeoPoint(center.latitude, center.longitude))
         for (row in rows) {
             for (col in cols) {
-                val point = GeoPoint(
-                    center.latitude + row * latSpan,
-                    center.longitude + col * lonSpan
-                )
-                put(Geohash.encode(point, TERRITORY_CELL_PRECISION), owner)
+                put(TerritoryGridCell(base.row + row, base.col + col).id, owner)
             }
         }
     }

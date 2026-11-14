@@ -16,7 +16,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { demoUser, firebaseConfig, STATE_PATH } from './client.mjs';
-import { ARTWORKS, CAPTURES, CIRCLES, USERS, artworkRoute, captureCells, circleRoute } from './data.mjs';
+import { ARTWORKS, CAPTURES, CIRCLES, USERS, artworkRoute, captureCells, circleRoute, regionOf } from './data.mjs';
 
 const CHUNK_SIZE = 100;
 // 앱의 CIRCLE_SCORE_ALGORITHM_VERSION
@@ -81,14 +81,14 @@ async function seedVote(voter, artworkId) {
 function submitCapture(user, captureId, cells) {
   const { db } = user;
   return runTransaction(db, async (tx) => {
-    const captureRef = doc(db, 'territoryCaptures', captureId);
+    const captureRef = doc(db, 'territoryGridCaptures', captureId);
     const existing = await tx.get(captureRef);
     if (existing.exists()) {
       const data = existing.data();
       if (data.ownerUid !== user.uid) throw new Error(`${captureId}: 다른 사용자(${data.ownerUid})의 획득 ID입니다.`);
       return { duplicate: true, newCells: data.newCellCount, stolenCells: data.stolenCellCount, ownCells: data.ownCellCount };
     }
-    const cellRefs = cells.map((id) => doc(db, 'territoryCells', id));
+    const cellRefs = cells.map((id) => doc(db, 'territoryGridCells', id));
     const snapshots = [];
     for (const ref of cellRefs) snapshots.push(await tx.get(ref));
     const previous = snapshots.map((s) => (s.exists() ? s.data().ownerUid : null));
@@ -101,8 +101,8 @@ function submitCapture(user, captureId, cells) {
     const stolenBy = {};
     for (const p of previous) if (p != null && p !== user.uid) stolenBy[p] = (stolenBy[p] ?? 0) + 1;
     const victims = {};
-    for (const uid of Object.keys(stolenBy)) victims[uid] = await tx.get(doc(db, 'territoryOwners', uid));
-    const ownerRef = doc(db, 'territoryOwners', user.uid);
+    for (const uid of Object.keys(stolenBy)) victims[uid] = await tx.get(doc(db, 'territoryGridOwners', uid));
+    const ownerRef = doc(db, 'territoryGridOwners', user.uid);
     const ownerSnap = await tx.get(ownerRef);
     const ownerCount = ownerSnap.exists() ? ownerSnap.data().cellCount : 0;
 
@@ -121,7 +121,7 @@ function submitCapture(user, captureId, cells) {
         captureId,
         capturedAt: serverTimestamp(),
         version: (snapshot.exists() ? snapshot.data().version : 0) + 1,
-        gh6: cells[index].slice(0, 6),
+        region: regionOf(cells[index]),
       });
     });
     tx.set(ownerRef, { nickname: user.nickname, cellCount: ownerCount + outcome.newCells + outcome.stolenCells }, { merge: true });
@@ -198,19 +198,19 @@ for (const capture of CAPTURES) {
   const cells = captureCells(capture);
   const outcome = await submitCapture(users[capture.owner], capture.id, cells);
   console.log(
-    `영토 territoryCaptures/${capture.id} ${capture.owner} ${cells.length}칸 ${outcome.duplicate ? '이미 반영' : '반영'}` +
+    `영토 territoryGridCaptures/${capture.id} ${capture.owner} ${cells.length}칸 ${outcome.duplicate ? '이미 반영' : '반영'}` +
       ` (새 ${outcome.newCells}, 빼앗음 ${outcome.stolenCells}, 내 칸 ${outcome.ownCells})`,
   );
 }
 
 // 정리(unseed.mjs)는 순위 칸 수만 0으로 바꾸고 칸은 남기므로, 다시 넣을 때 실제로 가진 칸 수로 순위를 맞춘다.
 for (const user of Object.values(users)) {
-  const owned = (await getCountFromServer(query(collection(user.db, 'territoryCells'), where('ownerUid', '==', user.uid)))).data().count;
-  const ref = doc(user.db, 'territoryOwners', user.uid);
+  const owned = (await getCountFromServer(query(collection(user.db, 'territoryGridCells'), where('ownerUid', '==', user.uid)))).data().count;
+  const ref = doc(user.db, 'territoryGridOwners', user.uid);
   const current = await getDoc(ref);
   if (current.exists() && current.data().cellCount === owned && current.data().nickname === user.nickname) continue;
   await setDoc(ref, { nickname: user.nickname, cellCount: owned }, { merge: true });
-  console.log(`영토 순위 territoryOwners/${user.uid} ${user.key} ${owned}칸으로 맞춤`);
+  console.log(`영토 순위 territoryGridOwners/${user.uid} ${user.key} ${owned}칸으로 맞춤`);
 }
 
 for (const [index, circle] of CIRCLES.entries()) {

@@ -22,7 +22,7 @@
 
 ## 닉네임 변경
 
-닉네임은 `users/{uid}.nickname`, `leaderboards/circle/entries/{uid}.nickname`, `territoryOwners/{uid}.nickname`, 작성한 각 `artworks/{id}.nickname`에 복사되어 있다. 규칙은 1~30자를 받지만 앱의 프로필 화면(#126)은 앞뒤 공백을 제거한 2~12자, 한글·영문·숫자·공백·`-`·`_`만 받는다. 새 사용자의 자동 닉네임은 "형용사 명사 숫자"(예: `빠른 고래 12`, UID로 정해져 같은 사용자는 같다)이고, 이미 프로필이 있는 사용자는 바꾸지 않는다. 기존 프로필의 `createdAt`은 유지한다.
+닉네임은 `users/{uid}.nickname`, `leaderboards/circle/entries/{uid}.nickname`, `territoryGridOwners/{uid}.nickname`(#148 이전은 `territoryOwners`), 작성한 각 `artworks/{id}.nickname`에 복사되어 있다. 규칙은 1~30자를 받지만 앱의 프로필 화면(#126)은 앞뒤 공백을 제거한 2~12자, 한글·영문·숫자·공백·`-`·`_`만 받는다. 새 사용자의 자동 닉네임은 "형용사 명사 숫자"(예: `빠른 고래 12`, UID로 정해져 같은 사용자는 같다)이고, 이미 프로필이 있는 사용자는 바꾸지 않는다. 기존 프로필의 `createdAt`은 유지한다.
 
 앱(`kr.roadcanvas.app.profile.FirestoreProfileStore`)은 다음 순서로 바꾼다.
 

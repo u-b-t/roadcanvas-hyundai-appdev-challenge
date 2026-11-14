@@ -4,13 +4,16 @@ import androidx.test.core.app.ApplicationProvider
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
+import kotlin.math.cos
 import kotlinx.coroutines.runBlocking
 import kr.roadcanvas.app.RoadCanvasApplication
 import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.TerritoryResult
+import kr.roadcanvas.app.territory.CaptureSyncStatus
 import kr.roadcanvas.app.territory.GeoBounds
-import kr.roadcanvas.app.territory.Geohash
-import kr.roadcanvas.app.territory.TERRITORY_CELL_PRECISION
+import kr.roadcanvas.app.territory.StoredTerritoryCapture
+import kr.roadcanvas.app.territory.TERRITORY_CELL_LAT_STEP
+import kr.roadcanvas.app.territory.TERRITORY_CELL_LON_STEP
 import kr.roadcanvas.app.territory.TERRITORY_MAP_MAX_CELLS
 import kr.roadcanvas.app.territory.TERRITORY_MAX_CELLS_PER_CAPTURE
 import kr.roadcanvas.app.territory.TERRITORY_RANKING_SIZE
@@ -19,6 +22,7 @@ import kr.roadcanvas.app.territory.TerritoryCall
 import kr.roadcanvas.app.territory.TerritoryCaptureOutcome
 import kr.roadcanvas.app.territory.TerritoryCaptureState
 import kr.roadcanvas.app.territory.TerritoryCellsResult
+import kr.roadcanvas.app.territory.TerritoryGrid
 import kr.roadcanvas.app.territory.TerritoryMapCells
 import kr.roadcanvas.app.territory.TerritoryRank
 import kr.roadcanvas.app.territory.territoryCellsOf
@@ -29,6 +33,7 @@ import org.junit.Assert.assertTrue
 private const val DRAWING_ID = 1L
 private const val ME = "test"
 private const val OTHER = "other"
+private const val METERS_PER_DEGREE = 6_371_000.0 * Math.PI / 180
 
 /** 화면이 없으므로 서버 땅따먹기를 대체 서버 저장소 위에서 직접 호출해 규칙을 확인한다. */
 class TerritoryCaptureSyncSteps {
@@ -38,11 +43,11 @@ class TerritoryCaptureSyncSteps {
     private val game get() = fakeContainer.territoryGame
     private val store get() = fakeContainer.territoryStore
 
-    private val latSpan = Geohash.latitudeSpan(TERRITORY_CELL_PRECISION)
-    private val lonSpan = Geohash.longitudeSpan(TERRITORY_CELL_PRECISION)
+    private val latSpan = TERRITORY_CELL_LAT_STEP
+    private val lonSpan = TERRITORY_CELL_LON_STEP
 
     /** 서울시청이 속한 칸의 서남쪽 모서리 */
-    private val base = Geohash.bounds("wydm9qy")
+    private val base = TerritoryGrid.bounds("118117_225719")
     private var lastState: TerritoryCaptureState? = null
     private var lastRows = 0
     private var lastCols = 0
@@ -84,6 +89,21 @@ class TerritoryCaptureSyncSteps {
             val count = index * max / users
             store.putCells("u$index", "사용자$index", all.drop(offset).take(count))
             offset += count
+        }
+    }
+
+    @Given("격자를 바꾸기 전 geohash 칸으로 만든 획득이 기기에 남아 있다")
+    fun legacyCapture() {
+        runBlocking {
+            fakeContainer.territoryCaptureRepository.save(
+                StoredTerritoryCapture(
+                    captureId = "legacy",
+                    drawingId = DRAWING_ID,
+                    cells = listOf("wydm9qy", "wydm9qz"),
+                    createdAtMillis = fakeContainer.territoryNowMillis,
+                    status = CaptureSyncStatus.PENDING
+                )
+            )
         }
     }
 
@@ -160,6 +180,30 @@ class TerritoryCaptureSyncSteps {
     fun assertNoSubmit() {
         assertTrue(store.submitRequests.isEmpty())
         assertTrue(fakeContainer.territoryCaptureRepository.all.isEmpty())
+    }
+
+    @Then("이 기록은 아직 획득을 만들지 않은 것으로 보인다")
+    fun assertNotCaptured() {
+        assertEquals(TerritoryCall.Success(null), runBlocking { game.state(DRAWING_ID) })
+    }
+
+    @Then("서버에 제출 요청을 보내지 않았다")
+    fun assertNoSubmitRequest() {
+        assertTrue(store.submitRequests.isEmpty())
+    }
+
+    @Then("제출한 칸 {int}개는 모두 가로와 세로가 {int}m에서 {int}m 안쪽인 격자 칸이다")
+    fun assertSquareCells(count: Int, side: Int, tolerance: Int) {
+        val cells = checkNotNull(store.capture("capture-1")).cells
+        assertEquals(count, cells.size)
+        cells.forEach { id ->
+            val bounds = TerritoryGrid.bounds(id)
+            val height = (bounds.north - bounds.south) * METERS_PER_DEGREE
+            val width = (bounds.east - bounds.west) * METERS_PER_DEGREE *
+                cos(Math.toRadians(bounds.center.latitude))
+            assertEquals("$id 세로", side.toDouble(), height, tolerance.toDouble())
+            assertEquals("$id 가로", side.toDouble(), width, tolerance.toDouble())
+        }
     }
 
     @Then("같은 획득 ID로 {int}번 제출했다")

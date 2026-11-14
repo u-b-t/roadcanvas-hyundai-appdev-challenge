@@ -26,7 +26,7 @@ class RoomTerritoryCaptureRepositoryTest {
     private fun capture(id: String, drawingId: Long, createdAt: Long) = StoredTerritoryCapture(
         captureId = id,
         drawingId = drawingId,
-        cells = listOf("wydm9qy", "wydm9qz"),
+        cells = listOf("118117_225719", "118117_225720"),
         createdAtMillis = createdAt,
         status = CaptureSyncStatus.PENDING
     )
@@ -38,7 +38,7 @@ class RoomTerritoryCaptureRepositoryTest {
 
         val pending = (captures.pending() as StorageResult.Success).value
         assertEquals(listOf("a", "b"), pending.map { it.captureId })
-        assertEquals(listOf("wydm9qy", "wydm9qz"), pending.first().cells)
+        assertEquals(listOf("118117_225719", "118117_225720"), pending.first().cells)
         assertNull(pending.first().outcome)
     }
 
