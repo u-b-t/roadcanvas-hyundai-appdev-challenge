@@ -16,15 +16,15 @@ import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.TerritoryCalculator
 import kr.roadcanvas.app.score.TerritoryResult
 import kr.roadcanvas.app.score.TestPaths
-import kr.roadcanvas.app.territory.Geohash
 import kr.roadcanvas.app.territory.ResultCell
 import kr.roadcanvas.app.territory.ResultCellKind
-import kr.roadcanvas.app.territory.TERRITORY_CELL_PRECISION
+import kr.roadcanvas.app.territory.TERRITORY_CELL_LAT_STEP
 import kr.roadcanvas.app.territory.TerritoryCaptureState
 import kr.roadcanvas.app.territory.TerritoryCell
 import kr.roadcanvas.app.territory.TerritoryCellsResult
 import kr.roadcanvas.app.territory.TerritoryFailure
 import kr.roadcanvas.app.territory.TerritoryGame
+import kr.roadcanvas.app.territory.TerritoryGrid
 import kr.roadcanvas.app.territory.TerritorySyncUiState
 import kr.roadcanvas.app.territory.fake.FakeTerritoryCaptureRepository
 import kr.roadcanvas.app.territory.fake.FakeTerritoryOwnerProvider
@@ -109,11 +109,15 @@ class ChallengeResultTerritoryTest {
             .boundary
         val cells = (territoryCellsOf(boundary) as TerritoryCellsResult.Cells).cells
         val north = boundary.maxOf { it.latitude } +
-            Geohash.latitudeSpan(TERRITORY_CELL_PRECISION) * 0.75
-        val outside = Geohash.encode(
-            GeoPoint(north, boundary.map { it.longitude }.average()),
-            TERRITORY_CELL_PRECISION
-        )
+            TERRITORY_CELL_LAT_STEP * 0.75
+        val outside = TerritoryGrid.cellOf(
+            GeoPoint(
+                north,
+                boundary.map {
+                    it.longitude
+                }.average()
+            )
+        ).id
         store.putCells("other", "드라이버-other", cells.take(2) + outside)
         store.putCells(FakeTerritoryOwnerProvider.DEFAULT_OWNER.uid, "나", cells.drop(2).take(1))
 

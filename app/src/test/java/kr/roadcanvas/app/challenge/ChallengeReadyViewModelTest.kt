@@ -10,10 +10,9 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kr.roadcanvas.app.score.GeoPoint
-import kr.roadcanvas.app.territory.Geohash
 import kr.roadcanvas.app.territory.NearbyTerritory
-import kr.roadcanvas.app.territory.TERRITORY_CELL_PRECISION
 import kr.roadcanvas.app.territory.TerritoryGame
+import kr.roadcanvas.app.territory.TerritoryGrid
 import kr.roadcanvas.app.territory.fake.FakeTerritoryCaptureRepository
 import kr.roadcanvas.app.territory.fake.FakeTerritoryOwnerProvider
 import kr.roadcanvas.app.territory.fake.FakeTerritoryStore
@@ -163,7 +162,7 @@ class ChallengeReadyViewModelTest {
         store.putCells(
             "u1",
             "드라이버-01",
-            listOf(Geohash.encode(cityHall, TERRITORY_CELL_PRECISION))
+            listOf(TerritoryGrid.cellOf(cityHall).id)
         )
         val game = TerritoryGame(
             store,

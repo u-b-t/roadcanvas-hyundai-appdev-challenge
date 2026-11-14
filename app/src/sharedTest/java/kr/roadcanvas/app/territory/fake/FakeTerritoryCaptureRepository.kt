@@ -23,6 +23,10 @@ class FakeTerritoryCaptureRepository : TerritoryCaptureRepository {
 
     /** 기기 DB처럼 반영 결과는 칸 수만 보관한다. */
     override suspend fun save(capture: StoredTerritoryCapture) = result {
+        // Room의 drawing_id 유일 색인과 REPLACE처럼 같은 기록의 다른 획득을 지운다.
+        captures.values.removeAll {
+            it.drawingId == capture.drawingId && it.captureId != capture.captureId
+        }
         captures[capture.captureId] = capture.copy(outcome = capture.outcome?.countsOnly())
     }
 

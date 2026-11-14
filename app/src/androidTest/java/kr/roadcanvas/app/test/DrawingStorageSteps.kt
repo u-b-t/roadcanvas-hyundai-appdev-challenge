@@ -357,7 +357,7 @@ class DrawingStorageSteps {
         val capture = StoredTerritoryCapture(
             captureId = "capture-1",
             drawingId = 1,
-            cells = listOf("wydm9qy"),
+            cells = listOf("118117_225719"),
             createdAtMillis = MINUTE,
             status = CaptureSyncStatus.PENDING
         )

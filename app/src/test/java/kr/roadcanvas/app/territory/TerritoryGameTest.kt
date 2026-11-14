@@ -28,9 +28,9 @@ class TerritoryGameTest {
         conflictRetryDelayMillis = 0
     )
 
-    private val latSpan = Geohash.latitudeSpan(TERRITORY_CELL_PRECISION)
-    private val lonSpan = Geohash.longitudeSpan(TERRITORY_CELL_PRECISION)
-    private val base = Geohash.bounds("wydm9qy")
+    private val latSpan = TERRITORY_CELL_LAT_STEP
+    private val lonSpan = TERRITORY_CELL_LON_STEP
+    private val base = TerritoryGridCell(118_117, 225_719).bounds
 
     /** 기준 칸에서 [rows] x [cols]칸을 덮는 차지한 영역 */
     private fun claimed(rows: Int, cols: Int) = TerritoryResult.Claimed(
@@ -180,6 +180,39 @@ class TerritoryGameTest {
         assertEquals(1, store.submitRequests.size)
         assertEquals(TerritoryCaptureState.Expired(6), capture())
     }
+
+    @Test
+    fun `격자 변경 전 geohash 칸 획득은 다시 제출하지 않는다`() = runTest {
+        captures.save(legacyCapture(CaptureSyncStatus.PENDING))
+
+        assertEquals(TerritoryCall.Success(0), game.resubmitPending())
+        assertEquals(CaptureSyncStatus.EXPIRED, captures.all.single().status)
+        assertTrue(store.submitRequests.isEmpty())
+    }
+
+    @Test
+    fun `격자 변경 전 geohash 칸 획득은 만든 적 없는 것으로 보고 다시 제출하면 새 격자로 만든다`() = runTest {
+        captures.save(legacyCapture(CaptureSyncStatus.SUBMITTED))
+
+        assertEquals(TerritoryCall.Success(null), game.state(1L))
+        assertEquals(
+            TerritoryCaptureState.Submitted(TerritoryCaptureOutcome(6, 0, 0)),
+            capture()
+        )
+        val replaced = captures.all.single()
+        assertEquals("capture-1", replaced.captureId)
+        assertEquals(cellsOf(2, 3), replaced.cells)
+        assertEquals(cellsOf(2, 3), store.capture("capture-1")?.cells)
+    }
+
+    private fun legacyCapture(status: CaptureSyncStatus) = StoredTerritoryCapture(
+        captureId = "legacy",
+        drawingId = 1L,
+        cells = listOf("wydm9qy", "wydm9qz"),
+        createdAtMillis = now,
+        status = status,
+        outcome = TerritoryCaptureOutcome(2, 0, 0).takeIf { status == CaptureSyncStatus.SUBMITTED }
+    )
 
     @Test
     fun `인증하지 못하면 기기에 남긴다`() = runTest {

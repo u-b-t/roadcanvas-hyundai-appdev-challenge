@@ -20,7 +20,7 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
-import { block } from './geo.mjs';
+import { gridBlock as block, regionOf } from './grid.mjs';
 
 const PROJECT_ID = 'demo-roadcanvas-rules';
 if (!PROJECT_ID.startsWith('demo-')) throw new Error('에뮬레이터 전용 demo- 프로젝트만 사용한다');
@@ -57,13 +57,13 @@ async function denied(promise) {
 function submit(user, captureId, cells) {
   const { db } = user;
   return runTransaction(db, async (tx) => {
-    const captureRef = doc(db, 'territoryCaptures', captureId);
+    const captureRef = doc(db, 'territoryGridCaptures', captureId);
     const existing = await tx.get(captureRef);
     if (existing.exists()) {
       const data = existing.data();
       return { duplicate: true, newCells: data.newCellCount, stolenCells: data.stolenCellCount, ownCells: data.ownCellCount };
     }
-    const cellRefs = cells.map((id) => doc(db, 'territoryCells', id));
+    const cellRefs = cells.map((id) => doc(db, 'territoryGridCells', id));
     const snapshots = [];
     for (const ref of cellRefs) snapshots.push(await tx.get(ref));
     const previous = snapshots.map((s) => (s.exists() ? s.data().ownerUid : null));
@@ -75,8 +75,8 @@ function submit(user, captureId, cells) {
     const stolenBy = {};
     for (const p of previous) if (p != null && p !== user.uid) stolenBy[p] = (stolenBy[p] ?? 0) + 1;
     const victims = {};
-    for (const uid of Object.keys(stolenBy)) victims[uid] = await tx.get(doc(db, 'territoryOwners', uid));
-    const ownerRef = doc(db, 'territoryOwners', user.uid);
+    for (const uid of Object.keys(stolenBy)) victims[uid] = await tx.get(doc(db, 'territoryGridOwners', uid));
+    const ownerRef = doc(db, 'territoryGridOwners', user.uid);
     const ownerSnap = await tx.get(ownerRef);
     const ownerCount = ownerSnap.exists() ? ownerSnap.data().cellCount : 0;
 
@@ -95,7 +95,7 @@ function submit(user, captureId, cells) {
         captureId,
         capturedAt: serverTimestamp(),
         version: (snapshot.exists() ? snapshot.data().version : 0) + 1,
-        gh6: cells[index].slice(0, 6),
+        region: regionOf(cells[index]),
       });
     });
     tx.set(ownerRef, { nickname: user.nickname, cellCount: ownerCount + outcome.newCells + outcome.stolenCells }, { merge: true });
@@ -123,7 +123,7 @@ async function submitWithRetry(user, captureId, cells) {
 }
 
 async function ownerCount(db, uid) {
-  const snapshot = await getDoc(doc(db, 'territoryOwners', uid));
+  const snapshot = await getDoc(doc(db, 'territoryGridOwners', uid));
   return snapshot.exists() ? snapshot.data().cellCount : 0;
 }
 
@@ -137,31 +137,31 @@ const anonymous = await createUser('anonymous', false);
 const aCells = block(0, 0, 1, 3);
 const first = await submit(a, 'cap-a1', aCells);
 check('새 칸 획득: 칸 분류와 칸 수', first.newCells === 3 && (await ownerCount(a.db, a.uid)) === 3, JSON.stringify(first));
-const cell0 = (await getDoc(doc(a.db, 'territoryCells', aCells[0]))).data();
-check('칸 문서: 소유자, 획득 ID, version 1, gh6', cell0.ownerUid === a.uid && cell0.captureId === 'cap-a1' && cell0.version === 1 && cell0.gh6 === aCells[0].slice(0, 6));
+const cell0 = (await getDoc(doc(a.db, 'territoryGridCells', aCells[0]))).data();
+check('칸 문서: 소유자, 획득 ID, version 1, region', cell0.ownerUid === a.uid && cell0.captureId === 'cap-a1' && cell0.version === 1 && cell0.region === regionOf(aCells[0]));
 
 const bCells = [...aCells.slice(0, 2), ...block(1, 0, 1, 1)];
 const steal = await submit(b, 'cap-b1', bCells);
-const aAfter = (await getDoc(doc(b.db, 'territoryOwners', a.uid))).data();
+const aAfter = (await getDoc(doc(b.db, 'territoryGridOwners', a.uid))).data();
 check('탈취: 빼앗은 칸 2, 새 칸 1', steal.stolenCells === 2 && steal.newCells === 1, JSON.stringify(steal));
 check('탈취: 빼앗긴 사용자 칸 수 감소와 획득 ID 기록', aAfter.cellCount === 1 && aAfter.lastLossCaptureId === 'cap-b1' && aAfter.nickname === a.nickname);
 check('탈취: 내 칸 수 증가', (await ownerCount(b.db, b.uid)) === 3);
-check('탈취: 칸 version 2', (await getDoc(doc(b.db, 'territoryCells', aCells[0]))).data().version === 2);
+check('탈취: 칸 version 2', (await getDoc(doc(b.db, 'territoryGridCells', aCells[0]))).data().version === 2);
 
 const again = await submit(b, 'cap-b2', bCells.slice(0, 1));
 check('내 칸 재획득: 이미 내 칸 1, 칸 수 그대로', again.ownCells === 1 && (await ownerCount(b.db, b.uid)) === 3);
-check('내 칸 재획득: 획득 ID와 version 갱신', (await getDoc(doc(b.db, 'territoryCells', bCells[0]))).data().captureId === 'cap-b2');
+check('내 칸 재획득: 획득 ID와 version 갱신', (await getDoc(doc(b.db, 'territoryGridCells', bCells[0]))).data().captureId === 'cap-b2');
 
 const duplicate = await submit(b, 'cap-b1', bCells);
 check('중복 제출: 이전 결과를 돌려주고 아무것도 쓰지 않음', duplicate.duplicate && duplicate.stolenCells === 2 && (await ownerCount(b.db, b.uid)) === 3);
 
 // 순위와 지도 조회
-const top = await getDocs(query(collection(c.db, 'territoryOwners'), orderBy('cellCount', 'desc'), limit(10)));
+const top = await getDocs(query(collection(c.db, 'territoryGridOwners'), orderBy('cellCount', 'desc'), limit(10)));
 check('순위: 보유 칸 수 내림차순 조회', top.docs.map((d) => d.data().cellCount).join(',') === '3,1');
-const gh6 = [...new Set([...aCells, ...bCells].map((id) => id.slice(0, 6)))];
-const mapCells = await getDocs(query(collection(c.db, 'territoryCells'), where('gh6', 'in', gh6), limit(301)));
-check('지도: gh6 접두어로 칸 조회', mapCells.size === 4, `${mapCells.size}개`);
-check('비로그인 사용자는 칸·순위를 읽지 못함', (await denied(getDocs(collection(anonymous.db, 'territoryCells')))) && (await denied(getDocs(collection(anonymous.db, 'territoryOwners')))));
+const regions = [...new Set([...aCells, ...bCells].map(regionOf))];
+const mapCells = await getDocs(query(collection(c.db, 'territoryGridCells'), where('region', 'in', regions), limit(301)));
+check('지도: 구역으로 칸 조회', mapCells.size === 4, `${mapCells.size}개`);
+check('비로그인 사용자는 칸·순위를 읽지 못함', (await denied(getDocs(collection(anonymous.db, 'territoryGridCells')))) && (await denied(getDocs(collection(anonymous.db, 'territoryGridOwners')))));
 
 // 거부해야 하는 요청
 const freeCell = block(5, 5, 1, 1)[0];
@@ -169,7 +169,7 @@ function captureDoc(user, cells, extra = {}) {
   return { ownerUid: user.uid, createdAt: serverTimestamp(), cells, cellCount: cells.length, newCellCount: cells.length, stolenCellCount: 0, ownCellCount: 0, ...extra };
 }
 function cellDoc(user, cellId, captureId, version = 1) {
-  return { ownerUid: user.uid, captureId, capturedAt: serverTimestamp(), version, gh6: cellId.slice(0, 6) };
+  return { ownerUid: user.uid, captureId, capturedAt: serverTimestamp(), version, region: regionOf(cellId) };
 }
 async function batchDenied(build) {
   const batch = writeBatch(c.db);
@@ -177,42 +177,58 @@ async function batchDenied(build) {
   return denied(batch.commit());
 }
 
-check('401칸 획득 기록 거부', await denied(setDoc(doc(c.db, 'territoryCaptures', 'big'), captureDoc(c, block(10, 10, 20, 21)))));
-check('400칸 획득 기록 허용', !(await denied(setDoc(doc(c.db, 'territoryCaptures', 'max'), captureDoc(c, block(10, 10, 20, 20))))));
-check('칸 분류 합이 칸 수와 다른 획득 기록 거부', await denied(setDoc(doc(c.db, 'territoryCaptures', 'bad-sum'), captureDoc(c, [freeCell], { newCellCount: 2 }))));
-check('남의 UID로 획득 기록 거부', await denied(setDoc(doc(c.db, 'territoryCaptures', 'fake-owner'), captureDoc(c, [freeCell], { ownerUid: a.uid }))));
-check('획득 기록 수정 거부', await denied(updateDoc(doc(b.db, 'territoryCaptures', 'cap-b1'), { cellCount: 3 })));
-check('획득 기록 없이 칸 쓰기 거부', await denied(setDoc(doc(c.db, 'territoryCells', freeCell), cellDoc(c, freeCell, 'none'))));
-check('이전 획득 기록을 재사용한 칸 쓰기 거부', await denied(setDoc(doc(c.db, 'territoryCells', freeCell), cellDoc(c, freeCell, 'max'))));
+check('401칸 획득 기록 거부', await denied(setDoc(doc(c.db, 'territoryGridCaptures', 'big'), captureDoc(c, block(10, 10, 20, 21)))));
+check('400칸 획득 기록 허용', !(await denied(setDoc(doc(c.db, 'territoryGridCaptures', 'max'), captureDoc(c, block(10, 10, 20, 20))))));
+check('칸 분류 합이 칸 수와 다른 획득 기록 거부', await denied(setDoc(doc(c.db, 'territoryGridCaptures', 'bad-sum'), captureDoc(c, [freeCell], { newCellCount: 2 }))));
+check('남의 UID로 획득 기록 거부', await denied(setDoc(doc(c.db, 'territoryGridCaptures', 'fake-owner'), captureDoc(c, [freeCell], { ownerUid: a.uid }))));
+check('획득 기록 수정 거부', await denied(updateDoc(doc(b.db, 'territoryGridCaptures', 'cap-b1'), { cellCount: 3 })));
+check('획득 기록 없이 칸 쓰기 거부', await denied(setDoc(doc(c.db, 'territoryGridCells', freeCell), cellDoc(c, freeCell, 'none'))));
+check('이전 획득 기록을 재사용한 칸 쓰기 거부', await denied(setDoc(doc(c.db, 'territoryGridCells', freeCell), cellDoc(c, freeCell, 'max'))));
 check('획득 기록에 없는 칸 쓰기 거부', await batchDenied((batch) => {
-  batch.set(doc(c.db, 'territoryCaptures', 'c-missing'), captureDoc(c, [block(6, 6, 1, 1)[0]]));
-  batch.set(doc(c.db, 'territoryCells', freeCell), cellDoc(c, freeCell, 'c-missing'));
+  batch.set(doc(c.db, 'territoryGridCaptures', 'c-missing'), captureDoc(c, [block(6, 6, 1, 1)[0]]));
+  batch.set(doc(c.db, 'territoryGridCells', freeCell), cellDoc(c, freeCell, 'c-missing'));
 }));
+const gridCell = block(7, 7, 1, 1)[0];
+check('같은 획득의 새 칸 쓰기 허용(아래 거부 항목의 기준)', !(await batchDenied((batch) => {
+  batch.set(doc(c.db, 'territoryGridCaptures', 'c-ok'), captureDoc(c, [gridCell]));
+  batch.set(doc(c.db, 'territoryGridCells', gridCell), cellDoc(c, gridCell, 'c-ok'));
+})));
+const otherCell = block(8, 8, 1, 1)[0];
+check('구역이 칸 ID와 다른 칸 쓰기 거부', await batchDenied((batch) => {
+  batch.set(doc(c.db, 'territoryGridCaptures', 'c-region'), captureDoc(c, [otherCell]));
+  batch.set(doc(c.db, 'territoryGridCells', otherCell), { ...cellDoc(c, otherCell, 'c-region'), region: regionOf(block(-20, -20, 1, 1)[0]) });
+}));
+for (const [name, id, region] of [['geohash 칸 ID', 'wydm9qy', 'wydm9q'], ['앞에 0을 붙인 칸 ID', `0${otherCell}`, regionOf(otherCell)]]) {
+  check(`${name} 칸 쓰기 거부`, await batchDenied((batch) => {
+    batch.set(doc(c.db, 'territoryGridCaptures', `c-${name}`), captureDoc(c, [id]));
+    batch.set(doc(c.db, 'territoryGridCells', id), { ...cellDoc(c, otherCell, `c-${name}`), region });
+  }));
+}
 check('오래된 version의 칸 쓰기 거부', await batchDenied((batch) => {
-  batch.set(doc(c.db, 'territoryCaptures', 'c-stale'), captureDoc(c, [aCells[0]], { newCellCount: 0, stolenCellCount: 1 }));
-  batch.set(doc(c.db, 'territoryCells', aCells[0]), cellDoc(c, aCells[0], 'c-stale', 2));
+  batch.set(doc(c.db, 'territoryGridCaptures', 'c-stale'), captureDoc(c, [aCells[0]], { newCellCount: 0, stolenCellCount: 1 }));
+  batch.set(doc(c.db, 'territoryGridCells', aCells[0]), cellDoc(c, aCells[0], 'c-stale', 2));
 }));
-check('다른 사용자 순위 문서 생성 거부', await denied(setDoc(doc(c.db, 'territoryOwners', 'nobody'), { nickname: 'x', cellCount: 1 })));
-check('다른 사용자 칸 수 증가 거부', await denied(updateDoc(doc(c.db, 'territoryOwners', a.uid), { cellCount: 5 })));
-check('획득 기록 없이 다른 사용자 칸 수 감소 거부', await denied(updateDoc(doc(c.db, 'territoryOwners', b.uid), { cellCount: 2, lastLossCaptureId: 'max' })));
+check('다른 사용자 순위 문서 생성 거부', await denied(setDoc(doc(c.db, 'territoryGridOwners', 'nobody'), { nickname: 'x', cellCount: 1 })));
+check('다른 사용자 칸 수 증가 거부', await denied(updateDoc(doc(c.db, 'territoryGridOwners', a.uid), { cellCount: 5 })));
+check('획득 기록 없이 다른 사용자 칸 수 감소 거부', await denied(updateDoc(doc(c.db, 'territoryGridOwners', b.uid), { cellCount: 2, lastLossCaptureId: 'max' })));
 check('빼앗은 칸 수보다 많이 감소 거부', await batchDenied((batch) => {
-  batch.set(doc(c.db, 'territoryCaptures', 'c-over'), captureDoc(c, [bCells[2]], { newCellCount: 0, stolenCellCount: 1 }));
-  batch.set(doc(c.db, 'territoryCells', bCells[2]), cellDoc(c, bCells[2], 'c-over', 2));
-  batch.update(doc(c.db, 'territoryOwners', b.uid), { cellCount: 1, lastLossCaptureId: 'c-over' });
+  batch.set(doc(c.db, 'territoryGridCaptures', 'c-over'), captureDoc(c, [bCells[2]], { newCellCount: 0, stolenCellCount: 1 }));
+  batch.set(doc(c.db, 'territoryGridCells', bCells[2]), cellDoc(c, bCells[2], 'c-over', 2));
+  batch.update(doc(c.db, 'territoryGridOwners', b.uid), { cellCount: 1, lastLossCaptureId: 'c-over' });
 }));
 check('다른 사용자 닉네임 변경 거부', await batchDenied((batch) => {
-  batch.set(doc(c.db, 'territoryCaptures', 'c-nick'), captureDoc(c, [bCells[2]], { newCellCount: 0, stolenCellCount: 1 }));
-  batch.set(doc(c.db, 'territoryCells', bCells[2]), cellDoc(c, bCells[2], 'c-nick', 2));
-  batch.update(doc(c.db, 'territoryOwners', b.uid), { cellCount: 2, lastLossCaptureId: 'c-nick', nickname: '바꿈' });
+  batch.set(doc(c.db, 'territoryGridCaptures', 'c-nick'), captureDoc(c, [bCells[2]], { newCellCount: 0, stolenCellCount: 1 }));
+  batch.set(doc(c.db, 'territoryGridCells', bCells[2]), cellDoc(c, bCells[2], 'c-nick', 2));
+  batch.update(doc(c.db, 'territoryGridOwners', b.uid), { cellCount: 2, lastLossCaptureId: 'c-nick', nickname: '바꿈' });
 }));
-check('음수 칸 수 거부', await denied(setDoc(doc(c.db, 'territoryOwners', c.uid), { nickname: c.nickname, cellCount: -1 })));
-check('칸 삭제 거부', await denied(writeBatch(b.db).delete(doc(b.db, 'territoryCells', bCells[0])).commit()));
+check('음수 칸 수 거부', await denied(setDoc(doc(c.db, 'territoryGridOwners', c.uid), { nickname: c.nickname, cellCount: -1 })));
+check('칸 삭제 거부', await denied(writeBatch(b.db).delete(doc(b.db, 'territoryGridCells', bCells[0])).commit()));
 
 // 동시 탈취: 같은 9칸에 4명이 동시에 제출하고 앱 재실행(최대 5번)으로 모두 반영한다.
 const contested = block(20, 20, 3, 3);
 await submit(a, 'cap-a-base', contested);
 const outcomes = await Promise.all(others.map((user, i) => submitWithRetry(user, `cap-race-${i}`, contested)));
-const cellOwners = await Promise.all(contested.map(async (id) => (await getDoc(doc(a.db, 'territoryCells', id))).data()));
+const cellOwners = await Promise.all(contested.map(async (id) => (await getDoc(doc(a.db, 'territoryGridCells', id))).data()));
 const winner = cellOwners[0].ownerUid;
 const counts = await Promise.all([a, ...others].map((u) => ownerCount(a.db, u.uid)));
 check('동시 탈취: 모든 제출이 재실행으로 반영', outcomes.every((o) => o.ok), JSON.stringify(outcomes.map((o) => o.ok ? o.attempt : o.error)));

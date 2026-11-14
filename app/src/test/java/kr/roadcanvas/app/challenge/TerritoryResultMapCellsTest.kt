@@ -14,12 +14,12 @@ class TerritoryResultMapCellsTest {
         val cells = mapCellsOf(
             TerritoryResultCells(
                 captured = listOf(
-                    ResultCell("wydm9qy", ResultCellKind.CAPTURED),
-                    ResultCell("wydm9qz", ResultCellKind.STOLEN, "드라이버-a"),
-                    ResultCell("wydm9qw", ResultCellKind.STOLEN, "드라이버-a"),
-                    ResultCell("wydm9qx", ResultCellKind.KEPT)
+                    ResultCell("118117_225719", ResultCellKind.CAPTURED),
+                    ResultCell("118117_225720", ResultCellKind.STOLEN, "드라이버-a"),
+                    ResultCell("118118_225719", ResultCellKind.STOLEN, "드라이버-a"),
+                    ResultCell("118118_225720", ResultCellKind.KEPT)
                 ),
-                nearby = listOf(TerritoryCell("wydm9qv", "a", mine = false))
+                nearby = listOf(TerritoryCell("118119_225719", "a", mine = false))
             )
         )
 

@@ -3,10 +3,10 @@ package kr.roadcanvas.app.territory.fake
 import kr.roadcanvas.app.account.defaultNickname
 import kr.roadcanvas.app.territory.StoredTerritoryCell
 import kr.roadcanvas.app.territory.StoredTerritoryOwner
-import kr.roadcanvas.app.territory.TERRITORY_QUERY_PRECISION
 import kr.roadcanvas.app.territory.TerritoryCaptureOutcome
 import kr.roadcanvas.app.territory.TerritoryCaptureRequest
 import kr.roadcanvas.app.territory.TerritoryFailure
+import kr.roadcanvas.app.territory.TerritoryGrid
 import kr.roadcanvas.app.territory.TerritoryOwner
 import kr.roadcanvas.app.territory.TerritoryStore
 import kr.roadcanvas.app.territory.TerritoryStoreException
@@ -90,9 +90,9 @@ class FakeTerritoryStore : TerritoryStore {
         return outcome
     }
 
-    override suspend fun cells(prefixes: List<String>, limit: Int): List<StoredTerritoryCell> {
-        request("cells", prefixes.joinToString(","))
-        return cellOwners.filterKeys { it.take(TERRITORY_QUERY_PRECISION) in prefixes }
+    override suspend fun cells(regions: List<String>, limit: Int): List<StoredTerritoryCell> {
+        request("cells", regions.joinToString(","))
+        return cellOwners.filterKeys { TerritoryGrid.parse(it)?.regionId in regions }
             .map { (id, owner) -> StoredTerritoryCell(id, owner) }
             .take(limit)
     }

@@ -60,9 +60,9 @@ class NearbyTerritoryTest {
 
     @Test
     fun `서버에서 주변 칸과 순위를 읽어 요약한다`() = runTest {
-        val near = Geohash.encode(cityHall, TERRITORY_CELL_PRECISION)
+        val near = TerritoryGrid.cellOf(cityHall).id
         store.putCells("u1", "드라이버-01", listOf(near))
-        store.putCells("far", "드라이버-far", listOf(Geohash.encode(GeoPoint(37.6, 127.1), 7)))
+        store.putCells("far", "드라이버-far", listOf(TerritoryGrid.cellOf(GeoPoint(37.6, 127.1)).id))
 
         val nearby = game.nearbyTerritory(cityHall) as NearbyTerritory.Loaded
 

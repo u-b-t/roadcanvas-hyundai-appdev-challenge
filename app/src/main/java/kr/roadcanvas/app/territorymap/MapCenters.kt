@@ -4,14 +4,14 @@ import kr.roadcanvas.app.drawing.CompletedDrawingSummary
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.map.RoutePoint
 import kr.roadcanvas.app.score.GeoPoint
-import kr.roadcanvas.app.territory.Geohash
+import kr.roadcanvas.app.territory.TerritoryGrid
 
-/** 내 땅이 모인 곳을 나누는 geohash 길이. 5자리는 서울 기준 약 4.9km × 3.9km다. */
-const val MY_LAND_CLUSTER_PRECISION = 5
+/** 내 땅이 모인 곳을 나누는 묶음 한 변의 칸 수. 40칸은 서울 기준 약 4.8km 정사각형이다. */
+const val MY_LAND_CLUSTER_CELLS = 40
 
 /**
  * 영역을 차지한 땅따먹기 기록이 가장 많이 모인 곳의 가운데. 기록마다 축약 경로의 가운데를 구해
- * [MY_LAND_CLUSTER_PRECISION] geohash 칸으로 묶고, 기록이 가장 많은 칸의 가운데들을 평균한다.
+ * [MY_LAND_CLUSTER_CELLS]칸 정사각형으로 묶고, 기록이 가장 많은 칸의 가운데들을 평균한다.
  * 개수가 같으면 [summaries]의 앞쪽(최신) 기록이 있는 칸이다. 차지한 기록이 없으면 null이다.
  */
 fun myLandCenter(summaries: List<CompletedDrawingSummary>): RoutePoint? {
@@ -20,7 +20,8 @@ fun myLandCenter(summaries: List<CompletedDrawingSummary>): RoutePoint? {
         .mapNotNull { it.thumbnail.center() }
     if (centers.isEmpty()) return null
     val groups = centers.groupBy {
-        Geohash.encode(GeoPoint(it.latitude, it.longitude), MY_LAND_CLUSTER_PRECISION)
+        val cell = TerritoryGrid.cellOf(GeoPoint(it.latitude, it.longitude))
+        cell.row / MY_LAND_CLUSTER_CELLS to cell.col / MY_LAND_CLUSTER_CELLS
     }
     val largest = groups.values.maxBy { it.size }
     return RoutePoint(largest.map { it.latitude }.average(), largest.map { it.longitude }.average())

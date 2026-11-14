@@ -6,9 +6,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TerritoryCellsTest {
-    private val latSpan = Geohash.latitudeSpan(TERRITORY_CELL_PRECISION)
-    private val lonSpan = Geohash.longitudeSpan(TERRITORY_CELL_PRECISION)
-    private val base = Geohash.bounds("wydm9qy")
+    private val latSpan = TERRITORY_CELL_LAT_STEP
+    private val lonSpan = TERRITORY_CELL_LON_STEP
+    private val baseCell = TerritoryGridCell(118_117, 225_719)
+    private val base = baseCell.bounds
 
     /** 기준 칸 서남쪽 모서리에서 칸 단위로 잰 직사각형. 경계가 칸 중심을 지나지 않도록 조금 줄이고 늘린다. */
     private fun rectangle(rows: Double, cols: Double, rowOffset: Double = 0.0) = listOf(
@@ -27,8 +28,9 @@ class TerritoryCellsTest {
 
         assertEquals(12, result.size)
         assertEquals(result.sorted(), result)
-        assertTrue("wydm9qy" in result)
-        result.forEach { assertEquals(7, it.length) }
+        assertTrue(baseCell.id in result)
+        assertTrue(TerritoryGridCell(118_119, 225_722).id in result)
+        result.forEach { assertEquals(it, TerritoryGrid.parse(it)?.id) }
     }
 
     @Test
@@ -42,11 +44,11 @@ class TerritoryCellsTest {
     fun `삼각형은 중심이 안에 있는 칸만 획득한다`() {
         val triangle = listOf(
             GeoPoint(base.south, base.west),
-            GeoPoint(base.south, base.west + 4 * lonSpan),
-            GeoPoint(base.south + 4 * latSpan, base.west)
+            GeoPoint(base.south, base.west + 3.9 * lonSpan),
+            GeoPoint(base.south + 3.9 * latSpan, base.west)
         )
 
-        // 중심 (r+0.5, c+0.5)가 r + c + 1 < 4인 칸: 대각선 아래 6칸
+        // 중심 (r+0.5, c+0.5)가 r + c + 1 < 3.9인 칸: 대각선 아래 6칸. 빗변이 칸 중심을 지나지 않게 3.9칸으로 한다.
         assertEquals(6, cells(triangle).size)
     }
 
@@ -61,7 +63,7 @@ class TerritoryCellsTest {
         )
         val centroid = GeoPoint(base.north + 0.1 * latSpan, base.east + 0.1 * lonSpan)
 
-        assertEquals(listOf(Geohash.encode(centroid, 7)), cells(small))
+        assertEquals(listOf(TerritoryGrid.cellOf(centroid).id), cells(small))
     }
 
     @Test
@@ -86,10 +88,7 @@ class TerritoryCellsTest {
             GeoPoint(base.south + 3 * latSpan, base.west + lonSpan),
             GeoPoint(base.south + 3 * latSpan, base.west)
         )
-        val notch = Geohash.encode(
-            GeoPoint(base.south + 2.5 * latSpan, base.west + 1.5 * lonSpan),
-            7
-        )
+        val notch = TerritoryGridCell(baseCell.row + 2, baseCell.col + 1).id
 
         val result = cells(u)
         assertEquals(8, result.size)

@@ -15,7 +15,7 @@
 
 익명 계정은 로그아웃하면 다시 찾을 수 없다. 스크립트는 SDK의 로그인 정보(갱신 토큰 포함)를 저장소 밖 상태 파일 `~/.roadcanvas-demo-seed/state.json`(`DEMO_SEED_STATE`로 변경, 권한 600)에 저장하고, 다시 실행하면 같은 UID로 로그인한다. 상태 파일은 커밋하거나 공유하지 않는다. 데모 계정의 비밀번호와 같다.
 
-모든 문서 ID가 고정이라 다시 실행하면 있는 문서는 건너뛴다. 투표는 본인 투표 문서가 있으면, 획득은 같은 획득 ID가 있으면 만들지 않는다. 마지막에 데모 사용자가 실제로 가진 칸 수로 `territoryOwners`를 맞춘다. 상태 파일을 잃으면 새 익명 사용자가 생기지만, 고정 ID 작품과 획득은 다른 사용자가 고칠 수 없어 실패하므로 중복 작품이나 중복 획득은 생기지 않는다.
+모든 문서 ID가 고정이라 다시 실행하면 있는 문서는 건너뛴다. 투표는 본인 투표 문서가 있으면, 획득은 같은 획득 ID가 있으면 만들지 않는다. 마지막에 데모 사용자가 실제로 가진 칸 수로 `territoryGridOwners`를 맞춘다. 상태 파일을 잃으면 새 익명 사용자가 생기지만, 고정 ID 작품과 획득은 다른 사용자가 고칠 수 없어 실패하므로 중복 작품이나 중복 획득은 생기지 않는다.
 
 ```sh
 cd firebase/demo-seed
@@ -39,7 +39,7 @@ npx firebase-tools emulators:exec --config ../../firebase.json --project demo-ro
 
 데모 사용자. 각자 `users/{uid}`에 닉네임 프로필이 있다.
 
-| 키 | UID | 닉네임 | 영토 칸 | 동그라미 점수 |
+| 키 | UID | 닉네임 | 영토 칸(geohash, #148 이전) | 동그라미 점수 |
 | --- | --- | --- | --- | --- |
 | gangnam | `183tMSeknUOVDURpj5RYN0Yc0kO2` | 강남드리프터 | 125 | 96 |
 | yeouido | `d3iN00eWRhe1guQrcDLALipWXhB2` | 여의도산책러 | 122 | 87 |
@@ -60,16 +60,16 @@ npx firebase-tools emulators:exec --config ../../firebase.json --project demo-ro
 | `demo-artwork-spiral` | 잠실 소용돌이 | jamsil | 잠실 | 1 |
 | `demo-artwork-lightning` | 성수 번개 | gangnam | 성수 | 1 |
 
-땅따먹기 획득 `territoryCaptures/{id}`. 칸은 `territoryCells/{geohash7}`이고 `captureId`로 찾는다.
+땅따먹기 획득 `territoryGridCaptures/{id}`. 칸은 `territoryGridCells/{row}_{col}`이고 `captureId`로 찾는다. #148에서 정사각형 격자로 바꾸며 같은 획득 ID로 새 컬렉션에 다시 넣는다. 아래 칸 수는 2026-11-14 에뮬레이터 시드 결과다. 이전 geohash 칸(`territoryCaptures`, `territoryCells`)의 칸 수는 위 사용자 표와 같고, 그 문서는 운영에 남아 있지만 새 규칙에서는 앱이 읽지 않는다.
 
 | 획득 ID | 사용자 | 지역 | 칸 |
 | --- | --- | --- | --- |
-| `demo-capture-cityhall` | cityhall | 서울시청 주변 1.3km x 1km | 66 |
-| `demo-capture-gangnam` | gangnam | 강남역 주변 다각형 | 125 |
-| `demo-capture-yeouido` | yeouido | 여의도 타원 | 122 |
-| `demo-capture-jamsil` | jamsil | 잠실 원 | 72 |
-| `demo-capture-mapo` | mapo | 홍대 주변 | 30 |
-| `demo-capture-hangang` | hangang | 광화문·종로(시청 칸 10개를 빼앗음) | 54 |
+| `demo-capture-cityhall` | cityhall | 서울시청 주변 1.3km x 1km | 88 (15칸을 빼앗김) |
+| `demo-capture-gangnam` | gangnam | 강남역 주변 다각형 | 162 |
+| `demo-capture-yeouido` | yeouido | 여의도 타원 | 157 |
+| `demo-capture-jamsil` | jamsil | 잠실 원 | 94 |
+| `demo-capture-mapo` | mapo | 홍대 주변 | 38 |
+| `demo-capture-hangang` | hangang | 광화문·종로(시청 칸 15개를 빼앗음) | 72 |
 
 동그라미 기록은 `users/{uid}/drawings/demo-circle-<키>`(청크 `chunks/0..1`)이고, 순위 항목은 `leaderboards/circle/entries/{uid}`다. 점수 계산 버전은 `1`이다. 점수는 앱이 계산한 값이 아니라 정해 넣은 값이며, 점수가 낮을수록 찌그러진 원 경로를 넣었다.
 
@@ -83,7 +83,7 @@ npm run unseed -- --delete-accounts  # 마지막에 익명 계정까지 지운�
 
 - 작품은 규칙상 삭제할 수 없어 비공개(`DRAFT`)로 바꾼다. 다른 사용자에게 더 이상 보이지 않는다.
 - 데모 사용자의 투표, 동그라미 기록·청크·순위 항목, 프로필은 삭제한다.
-- 영토 칸·획득 기록·순위 문서는 규칙상 삭제할 수 없다. 순위 칸 수만 0으로 바꾸므로 지도에는 칸이 남고(다른 사용자가 빼앗을 수 있다) 순위 상위에서는 빠진다. 다시 `npm run seed`를 실행하면 작품을 공개하고 남은 칸 수로 순위를 맞춘다.
+- 영토 칸·획득 기록·순위 문서(`territoryGrid*`)는 규칙상 삭제할 수 없다. 순위 칸 수만 0으로 바꾸므로 지도에는 칸이 남고(다른 사용자가 빼앗을 수 있다) 순위 상위에서는 빠진다. 다시 `npm run seed`를 실행하면 작품을 공개하고 남은 칸 수로 순위를 맞춘다.
 - `--delete-accounts`로 계정을 지우면 남은 작품·칸·순위 문서를 클라이언트로 다시 고칠 수 없다. 완전히 지우려면 Firebase 콘솔에서 위 문서 ID와 UID로 직접 지운다(관리자 권한 작업이므로 따로 확인 후 진행).
 
 ## 확인하지 못한 사항

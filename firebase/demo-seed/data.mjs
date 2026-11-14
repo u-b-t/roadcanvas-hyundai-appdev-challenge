@@ -10,7 +10,6 @@ export const USERS = [
   { key: 'mapo', nickname: '마포드라이브' },
 ];
 
-const BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz';
 const METERS_PER_LAT = 110540;
 const metersPerLon = (lat) => 111320 * Math.cos((lat * Math.PI) / 180);
 
@@ -139,49 +138,14 @@ export const CAPTURES = [
   { id: 'demo-capture-hangang', owner: 'hangang', origin: { lat: 37.572, lon: 126.985 }, polygon: rect(1100, 900) },
 ];
 
-function encode(lat, lon, precision) {
-  const latRange = [-90, 90];
-  const lonRange = [-180, 180];
-  let hash = '';
-  let bits = 0;
-  let value = 0;
-  let evenBit = true;
-  while (hash.length < precision) {
-    const range = evenBit ? lonRange : latRange;
-    const coordinate = evenBit ? lon : lat;
-    const mid = (range[0] + range[1]) / 2;
-    if (coordinate >= mid) {
-      value = (value << 1) | 1;
-      range[0] = mid;
-    } else {
-      value <<= 1;
-      range[1] = mid;
-    }
-    evenBit = !evenBit;
-    if (++bits === 5) {
-      hash += BASE32[value];
-      bits = 0;
-      value = 0;
-    }
-  }
-  return hash;
-}
+// 앱의 TerritoryGrid와 같은 정사각형 격자(서울 기준 약 120m x 120m). 칸 ID는 "{row}_{col}", 구역은 두 번호를 8로 나눈 몫이다.
+const LAT_STEP = 0.00108;
+const LON_STEP = 0.00136;
+const REGION_CELLS = 8;
 
-function bounds(hash) {
-  const latRange = [-90, 90];
-  const lonRange = [-180, 180];
-  let evenBit = true;
-  for (const char of hash) {
-    const value = BASE32.indexOf(char);
-    for (let bit = 4; bit >= 0; bit--) {
-      const range = evenBit ? lonRange : latRange;
-      const mid = (range[0] + range[1]) / 2;
-      if ((value >> bit) & 1) range[0] = mid;
-      else range[1] = mid;
-      evenBit = !evenBit;
-    }
-  }
-  return { minLat: latRange[0], maxLat: latRange[1], minLon: lonRange[0], maxLon: lonRange[1] };
+export function regionOf(cellId) {
+  const [row, col] = cellId.split('_').map(Number);
+  return `${Math.floor(row / REGION_CELLS)}_${Math.floor(col / REGION_CELLS)}`;
 }
 
 function inside(polygon, [x, y]) {
@@ -194,23 +158,22 @@ function inside(polygon, [x, y]) {
   return result;
 }
 
-/** 앱의 territoryCellsOf처럼 다각형 안에 중심이 들어오는 geohash7 칸을 고른다. */
+/** 앱의 territoryCellsOf처럼 다각형 안에 중심이 들어오는 격자 칸을 고른다. */
 export function captureCells(capture) {
   const corners = capture.polygon.map((p) => toLatLon(capture.origin, p));
-  const minLat = Math.min(...corners.map((c) => c.latitude));
-  const maxLat = Math.max(...corners.map((c) => c.latitude));
-  const minLon = Math.min(...corners.map((c) => c.longitude));
-  const maxLon = Math.max(...corners.map((c) => c.longitude));
-  const start = bounds(encode(minLat, minLon, 7));
-  const dLat = start.maxLat - start.minLat;
-  const dLon = start.maxLon - start.minLon;
+  const minRow = Math.floor((Math.min(...corners.map((c) => c.latitude)) + 90) / LAT_STEP);
+  const maxRow = Math.floor((Math.max(...corners.map((c) => c.latitude)) + 90) / LAT_STEP);
+  const minCol = Math.floor((Math.min(...corners.map((c) => c.longitude)) + 180) / LON_STEP);
+  const maxCol = Math.floor((Math.max(...corners.map((c) => c.longitude)) + 180) / LON_STEP);
   const cells = [];
-  for (let lat = (start.minLat + start.maxLat) / 2; lat <= maxLat; lat += dLat) {
-    for (let lon = (start.minLon + start.maxLon) / 2; lon <= maxLon; lon += dLon) {
-      if (inside(capture.polygon, toLocal(capture.origin, lat, lon))) cells.push(encode(lat, lon, 7));
+  for (let row = minRow; row <= maxRow; row++) {
+    for (let col = minCol; col <= maxCol; col++) {
+      const lat = -90 + (row + 0.5) * LAT_STEP;
+      const lon = -180 + (col + 0.5) * LON_STEP;
+      if (inside(capture.polygon, toLocal(capture.origin, lat, lon))) cells.push(`${row}_${col}`);
     }
   }
-  return [...new Set(cells)].sort();
+  return cells.sort();
 }
 
 /** 동그라미 챌린지 기록. 점수가 낮을수록 찌그러진 원으로 그린다. */

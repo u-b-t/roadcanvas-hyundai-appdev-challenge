@@ -10,7 +10,7 @@ fun interface TerritoryOwnerProvider {
 
 /**
  * 서버에 제출하는 획득 하나. [captureId]는 처음 만들 때 한 번 정하는 UUID이며 다시 제출해도 같은 값을 쓴다.
- * [cells]는 geohash7 칸 목록(1~[TERRITORY_MAX_CELLS_PER_CAPTURE]개)이다.
+ * [cells]는 격자 칸 ID 목록(1~[TERRITORY_MAX_CELLS_PER_CAPTURE]개)이다.
  */
 data class TerritoryCaptureRequest(val captureId: String, val cells: List<String>)
 
@@ -68,7 +68,7 @@ fun territoryCaptureOutcomeOf(
 /** 지도에 그리는 칸 하나. [mine]이면 현재 사용자의 칸이다. */
 data class TerritoryCell(val id: String, val ownerUid: String, val mine: Boolean) {
     /** 칸 범위. 지도에 다각형으로 그릴 때 [GeoBounds.corners]를 쓴다. */
-    val bounds: GeoBounds get() = Geohash.bounds(id)
+    val bounds: GeoBounds get() = TerritoryGrid.bounds(id)
 }
 
 /** 순위표 한 줄. [rank]는 1부터 시작한다. [mine]이면 현재 사용자다. */
@@ -130,9 +130,9 @@ interface TerritoryStore {
     ): TerritoryCaptureOutcome
 
     /**
-     * `gh6`가 [prefixes] 중 하나인 칸을 최대 [limit]개 읽는다. [limit]개를 채우면 더 있을 수 있다.
+     * 구역 ID(`region`)가 [regions] 중 하나인 칸을 최대 [limit]개 읽는다. [limit]개를 채우면 더 있을 수 있다.
      */
-    suspend fun cells(prefixes: List<String>, limit: Int): List<StoredTerritoryCell>
+    suspend fun cells(regions: List<String>, limit: Int): List<StoredTerritoryCell>
 
     /** [uid] 사용자의 보유 칸 수. 순위 문서가 없으면 0이다. */
     suspend fun ownedCellCount(uid: String): Long
@@ -149,7 +149,7 @@ object UnavailableTerritoryStore : TerritoryStore {
     override suspend fun submit(owner: TerritoryOwner, request: TerritoryCaptureRequest) =
         unavailable()
 
-    override suspend fun cells(prefixes: List<String>, limit: Int) = unavailable()
+    override suspend fun cells(regions: List<String>, limit: Int) = unavailable()
 
     override suspend fun ownedCellCount(uid: String) = unavailable()
 

@@ -19,11 +19,11 @@ import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.TerritoryCalculator
 import kr.roadcanvas.app.score.TerritoryResult
 import kr.roadcanvas.app.score.TestPaths
-import kr.roadcanvas.app.territory.Geohash
-import kr.roadcanvas.app.territory.TERRITORY_CELL_PRECISION
+import kr.roadcanvas.app.territory.TERRITORY_CELL_LAT_STEP
 import kr.roadcanvas.app.territory.TERRITORY_MAP_MAX_CELLS
 import kr.roadcanvas.app.territory.TerritoryFailure
 import kr.roadcanvas.app.territory.TerritoryGame
+import kr.roadcanvas.app.territory.TerritoryGrid
 import kr.roadcanvas.app.territory.TerritoryMapCells
 import kr.roadcanvas.app.territory.fake.FakeTerritoryCaptureRepository
 import kr.roadcanvas.app.territory.fake.FakeTerritoryOwnerProvider
@@ -93,13 +93,10 @@ class TerritoryMapViewModelTest {
     }
 
     private fun cellsNearCityHall(count: Int, skip: Int = 0): List<String> {
-        val step = Geohash.latitudeSpan(TERRITORY_CELL_PRECISION)
+        val step = TERRITORY_CELL_LAT_STEP
         return (0 until 20).flatMap { row ->
             (0 until 20).map { col ->
-                Geohash.encode(
-                    GeoPoint(37.560 + row * step, 126.972 + col * step),
-                    TERRITORY_CELL_PRECISION
-                )
+                TerritoryGrid.cellOf(GeoPoint(37.560 + row * step, 126.972 + col * step)).id
             }
         }.distinct().drop(skip).take(count)
     }

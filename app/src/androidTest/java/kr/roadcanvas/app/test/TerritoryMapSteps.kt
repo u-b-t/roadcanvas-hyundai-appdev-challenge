@@ -40,10 +40,11 @@ import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.TerritoryCalculator
 import kr.roadcanvas.app.score.TerritoryResult
 import kr.roadcanvas.app.score.TestPaths
-import kr.roadcanvas.app.territory.Geohash
-import kr.roadcanvas.app.territory.TERRITORY_CELL_PRECISION
+import kr.roadcanvas.app.territory.TERRITORY_CELL_LAT_STEP
+import kr.roadcanvas.app.territory.TERRITORY_CELL_LON_STEP
 import kr.roadcanvas.app.territory.TERRITORY_SYNC_STATUS_TAG
 import kr.roadcanvas.app.territory.TerritoryCellsResult
+import kr.roadcanvas.app.territory.TerritoryGrid
 import kr.roadcanvas.app.territory.fake.FakeTerritoryOwnerProvider
 import kr.roadcanvas.app.territory.formatCells
 import kr.roadcanvas.app.territory.territoryAreaOf
@@ -357,7 +358,7 @@ class TerritoryMapSteps(
             boundary.map { it.longitude }.average()
         )
         return (territoryCellsOf(boundary) as TerritoryCellsResult.Cells).cells.sortedBy {
-            val cell = Geohash.bounds(it).center
+            val cell = TerritoryGrid.bounds(it).center
             distanceMeters(center, MapPoint(cell.latitude, cell.longitude))
         }
     }
@@ -365,12 +366,12 @@ class TerritoryMapSteps(
     /** 영역 북쪽 바로 바깥의 칸. 칸 가운데가 영역 북쪽 끝보다 칸 높이의 1/4 이상 북쪽에 있다. */
     private fun outsideCells(boundary: List<GeoPoint>): List<String> {
         val latitude = boundary.maxOf { it.latitude } +
-            Geohash.latitudeSpan(TERRITORY_CELL_PRECISION) * 0.75
+            TERRITORY_CELL_LAT_STEP * 0.75
         val west = boundary.minOf { it.longitude }
         val east = boundary.maxOf { it.longitude }
-        val step = Geohash.longitudeSpan(TERRITORY_CELL_PRECISION)
+        val step = TERRITORY_CELL_LON_STEP
         return generateSequence(west) { it + step }.takeWhile { it <= east }
-            .map { Geohash.encode(GeoPoint(latitude, it), TERRITORY_CELL_PRECISION) }
+            .map { TerritoryGrid.cellOf(GeoPoint(latitude, it)).id }
             .distinct()
             .toList()
     }
@@ -435,20 +436,22 @@ class TerritoryMapSteps(
         const val MY_CELLS_OFFSET = 2
 
         /**
-         * [center]에서 가까운 순서의 geohash7 칸. 대체 지도가 알리는 범위 안에 들도록
+         * [center]에서 가까운 순서의 격자 칸. 대체 지도가 알리는 범위 안에 들도록
          * 범위 폭의 절반보다 조금 안쪽까지만 고른다.
          */
         fun cellsNear(center: kr.roadcanvas.app.map.RoutePoint): Iterator<String> {
             val reach = FakeRouteMapComponent.VISIBLE_SPAN_DEGREES / 2 * 0.9
-            val step = Geohash.latitudeSpan(TERRITORY_CELL_PRECISION) / 2
+            val step = TERRITORY_CELL_LAT_STEP / 2
             val steps = (reach / step).toInt()
             return (-steps..steps).flatMap { row -> (-steps..steps).map { col -> row to col } }
                 .sortedBy { (row, col) -> hypot(row.toDouble(), col.toDouble()) }
                 .map { (row, col) ->
-                    Geohash.encode(
-                        GeoPoint(center.latitude + row * step, center.longitude + col * step),
-                        TERRITORY_CELL_PRECISION
-                    )
+                    TerritoryGrid.cellOf(
+                        GeoPoint(
+                            center.latitude + row * step,
+                            center.longitude + col * step
+                        )
+                    ).id
                 }
                 .distinct()
                 .iterator()
