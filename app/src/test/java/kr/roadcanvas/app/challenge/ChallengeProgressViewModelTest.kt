@@ -19,7 +19,14 @@ import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingRequest
 import kr.roadcanvas.app.recording.RecordingState
 import kr.roadcanvas.app.recording.fake.FakeRecordingRunner
+import kr.roadcanvas.app.score.GeoPoint
 import kr.roadcanvas.app.score.TestPaths
+import kr.roadcanvas.app.territory.TerritoryGame
+import kr.roadcanvas.app.territory.TerritoryGrid
+import kr.roadcanvas.app.territory.TerritoryGridCell
+import kr.roadcanvas.app.territory.fake.FakeTerritoryCaptureRepository
+import kr.roadcanvas.app.territory.fake.FakeTerritoryOwnerProvider
+import kr.roadcanvas.app.territory.fake.FakeTerritoryStore
 import kr.roadcanvas.app.vehicle.DrivingRestriction
 import kr.roadcanvas.app.vehicle.LocationSample
 import kr.roadcanvas.app.vehicle.fake.FakeDrivingRestrictionProvider
@@ -123,6 +130,46 @@ class ChallengeProgressViewModelTest {
         assertEquals(PI * 60 * 60 / 2, state.territoryEstimate!!.areaSquareMeters, 100.0)
         // 반원 끝점이 출발점에서 가장 먼 점(지름 120m)이라 아직 돌아오는 중이 아니다.
         assertEquals(StartApproach.AWAY, state.startApproach)
+    }
+
+    @Test
+    fun `땅따먹기 중에는 현재 위치 주변의 다른 사용자 칸을 읽는다`() = runTest(dispatcher) {
+        val store = FakeTerritoryStore()
+        val cityHall = TerritoryGrid.cellOf(GeoPoint(37.5665, 126.978))
+        store.putCells("other", "다른 사용자", listOf(cityHall.id))
+        store.putCells(
+            FakeTerritoryOwnerProvider.DEFAULT_OWNER.uid,
+            "나",
+            listOf(TerritoryGridCell(cityHall.row + 1, cityHall.col).id)
+        )
+        val game = TerritoryGame(
+            store,
+            FakeTerritoryCaptureRepository(),
+            FakeTerritoryOwnerProvider()
+        )
+        runner.run(RecordingRequest.New(DrawingMode.TERRITORY))
+        locationProvider.subscriberCount.first { it > 0 }
+        val viewModel = ChallengeProgressViewModel(
+            recorder,
+            runner,
+            restrictionProvider,
+            clock = { now },
+            estimateDispatcher = dispatcher,
+            territoryGame = game
+        )
+        backgroundScope.launch { viewModel.nearbyCells.collect {} }
+        assertTrue(viewModel.nearbyCells.value.isEmpty())
+
+        locationProvider.sendLocation(LocationSample(37.5665, 126.978, now))
+        advanceTimeBy(TERRITORY_ESTIMATE_REFRESH_MILLIS + 1)
+
+        assertEquals(
+            setOf(
+                cityHall.id to false,
+                TerritoryGridCell(cityHall.row + 1, cityHall.col).id to true
+            ),
+            viewModel.nearbyCells.value.map { it.id to it.mine }.toSet()
+        )
     }
 
     @Test
