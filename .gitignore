@@ -3,5 +3,3 @@
 local.properties
 .idea/
 *.iml
-
-app/google-services.json

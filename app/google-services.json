@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "589189410642",
+    "project_id": "roadcanvas-f9f2a",
+    "storage_bucket": "roadcanvas-f9f2a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:589189410642:android:ad5349760037b502b7148b",
+        "android_client_info": {
+          "package_name": "kr.roadcanvas.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "589189410642-3ui7kikunh318urs69tu617r4fq2c65d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "kr.roadcanvas.app",
+            "certificate_hash": "c47472e1dca12c6a519523f5476998eefe2d6b39"
+          }
+        },
+        {
+          "client_id": "589189410642-nq6p1b4681j0attaqdgr61rif0kldamk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBT0ET_TWTnMA8FlR6_opaNfwQTOFGKZyc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "589189410642-nq6p1b4681j0attaqdgr61rif0kldamk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
