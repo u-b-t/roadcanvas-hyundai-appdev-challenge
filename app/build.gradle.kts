@@ -25,10 +25,23 @@ android {
         minSdk = 28
         targetSdk = 34
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
         testInstrumentationRunner = "kr.roadcanvas.app.test.RoadCanvasTestRunner"
         testInstrumentationRunnerArguments["optionsAnnotationPackage"] = "kr.roadcanvas.app.test"
         naverMapFields()
+    }
+
+    // release 서명 키는 저장소 밖에 둔다. 서명 정보가 없으면(CI 등) 서명하지 않은 release를 만든다.
+    val releaseSigning = releaseSigningProperties()
+    signingConfigs {
+        if (releaseSigning != null) {
+            create("release") {
+                storeFile = file(releaseSigning.getProperty("storeFile"))
+                storePassword = releaseSigning.getProperty("storePassword")
+                keyAlias = releaseSigning.getProperty("keyAlias")
+                keyPassword = releaseSigning.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
@@ -37,6 +50,7 @@ android {
         }
         release {
             vehicleIntegrationFields(defaultLocation = "pleos", defaultDriving = "aaos")
+            if (releaseSigning != null) signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -101,7 +115,20 @@ ksp {
 }
 
 /**
- * 네이버 지도 키 ID를 환경 변수 NAVER_MAP_CLIENT_ID 또는 local.properties의 같은 이름 값에서 읽는다.
+ * release 서명 정보. 환경 변수 ROADCANVAS_RELEASE_SIGNING이 가리키는 파일, 없으면 ~/.roadcanvas-release/keystore.properties를
+ * 읽는다(storeFile, storePassword, keyAlias, keyPassword). 파일이 없으면 null이다.
+ */
+fun releaseSigningProperties(): Properties? {
+    val path = providers.environmentVariable("ROADCANVAS_RELEASE_SIGNING").orNull
+        ?: "${System.getProperty("user.home")}/.roadcanvas-release/keystore.properties"
+    val file = File(path)
+    if (!file.isFile) return null
+    return Properties().apply { file.inputStream().use(::load) }
+}
+
+/**
+ * 네이버 지도 키 ID를 환경 변수 NAVER_MAP_CLIENT_ID, local.properties의 같은 이름 값, gradle.properties의
+ * roadcanvas.naverMapClientId 순서로 읽는다. gradle.properties 값은 공모전 심사용으로 넣은 키이며 종료 후 로테이션한다.
  * 값이 없으면 빈 값으로 빌드하고 앱은 지도 영역에 키 없음 안내를 표시한다.
  */
 fun VariantDimension.naverMapFields() {
@@ -114,7 +141,8 @@ fun VariantDimension.naverMapFields() {
     }
     val clientId = (
         providers.environmentVariable(name).orNull?.takeIf { it.isNotBlank() }
-            ?: fromLocal
+            ?: fromLocal?.takeIf { it.isNotBlank() }
+            ?: providers.gradleProperty("roadcanvas.naverMapClientId").orNull
         )
         ?.trim()
         .orEmpty()
