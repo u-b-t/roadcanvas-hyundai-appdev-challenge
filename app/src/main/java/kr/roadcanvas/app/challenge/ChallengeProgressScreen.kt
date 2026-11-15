@@ -31,12 +31,14 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import kr.roadcanvas.app.appContainer
 import kr.roadcanvas.app.drawing.DrawingMode
 import kr.roadcanvas.app.map.CurrentPosition
+import kr.roadcanvas.app.map.MapCell
 import kr.roadcanvas.app.map.RouteMap
 import kr.roadcanvas.app.map.RouteMapOptions
 import kr.roadcanvas.app.map.RoutePoint
 import kr.roadcanvas.app.recording.RecordingPermissions
 import kr.roadcanvas.app.recording.RecordingRequest
 import kr.roadcanvas.app.recording.RecordingState
+import kr.roadcanvas.app.territory.TerritoryCell
 import kr.roadcanvas.app.ui.components.CarButton
 import kr.roadcanvas.app.ui.components.CarButtonStyle
 import kr.roadcanvas.app.ui.components.DriverSideOverlay
@@ -116,7 +118,8 @@ fun ChallengeProgressRoute(
                 ChallengeProgressViewModel(
                     container.challengeRecorder,
                     container.recordingRunner,
-                    container.drivingRestrictionProvider
+                    container.drivingRestrictionProvider,
+                    territoryGame = container.territoryGame
                 )
             }
         }
@@ -124,6 +127,7 @@ fun ChallengeProgressRoute(
     // 화면이 멈추면 구독자가 없어져 화면 갱신도 멈춘다. 기록은 서비스에서 계속된다.
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val giveUpFailed by viewModel.giveUpFailed.collectAsStateWithLifecycle()
+    val nearbyCells by viewModel.nearbyCells.collectAsStateWithLifecycle()
 
     // 도전 중에는 종료나 포기로만 화면을 떠난다.
     BackHandler(enabled = state.phase != ChallengeProgressPhase.FAILED) {}
@@ -135,7 +139,8 @@ fun ChallengeProgressRoute(
         onFinish = { viewModel.finish(onFinished) },
         onGiveUp = { viewModel.giveUp { onGaveUp(screenMode) } },
         onBackToReady = { onBackToReady(screenMode) },
-        modifier = modifier
+        modifier = modifier,
+        nearbyCells = nearbyCells
     )
 
     if (giveUpFailed) {
@@ -171,9 +176,16 @@ fun ChallengeProgressScreen(
     onFinish: () -> Unit,
     onGiveUp: () -> Unit,
     onBackToReady: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    nearbyCells: List<TerritoryCell> = emptyList()
 ) {
     var confirmGiveUp by rememberSaveable { mutableStateOf(false) }
+    // 땅따먹기 중에는 준비 화면처럼 주변 서버 칸을 내 칸과 다른 사용자 칸으로 나눠 그린다.
+    val nearbyMapCells = remember(nearbyCells) {
+        nearbyCells.map { cell ->
+            MapCell(cell.bounds.corners.map { RoutePoint(it.latitude, it.longitude) }, cell.mine)
+        }
+    }
 
     DriverSideOverlay(
         background = {
@@ -186,6 +198,7 @@ fun ChallengeProgressScreen(
                         ?.takeIf { state.showsTerritoryProgress }
                         ?.map { RoutePoint(it.latitude, it.longitude) },
                     contentPadding = driverSideOverlayContentPadding(),
+                    cells = nearbyMapCells,
                     currentPosition = state.path.lastOrNull()?.let {
                         CurrentPosition(
                             RoutePoint(it.latitude, it.longitude),

@@ -10,9 +10,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -22,6 +25,14 @@ import kr.roadcanvas.app.recording.ChallengeRecorder
 import kr.roadcanvas.app.recording.RecordingRequest
 import kr.roadcanvas.app.recording.RecordingRunner
 import kr.roadcanvas.app.recording.RecordingState
+import kr.roadcanvas.app.recording.distanceTo
+import kr.roadcanvas.app.score.GeoPoint
+import kr.roadcanvas.app.territory.NEARBY_TERRITORY_RELOAD_METERS
+import kr.roadcanvas.app.territory.TerritoryCall
+import kr.roadcanvas.app.territory.TerritoryCell
+import kr.roadcanvas.app.territory.TerritoryGame
+import kr.roadcanvas.app.territory.TerritoryMapCells
+import kr.roadcanvas.app.territory.boundsAround
 import kr.roadcanvas.app.vehicle.DrivingRestrictionProvider
 
 /** 진행 화면 갱신 간격. 화면은 최대 1초에 한 번 갱신한다. */
@@ -31,6 +42,7 @@ const val PROGRESS_REFRESH_MILLIS = 1_000L
  * 진행 화면의 기록 상태를 구독하고 종료·포기를 처리한다.
  * 기록 자체는 [RecordingRunner]가 화면과 상관없이 실행하므로, 화면이 멈추면 화면 갱신만 멈춘다.
  * 땅따먹기 예상 영역은 [estimateMillis]마다 경로가 늘었을 때만 [estimateDispatcher]에서 다시 계산한다.
+ * 땅따먹기는 [territoryGame]으로 현재 위치 주변의 서버 칸을 읽어 다른 사용자 영토를 함께 보여준다.
  */
 class ChallengeProgressViewModel(
     private val recorder: ChallengeRecorder,
@@ -39,7 +51,8 @@ class ChallengeProgressViewModel(
     private val clock: () -> Long = System::currentTimeMillis,
     refreshMillis: Long = PROGRESS_REFRESH_MILLIS,
     estimateMillis: Long = TERRITORY_ESTIMATE_REFRESH_MILLIS,
-    estimateDispatcher: CoroutineDispatcher = Dispatchers.Default
+    estimateDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val territoryGame: TerritoryGame? = null
 ) : ViewModel() {
     init {
         // 프로세스가 다시 만들어져 진행 화면이 바로 복원되면 저장된 기록을 이어간다.
@@ -68,6 +81,29 @@ class ChallengeProgressViewModel(
         .map { path ->
             path?.let { withContext(estimateDispatcher) { territoryEstimateOf(it) } }
         }
+
+    /**
+     * 땅따먹기 중 현재 위치 주변의 서버 칸. 준비 화면처럼 처음 위치에서 읽고 [NEARBY_TERRITORY_RELOAD_METERS]보다
+     * 멀리 움직이면 다시 읽는다. 읽지 못하거나 칸이 너무 많으면 마지막으로 읽은 칸을 그대로 둔다.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val nearbyCells: StateFlow<List<TerritoryCell>> = (
+        territoryGame?.let { game ->
+            territoryPath
+                .map { path -> path?.lastOrNull() }
+                .filterNotNull()
+                .distinctUntilChanged { old, new ->
+                    old.distanceTo(new) <= NEARBY_TERRITORY_RELOAD_METERS
+                }
+                .mapLatest { point ->
+                    val found = game.mapCells(
+                        boundsAround(GeoPoint(point.latitude, point.longitude))
+                    )
+                    ((found as? TerritoryCall.Success)?.value as? TerritoryMapCells.Loaded)?.cells
+                }
+                .filterNotNull()
+        } ?: flow { }
+        ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
     // 경로와 경과 시간은 갱신 시점에만 읽어 화면 갱신을 1초에 한 번으로 제한한다.
     val uiState: StateFlow<ChallengeProgressUiState> = combine(
