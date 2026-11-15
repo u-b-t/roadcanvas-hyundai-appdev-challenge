@@ -39,7 +39,7 @@ npx firebase-tools emulators:exec --config ../../firebase.json --project demo-ro
 
 데모 사용자. 각자 `users/{uid}`에 닉네임 프로필이 있다.
 
-| 키 | UID | 닉네임 | 영토 칸(geohash, #148 이전) | 동그라미 점수 |
+| 키 | UID | 닉네임 | 영토 칸(2026-11-09 geohash, 지금은 아래 표) | 동그라미 점수 |
 | --- | --- | --- | --- | --- |
 | gangnam | `183tMSeknUOVDURpj5RYN0Yc0kO2` | 강남드리프터 | 125 | 96 |
 | yeouido | `d3iN00eWRhe1guQrcDLALipWXhB2` | 여의도산책러 | 122 | 87 |
@@ -60,18 +60,38 @@ npx firebase-tools emulators:exec --config ../../firebase.json --project demo-ro
 | `demo-artwork-spiral` | 잠실 소용돌이 | jamsil | 잠실 | 1 |
 | `demo-artwork-lightning` | 성수 번개 | gangnam | 성수 | 1 |
 
-땅따먹기 획득 `territoryGridCaptures/{id}`. 칸은 `territoryGridCells/{row}_{col}`이고 `captureId`로 찾는다. #148에서 정사각형 격자로 바꾸며 같은 획득 ID로 새 컬렉션에 다시 넣는다. 아래 칸 수는 2026-11-14 에뮬레이터 시드 결과다. 이전 geohash 칸(`territoryCaptures`, `territoryCells`)의 칸 수는 위 사용자 표와 같고, 그 문서는 운영에 남아 있지만 새 규칙에서는 앱이 읽지 않는다.
+땅따먹기 획득 `territoryGridCaptures/{id}`. 칸은 `territoryGridCells/{row}_{col}`이고 `captureId`로 찾는다. 영토 지도를 처음 여는 서울시청 주변에는 사용자마다 동네 하나씩을 서로 떨어진 덩어리로 두었다. 앱은 다른 사용자의 칸을 모두 같은 색으로 그리므로 덩어리가 맞닿으면 하나로 보인다(#164). 2026-11-15 운영 결과다.
 
 | 획득 ID | 사용자 | 지역 | 칸 |
 | --- | --- | --- | --- |
-| `demo-capture-cityhall` | cityhall | 서울시청 주변 1.3km x 1km | 88 (15칸을 빼앗김) |
+| `demo-capture-gwanghwamun` | hangang | 광화문 | 27 |
+| `demo-capture-jongno` | jamsil | 종각 | 25 |
+| `demo-capture-cityhall` | cityhall | 시청·덕수궁 | 23 |
+| `demo-capture-myeongdong` | gangnam | 명동 | 24 |
+| `demo-capture-sungnyemun` | mapo | 숭례문 | 16 |
+| `demo-capture-seodaemun` | yeouido | 서대문 | 16 |
 | `demo-capture-gangnam` | gangnam | 강남역 주변 다각형 | 162 |
 | `demo-capture-yeouido` | yeouido | 여의도 타원 | 157 |
 | `demo-capture-jamsil` | jamsil | 잠실 원 | 94 |
 | `demo-capture-mapo` | mapo | 홍대 주변 | 38 |
-| `demo-capture-hangang` | hangang | 광화문·종로(시청 칸 15개를 빼앗음) | 72 |
+| `demo-capture-banpo` | hangang | 반포 한강공원 | 53 |
+
+순위 칸 수는 강남드리프터 186, 여의도산책러 173, 잠실한바퀴 119, 한강라이더 80, 마포드라이브 54, 시청앞단골 23이다.
 
 동그라미 기록은 `users/{uid}/drawings/demo-circle-<키>`(청크 `chunks/0..1`)이고, 순위 항목은 `leaderboards/circle/entries/{uid}`다. 점수 계산 버전은 `1`이다. 점수는 앱이 계산한 값이 아니라 정해 넣은 값이며, 점수가 낮을수록 찌그러진 원 경로를 넣었다.
+
+## 운영 정리 (2026-11-15, #164)
+
+배포 전이라 데모 사용자 외 계정은 모두 테스트 계정이었다. 관리자 권한(`firebase-tools`, 로그인한 프로젝트 소유자)으로 다음을 지운 뒤 `npm run seed`로 다시 넣었다.
+
+- 이전 geohash 영토 `territoryCaptures`·`territoryCells`·`territoryOwners`, 격자 영토 `territoryGridCaptures`·`territoryGridCells`·`territoryGridOwners` 전체
+- 테스트 계정 3개(`D2yLt8UI…`, `bJtBtxSJ…`, `WjgvFJs1…`)의 동그라미 순위 항목 `leaderboards/circle/entries/{uid}`와 사용자 문서 `users/{uid}`(그림 포함)
+
+```sh
+npx firebase-tools firestore:delete <경로> --recursive --force --project roadcanvas-f9f2a
+```
+
+정리 뒤 동그라미 순위와 영토 순위에는 데모 사용자 6명만 있다. 공개 작품 7개는 모두 데모 작품이라 그대로 두었다.
 
 ## 지우기
 

@@ -76,12 +76,6 @@ function ellipse(a, b, rotation = 0, count = 72) {
   return parametric(count, (t) => [a * Math.cos(t) * c - b * Math.sin(t) * s, a * Math.cos(t) * s + b * Math.sin(t) * c]);
 }
 
-function rect(width, height) {
-  const w = width / 2;
-  const h = height / 2;
-  return [[-w, -h], [w, -h], [w, h], [-w, h], [-w, -h]];
-}
-
 const SHAPES = {
   heart: parametric(120, (t) => [
     40 * 16 * Math.sin(t) ** 3,
@@ -126,16 +120,30 @@ export function artworkRoute(artwork, seed) {
 }
 
 /**
- * 땅따먹기 획득. 순서대로 제출하며 한강라이더는 시청앞단골의 칸 일부를 빼앗는다.
- * 획득 ID는 고정이라 다시 실행하면 이미 반영된 획득으로 건너뛴다.
+ * 땅따먹기 획득. 순서대로 제출한다. 서울시청 주변(영토 지도를 처음 여는 곳)에는 데모 사용자마다 동네 하나씩을
+ * 서로 떨어진 덩어리로 둔다. 앱은 다른 사용자의 칸을 모두 같은 색으로 그리므로 덩어리가 맞닿으면 하나로 보인다.
+ * 그 밖에 사용자마다 자기 동네 영토가 있다. 획득 ID는 고정이라 다시 실행하면 이미 반영된 획득으로 건너뛴다.
  */
+const CITY_HALL = { lat: 37.5665, lon: 126.978 };
+
+/** 서울시청에서 동쪽 [x]m, 북쪽 [y]m 떨어진 기준점 */
+function nearCityHall(x, y) {
+  const point = toLatLon(CITY_HALL, [x, y]);
+  return { lat: point.latitude, lon: point.longitude };
+}
+
 export const CAPTURES = [
-  { id: 'demo-capture-cityhall', owner: 'cityhall', origin: { lat: 37.5665, lon: 126.978 }, polygon: rect(1300, 1000) },
+  { id: 'demo-capture-gwanghwamun', owner: 'hangang', origin: nearCityHall(-320, 620), polygon: ellipse(390, 290) },
+  { id: 'demo-capture-jongno', owner: 'jamsil', origin: nearCityHall(640, 600), polygon: ellipse(400, 280, 0.15) },
+  { id: 'demo-capture-cityhall', owner: 'cityhall', origin: nearCityHall(-360, -90), polygon: ellipse(340, 280) },
+  { id: 'demo-capture-myeongdong', owner: 'gangnam', origin: nearCityHall(660, -250), polygon: ellipse(380, 300, -0.2) },
+  { id: 'demo-capture-sungnyemun', owner: 'mapo', origin: nearCityHall(-260, -760), polygon: ellipse(360, 200) },
+  { id: 'demo-capture-seodaemun', owner: 'yeouido', origin: nearCityHall(-1050, 280), polygon: ellipse(230, 330) },
   { id: 'demo-capture-gangnam', owner: 'gangnam', origin: { lat: 37.4979, lon: 127.0276 }, polygon: [[-900, -500], [300, -800], [1000, -200], [800, 700], [-200, 800], [-1000, 200], [-900, -500]] },
   { id: 'demo-capture-yeouido', owner: 'yeouido', origin: { lat: 37.525, lon: 126.926 }, polygon: ellipse(1300, 550, Math.PI / 6) },
   { id: 'demo-capture-jamsil', owner: 'jamsil', origin: { lat: 37.513, lon: 127.1 }, polygon: ellipse(650, 650) },
   { id: 'demo-capture-mapo', owner: 'mapo', origin: { lat: 37.5563, lon: 126.9236 }, polygon: [[-450, -300], [400, -350], [450, 300], [-350, 350], [-450, -300]] },
-  { id: 'demo-capture-hangang', owner: 'hangang', origin: { lat: 37.572, lon: 126.985 }, polygon: rect(1100, 900) },
+  { id: 'demo-capture-banpo', owner: 'hangang', origin: { lat: 37.5115, lon: 126.996 }, polygon: ellipse(1100, 220, -Math.PI / 12) },
 ];
 
 // 앱의 TerritoryGrid와 같은 정사각형 격자(서울 기준 약 120m x 120m). 칸 ID는 "{row}_{col}", 구역은 두 번호를 8로 나눈 몫이다.
